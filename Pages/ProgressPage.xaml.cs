@@ -9,6 +9,8 @@ public partial class ProgressPage : ContentPage
     private readonly TrendAnalysisService _trendAnalysisService;
     private readonly ConfidenceSettingsService _confidenceSettingsService;
 
+    private IReadOnlyList<Models.ProgressEntry> _allEntries = Array.Empty<Models.ProgressEntry>();
+
     public ProgressPage()
     {
         InitializeComponent();
@@ -20,21 +22,12 @@ public partial class ProgressPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-
         TrajectoryLabel.Text = "Loading progress...";
 
         try
         {
-            var entries = await _progressTrackingService.GetEntriesAsync();
-            ProgressCollection.ItemsSource = entries;
-
-            var thresholds = _confidenceSettingsService.GetThresholds();
-            ModerateThresholdLabel.Text = $"Moderate threshold: {thresholds.ModerateThreshold:P0}";
-            HighThresholdLabel.Text = $"High threshold: {thresholds.HighThreshold:P0}";
-
-            var trendPoints = _trendAnalysisService.BuildTrendPoints(entries, 12);
-            TrendCollection.ItemsSource = ApplyThresholdGuides(trendPoints, thresholds);
-            TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(entries);
+            _allEntries = await _progressTrackingService.GetEntriesAsync();
+            ApplyFilter((FilterEntry.Text ?? string.Empty).Trim());
         }
         catch (Exception ex)
         {
@@ -44,6 +37,36 @@ public partial class ProgressPage : ContentPage
             HighThresholdLabel.Text = "High threshold: -";
             TrajectoryLabel.Text = ex.Message;
         }
+    }
+
+    private void OnFilterTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        ApplyFilter((e.NewTextValue ?? string.Empty).Trim());
+    }
+
+    private void OnFilterClearClicked(object? sender, EventArgs e)
+    {
+        FilterEntry.Text = string.Empty;
+        ApplyFilter(string.Empty);
+    }
+
+    private void ApplyFilter(string filterText)
+    {
+        var filtered = string.IsNullOrWhiteSpace(filterText)
+            ? _allEntries
+            : _allEntries
+                .Where(e => e.TargetSound.Contains(filterText, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        ProgressCollection.ItemsSource = filtered;
+
+        var thresholds = _confidenceSettingsService.GetThresholds();
+        ModerateThresholdLabel.Text = $"Moderate threshold: {thresholds.ModerateThreshold:P0}";
+        HighThresholdLabel.Text = $"High threshold: {thresholds.HighThreshold:P0}";
+
+        var trendPoints = _trendAnalysisService.BuildTrendPoints(filtered, 12);
+        TrendCollection.ItemsSource = ApplyThresholdGuides(trendPoints, thresholds);
+        TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(filtered);
     }
 
     private static IReadOnlyList<Models.TrendPoint> ApplyThresholdGuides(

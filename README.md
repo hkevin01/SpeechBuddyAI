@@ -490,6 +490,11 @@ dotnet build
 - [x] M5.1: add provider and confidence visibility in Practice and Progress UI
 - [x] M5.2: add clinician-tunable confidence thresholds in Settings
 - [x] M5.3: add lightweight tests for confidence and SQLite migration logic
+- [x] M6.1: add position-aware phoneme word bank covering 30+ phonemes and blends
+- [x] M6.2: persist session notes to SQLite with history view in Notes tab
+- [x] M6.3: add home dashboard quick stats (attempts, average, streak, most-improved)
+- [x] M6.4: add target-sound filter on Progress dashboard
+- [x] M6.5: add real report export and share flow from Notes
 
 > [!IMPORTANT]
 > Favor backward-compatible output contracts in service responses so historical data and dashboard rendering remain stable across model and storage upgrades.

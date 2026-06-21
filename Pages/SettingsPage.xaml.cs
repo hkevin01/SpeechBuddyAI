@@ -1,15 +1,18 @@
 using SpeechBuddyAI.Services.Confidence;
+using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Pages;
 
 public partial class SettingsPage : ContentPage
 {
     private readonly ConfidenceSettingsService _settingsService;
+    private readonly ReportExportSettingsService _reportExportSettingsService;
 
     public SettingsPage()
     {
         InitializeComponent();
         _settingsService = ResolveService<ConfidenceSettingsService>();
+        _reportExportSettingsService = ResolveService<ReportExportSettingsService>();
     }
 
     protected override void OnAppearing()
@@ -21,6 +24,8 @@ public partial class SettingsPage : ContentPage
             var thresholds = _settingsService.GetThresholds();
             ModerateSlider.Value = thresholds.ModerateThreshold;
             HighSlider.Value = thresholds.HighThreshold;
+            ShareBehaviorPicker.SelectedIndex =
+                _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
             StatusLabel.Text = "Current thresholds loaded.";
         }
@@ -62,11 +67,29 @@ public partial class SettingsPage : ContentPage
         try
         {
             _settingsService.ResetDefaults();
+            _reportExportSettingsService.ResetDefaults();
             var thresholds = _settingsService.GetThresholds();
             ModerateSlider.Value = thresholds.ModerateThreshold;
             HighSlider.Value = thresholds.HighThreshold;
+            ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
-            StatusLabel.Text = "Thresholds reset to defaults.";
+            StatusLabel.Text = "Thresholds and share behavior reset to defaults.";
+        }
+        catch (Exception ex)
+        {
+            StatusLabel.Text = ex.Message;
+        }
+    }
+
+    private void OnSaveShareBehaviorClicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            var behavior = ShareBehaviorPicker.SelectedIndex == 0
+                ? ReportShareBehavior.ExportOnly
+                : ReportShareBehavior.ExportAndShare;
+            _reportExportSettingsService.SaveDefaultShareBehavior(behavior);
+            StatusLabel.Text = "Share behavior saved.";
         }
         catch (Exception ex)
         {

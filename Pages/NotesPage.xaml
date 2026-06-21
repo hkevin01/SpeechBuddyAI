@@ -8,8 +8,36 @@
             <Label Text="Session Notes" FontSize="22" FontAttributes="Bold" />
             <Editor x:Name="RawNoteEditor" Placeholder="Type or dictate your note here..." HeightRequest="180" />
 
-            <Button Text="Generate Clinician + Parent Summaries"
-                    Clicked="OnGenerateSummariesClicked" />
+            <HorizontalStackLayout Spacing="10">
+                <Button Text="Generate Summaries"
+                        Clicked="OnGenerateSummariesClicked"
+                        WidthRequest="180" />
+                <Button Text="Save Note"
+                        Clicked="OnSaveNoteClicked"
+                        WidthRequest="140" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                <Label Text="Export format" VerticalOptions="Center" />
+                <Picker x:Name="ExportFormatPicker" WidthRequest="180" SelectedIndex="0">
+                    <Picker.Items>
+                        <x:String>Plain Text (.txt)</x:String>
+                        <x:String>Markdown (.md)</x:String>
+                        <x:String>CSV Summary (.csv)</x:String>
+                    </Picker.Items>
+                </Picker>
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Spacing="10">
+                <Button Text="Export Latest Report"
+                        Clicked="OnExportLatestClicked"
+                        WidthRequest="180" />
+                <Button Text="Share Latest Report"
+                        Clicked="OnShareLatestClicked"
+                        WidthRequest="180" />
+            </HorizontalStackLayout>
+
+            <Label x:Name="NoteStatusLabel" Text="" FontAttributes="Italic" />
 
             <Frame BorderColor="#DDDDDD" Padding="10">
                 <VerticalStackLayout Spacing="6">
@@ -24,6 +52,28 @@
                     <Label x:Name="ParentSummaryLabel" Text="No summary generated yet." />
                 </VerticalStackLayout>
             </Frame>
+
+            <Label Text="Note History" FontSize="18" FontAttributes="Bold" />
+
+            <CollectionView x:Name="NotesHistoryCollection"
+                            SelectionMode="Single"
+                            SelectionChanged="OnHistorySelectionChanged">
+                <CollectionView.EmptyView>
+                    <Label Text="No saved notes yet." />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="0,0,0,8" Padding="10" BorderColor="#DDDDDD">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding SessionDate, StringFormat='{0:yyyy-MM-dd HH:mm}'}"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding SoapSummary}" />
+                                <Label Text="{Binding ParentSummary}" TextColor="#555555" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

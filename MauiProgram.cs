@@ -22,11 +22,15 @@ public static class MauiProgram
             builder.Services.AddSingleton<Services.Confidence.IConfidenceThresholdProvider>(sp =>
                 sp.GetRequiredService<Services.Confidence.ConfidenceSettingsService>());
             builder.Services.AddSingleton<Services.Confidence.ConfidenceCalculator>();
+            builder.Services.AddSingleton<Services.PhonemeWordBankService>();
             builder.Services.AddSingleton<Services.AiSpeechService>();
             builder.Services.AddSingleton<Services.AiTextService>();
             builder.Services.AddSingleton<Services.ProgressTrackingService>();
             builder.Services.AddSingleton<Services.TrendAnalysisService>();
             builder.Services.AddSingleton<Services.ReportService>();
+            builder.Services.AddSingleton<Services.Reports.ReportExportSettingsService>();
+            builder.Services.AddSingleton<Services.NoteStorageService>();
+            builder.Services.AddSingleton<Services.DashboardStatsService>();
 
             return builder.Build();
         }

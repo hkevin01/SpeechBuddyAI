@@ -50,11 +50,15 @@ public partial class PracticePage : ContentPage
     private async void OnGeneratePracticeListClicked(object? sender, EventArgs e)
     {
         var target = (TargetSoundEntry.Text ?? string.Empty).Trim();
+        var selectedPosition = PositionPicker.SelectedItem as string;
+        var position = selectedPosition is "Any" or null ? null : selectedPosition?.ToLowerInvariant();
+
+        var key = position is null ? target : $"{target}:{position}";
         PracticeWordsLabel.Text = "Generating list...";
 
         try
         {
-            var words = await _aiTextService.GeneratePracticeWordsAsync(target);
+            var words = await _aiTextService.GeneratePracticeWordsAsync(key);
             PracticeWordsLabel.Text = string.Join(", ", words);
         }
         catch (Exception ex)

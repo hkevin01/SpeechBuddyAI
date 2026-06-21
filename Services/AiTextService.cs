@@ -2,28 +2,35 @@ using SpeechBuddyAI.Models;
 
 namespace SpeechBuddyAI.Services;
 
+// ID: SVC-TEXT-001
+// Purpose: Generates practice word lists and home assignment plans.
 public class AiTextService
 {
+    private readonly PhonemeWordBankService _wordBank;
+
+    public AiTextService(PhonemeWordBankService wordBank)
+    {
+        _wordBank = wordBank ?? throw new ArgumentNullException(nameof(wordBank));
+    }
+
+    // ID: SVC-TEXT-002
+    // Purpose: Returns position-aware practice words for a given target sound.
+    // Inputs: target ("r", "sh", "r:initial", etc.), null position falls back to all positions.
     public Task<string[]> GeneratePracticeWordsAsync(string target)
     {
         var normalizedTarget = (target ?? string.Empty).Trim().ToLowerInvariant();
 
         if (string.IsNullOrWhiteSpace(normalizedTarget))
-        {
-            return Task.FromResult(new[] { "rabbit", "rain", "ring", "rocket" });
-        }
+            return Task.FromResult(_wordBank.GetWords("r", "initial"));
 
         try
         {
-            var words = normalizedTarget.Contains("s", StringComparison.Ordinal)
-                ? new[] { "sun", "soup", "sand", "sail" }
-                : normalizedTarget.Contains("l", StringComparison.Ordinal)
-                    ? new[] { "leaf", "lamp", "light", "lemon" }
-                    : normalizedTarget.Contains("r", StringComparison.Ordinal)
-                        ? new[] { "rabbit", "rain", "ring", "rocket" }
-                        : new[] { "cat", "cup", "kite", "coat" };
+            // Support "target:position" shorthand from callers
+            var parts = normalizedTarget.Split(':', 2);
+            var phoneme = parts[0].Trim();
+            var position = parts.Length > 1 ? parts[1].Trim() : null;
 
-            return Task.FromResult(words);
+            return Task.FromResult(_wordBank.GetWords(phoneme, position));
         }
         catch (Exception ex)
         {

@@ -9,9 +9,42 @@
             <Label Text="Therapist companion for articulation practice, progress tracking, and smart notes." />
 
             <Frame BorderColor="#DDDDDD" Padding="12">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Session Overview" FontAttributes="Bold" FontSize="16" />
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+                        <Frame Grid.Row="0" Grid.Column="0" Padding="10" BackgroundColor="#EFF6FF" BorderColor="#BFDBFE">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Total Attempts" FontSize="11" TextColor="#555" />
+                                <Label x:Name="TotalAttemptsLabel" Text="-" FontSize="22" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Row="0" Grid.Column="1" Padding="10" BackgroundColor="#F0FDF4" BorderColor="#BBF7D0">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Average Score" FontSize="11" TextColor="#555" />
+                                <Label x:Name="AverageScoreLabel" Text="-" FontSize="22" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Row="1" Grid.Column="0" Padding="10" BackgroundColor="#FFF7ED" BorderColor="#FED7AA">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Most Practiced" FontSize="11" TextColor="#555" />
+                                <Label x:Name="MostPracticedLabel" Text="-" FontSize="16" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Row="1" Grid.Column="1" Padding="10" BackgroundColor="#FDF4FF" BorderColor="#E9D5FF">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Practice Streak" FontSize="11" TextColor="#555" />
+                                <Label x:Name="StreakLabel" Text="-" FontSize="16" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </Grid>
+                    <Label x:Name="MostImprovedLabel" Text="Most improved: -" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame BorderColor="#DDDDDD" Padding="12">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="M2 Home Assignment" FontAttributes="Bold" />
-                    <Button Text="Generate Assignment from Weak Patterns"
+                    <Label Text="Home Assignment" FontAttributes="Bold" />
+                    <Button Text="Generate from Weak Patterns"
                             Clicked="OnGenerateAssignmentClicked" />
                     <Label x:Name="AssignmentTitleLabel" Text="No assignment generated yet." FontAttributes="Bold" />
                     <Label x:Name="AssignmentRationaleLabel" Text="" />

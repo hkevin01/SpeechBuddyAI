@@ -1,4 +1,6 @@
 using SpeechBuddyAI.Models;
+using Microsoft.Maui.ApplicationModel.DataTransfer;
+using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Services;
 
@@ -24,6 +26,74 @@ public class ReportService
         catch (Exception ex)
         {
             throw new InvalidOperationException("Failed to generate clinician and parent reports.", ex);
+        }
+    }
+
+    public string BuildExportText(SessionNote note)
+    {
+        return BuildExportText(note, Array.Empty<ProgressEntry>(), ReportExportFormat.PlainText);
+    }
+
+    public async Task<string> ExportReportAsync(SessionNote note)
+    {
+        return await ExportReportAsync(note, Array.Empty<ProgressEntry>(), ReportExportFormat.PlainText);
+    }
+
+    public string BuildExportText(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
+    {
+        return ReportExportFormatter.BuildContent(note, metadataEntries, format);
+    }
+
+    public async Task<string> ExportReportAsync(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
+    {
+        if (note is null)
+        {
+            throw new ArgumentNullException(nameof(note));
+        }
+
+        try
+        {
+            var exportsDir = Path.Combine(FileSystem.AppDataDirectory, "exports");
+            Directory.CreateDirectory(exportsDir);
+
+            var fileName = ReportExportFormatter.BuildFileName(note, format);
+            var filePath = Path.Combine(exportsDir, fileName);
+            var content = BuildExportText(note, metadataEntries ?? Array.Empty<ProgressEntry>(), format);
+
+            await File.WriteAllTextAsync(filePath, content);
+            return filePath;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to export session report.", ex);
+        }
+    }
+
+    public async Task ShareReportAsync(SessionNote note)
+    {
+        await ShareReportAsync(note, Array.Empty<ProgressEntry>(), ReportExportFormat.PlainText);
+    }
+
+    public async Task ShareReportAsync(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
+    {
+        if (note is null)
+        {
+            throw new ArgumentNullException(nameof(note));
+        }
+
+        var filePath = await ExportReportAsync(note, metadataEntries, format);
+
+        try
+        {
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "Share Session Report",
+                File = new ShareFile(filePath)
+            });
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to share session report.", ex);
         }
     }
 

@@ -8,6 +8,15 @@
             <Label Text="Progress Dashboard" FontSize="22" FontAttributes="Bold" />
             <Label x:Name="TrajectoryLabel" Text="Trajectory not available yet." />
 
+            <HorizontalStackLayout Spacing="8">
+                <Entry x:Name="FilterEntry"
+                       Placeholder="Filter by target sound..."
+                       HorizontalOptions="FillAndExpand"
+                       WidthRequest="220"
+                       TextChanged="OnFilterTextChanged" />
+                <Button Text="Clear" Clicked="OnFilterClearClicked" WidthRequest="70" />
+            </HorizontalStackLayout>
+
             <Frame BorderColor="#DDDDDD" Padding="10">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Score Trend (Recent Attempts)" FontAttributes="Bold" />

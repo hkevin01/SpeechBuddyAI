@@ -9,7 +9,17 @@
             <Label Text="Capture an attempt, compute score components, and persist the result." />
 
             <Label Text="Target sound" FontAttributes="Bold" />
-            <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or initial r" />
+            <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or sh" />
+
+            <Label Text="Word position (optional)" FontAttributes="Bold" />
+            <Picker x:Name="PositionPicker" Title="Any position">
+                <Picker.Items>
+                    <x:String>Any</x:String>
+                    <x:String>Initial</x:String>
+                    <x:String>Medial</x:String>
+                    <x:String>Final</x:String>
+                </Picker.Items>
+            </Picker>
 
             <Label Text="Attempt transcript" FontAttributes="Bold" />
             <Editor x:Name="TranscriptEditor" Placeholder="Type recognized transcript here" AutoSize="TextChanges" HeightRequest="120" />
