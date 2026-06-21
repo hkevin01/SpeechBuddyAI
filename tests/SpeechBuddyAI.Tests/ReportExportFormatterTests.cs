@@ -66,6 +66,29 @@ public sealed class ReportExportFormatterTests
         Assert.StartsWith("speechbuddy-report-", txt);
     }
 
+    [Fact]
+    public void BuildContent_EmptyMetadata_UsesNaFallbacks()
+    {
+        var note = MakeNote();
+
+        var content = ReportExportFormatter.BuildContent(note, Array.Empty<ProgressEntry>(), ReportExportFormat.PlainText);
+
+        Assert.Contains("Scoring Providers: n/a", content);
+        Assert.Contains("Confidence Bands: n/a", content);
+        Assert.Contains("Target-Level Deltas: n/a", content);
+    }
+
+    [Fact]
+    public void BuildContent_CsvSummary_EscapesCommaAndQuotes()
+    {
+        var note = MakeNote();
+        note.RawNote = "line one, with comma and \"quotes\"";
+
+        var content = ReportExportFormatter.BuildContent(note, MakeEntries(), ReportExportFormat.CsvSummary);
+
+        Assert.Contains("\"line one, with comma and \"\"quotes\"\"\"", content);
+    }
+
     private static SessionNote MakeNote()
     {
         return new SessionNote
