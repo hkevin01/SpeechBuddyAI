@@ -42,30 +42,48 @@ These tables are intentionally near the top so new contributors can quickly pick
 
 ### Deployment and Inference Modes
 
-| # | Option | What It Does | Use When | Do Not Use When | How It Works (High Level) |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Offline-first STT | Runs recognition on device without sending audio to cloud | Privacy-sensitive workflows and poor connectivity | You require managed cloud diarization now | Capture audio -> local model inference -> score pipeline |
-| 2 | Cloud STT | Delegates recognition to hosted API | Rapid iteration and broad language support | Strict local-only policy or high latency constraints | Capture audio -> upload -> cloud transcript -> score pipeline |
-| 3 | Hybrid STT | Uses local path first and cloud fallback | Production resilience with mixed network conditions | Team cannot maintain two adapters yet | Try local -> if unavailable/fails use cloud -> continue scoring |
+| <sub>#</sub> | <sub>Option</sub> | <sub>What It Does</sub> | <sub>Use When</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Offline-first STT</sub> | <sub>Runs recognition on device without cloud audio upload</sub> | <sub>Privacy-sensitive workflows and poor connectivity</sub> |
+| <sub>2</sub> | <sub>Cloud STT</sub> | <sub>Delegates recognition to hosted API</sub> | <sub>Rapid iteration and broad language support</sub> |
+| <sub>3</sub> | <sub>Hybrid STT</sub> | <sub>Uses local path first and cloud fallback</sub> | <sub>Production resilience in mixed network conditions</sub> |
+
+| <sub>#</sub> | <sub>Option</sub> | <sub>Do Not Use When</sub> | <sub>How It Works</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Offline-first STT</sub> | <sub>Managed cloud diarization is required immediately</sub> | <sub>Capture audio to local model to score pipeline</sub> |
+| <sub>2</sub> | <sub>Cloud STT</sub> | <sub>Strict local-only policy or high latency constraints</sub> | <sub>Capture audio to upload to transcript to score</sub> |
+| <sub>3</sub> | <sub>Hybrid STT</sub> | <sub>Team cannot maintain two adapters yet</sub> | <sub>Try local, fallback to cloud, continue scoring</sub> |
 
 > [!TIP]
 > For this codebase, hybrid is the long-term target, but offline-first should remain the default experience.
 
 ### Scoring Strategy Comparison
 
-| # | Strategy | What It Measures | Best For | Not Ideal For | Why Chosen or Deferred |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Rule-based component scoring | Phoneme match proxy, fluency proxy, consistency proxy | MVP reliability and explainability | Fine-grained phonetic diagnostics at scale | Chosen for M1 due transparency and low complexity |
-| 2 | GOP-style scoring | Phoneme-level posterior contrast confidence | Targeted phone-level coaching and minimal pairs | Pipelines without phoneme alignment/lexicon | Planned as M2/M3 enhancement |
-| 3 | Joint APA + MDD models | Overall pronunciation quality plus error diagnosis | Research-grade CAPT with curated benchmark datasets | Small teams without ML ops and annotation capacity | Deferred due complexity and data requirements |
+| <sub>#</sub> | <sub>Strategy</sub> | <sub>What It Measures</sub> | <sub>Best For</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Rule-based component scoring</sub> | <sub>Phoneme match proxy, fluency proxy, consistency proxy</sub> | <sub>MVP reliability and explainability</sub> |
+| <sub>2</sub> | <sub>GOP-style scoring</sub> | <sub>Phoneme-level posterior contrast confidence</sub> | <sub>Targeted phone-level coaching and minimal pairs</sub> |
+| <sub>3</sub> | <sub>Joint APA plus MDD models</sub> | <sub>Pronunciation quality plus error diagnosis</sub> | <sub>Research-grade CAPT with curated datasets</sub> |
+
+| <sub>#</sub> | <sub>Strategy</sub> | <sub>Not Ideal For</sub> | <sub>Why Chosen or Deferred</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Rule-based component scoring</sub> | <sub>Fine-grained phonetic diagnostics at scale</sub> | <sub>Chosen for M1 due transparency and low complexity</sub> |
+| <sub>2</sub> | <sub>GOP-style scoring</sub> | <sub>Pipelines without phoneme alignment and lexicon</sub> | <sub>Planned as M2 and M3 enhancement</sub> |
+| <sub>3</sub> | <sub>Joint APA plus MDD models</sub> | <sub>Small teams without ML ops and annotation capacity</sub> | <sub>Deferred due complexity and data requirements</sub> |
 
 ### Persistence Backends Comparison
 
-| # | Backend | What It Does | Use When | Avoid When | Migration Notes |
-| --- | --- | --- | --- | --- | --- |
-| 1 | JSON file store (current M1) | Simple local persistence with low setup overhead | Early milestone and local prototype workflows | Need robust query/reporting at scale | Current implementation in ProgressTrackingService |
-| 2 | SQLite (planned) | Relational local database with indexed queries | Dashboard analytics and larger history datasets | Ultra-light demos without query complexity | Planned migration path for M2 or M3 |
-| 3 | Cloud sync DB | Cross-device shared history and backup | Multi-device clinician-family workflows | Offline-only deployments | Add after local model and privacy policy are stable |
+| <sub>#</sub> | <sub>Backend</sub> | <sub>What It Does</sub> | <sub>Use When</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>JSON file store current M1</sub> | <sub>Simple local persistence with low setup overhead</sub> | <sub>Early milestone and local prototype workflows</sub> |
+| <sub>2</sub> | <sub>SQLite planned</sub> | <sub>Relational local database with indexed queries</sub> | <sub>Dashboard analytics and larger history datasets</sub> |
+| <sub>3</sub> | <sub>Cloud sync DB</sub> | <sub>Cross-device shared history and backup</sub> | <sub>Multi-device clinician-family workflows</sub> |
+
+| <sub>#</sub> | <sub>Backend</sub> | <sub>Avoid When</sub> | <sub>Migration Notes</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>JSON file store current M1</sub> | <sub>Robust query and reporting at scale is required</sub> | <sub>Current implementation in ProgressTrackingService</sub> |
+| <sub>2</sub> | <sub>SQLite planned</sub> | <sub>Ultra-light demos without query complexity</sub> | <sub>Planned migration path for M2 or M3</sub> |
+| <sub>3</sub> | <sub>Cloud sync DB</sub> | <sub>Offline-only deployments</sub> | <sub>Add after local model and privacy policy stabilize</sub> |
 
 > [!IMPORTANT]
 > Keep README claims aligned with code reality. M1 currently uses JSON persistence, not SQLite runtime persistence.
@@ -74,13 +92,13 @@ These tables are intentionally near the top so new contributors can quickly pick
 
 M1 is now implemented as an end-to-end slice. It captures practice attempts, computes score components, saves each attempt, and renders persisted entries in the progress view.
 
-| # | M1 Contract Item | Status | Implementation Detail |
+| <sub>#</sub> | <sub>M1 Contract Item</sub> | <sub>Status</sub> | <sub>Implementation Detail</sub> |
 | --- | --- | --- | --- |
-| 1 | Practice input capture | Done | Target and transcript are entered on Practice page |
-| 2 | Component scoring loop | Done | Phoneme, fluency, consistency, and overall score computed |
-| 3 | Persisted score components | Done | ProgressEntry includes component fields and transcript |
-| 4 | Longitudinal attempt list | Done | Progress page loads and displays persisted entries |
-| 5 | Error pattern tag | Done | Simple pattern inference for feedback categorization |
+| <sub>1</sub> | <sub>Practice input capture</sub> | <sub>Done</sub> | <sub>Target and transcript entered on Practice page</sub> |
+| <sub>2</sub> | <sub>Component scoring loop</sub> | <sub>Done</sub> | <sub>Phoneme, fluency, consistency, and overall computed</sub> |
+| <sub>3</sub> | <sub>Persisted score components</sub> | <sub>Done</sub> | <sub>ProgressEntry includes components and transcript</sub> |
+| <sub>4</sub> | <sub>Longitudinal attempt list</sub> | <sub>Done</sub> | <sub>Progress page loads persisted entries</sub> |
+| <sub>5</sub> | <sub>Error pattern tag</sub> | <sub>Done</sub> | <sub>Simple pattern inference for categorization</sub> |
 
 ### M1 Runtime Loop
 
@@ -122,12 +140,12 @@ sequenceDiagram
 
 ### M1 Data Shape (Score Components)
 
-| # | Field | Meaning | Range | Why Needed |
+| <sub>#</sub> | <sub>Field</sub> | <sub>Meaning</sub> | <sub>Range</sub> | <sub>Why Needed</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | PhonemeScore | Target match proxy | 0.0 to 1.0 | Core articulation confidence dimension |
-| 2 | FluencyScore | Stability/length proxy | 0.0 to 1.0 | Captures rhythm/continuity signal in simple form |
-| 3 | ConsistencyScore | Variation across recent attempts | 0.0 to 1.0 | Distinguishes one-off success from stable performance |
-| 4 | OverallScore | Weighted aggregate score | 0.0 to 1.0 | Supports quick clinician and learner interpretation |
+| <sub>1</sub> | <sub>PhonemeScore</sub> | <sub>Target match proxy</sub> | <sub>0.0 to 1.0</sub> | <sub>Core articulation confidence dimension</sub> |
+| <sub>2</sub> | <sub>FluencyScore</sub> | <sub>Stability and length proxy</sub> | <sub>0.0 to 1.0</sub> | <sub>Captures rhythm and continuity signal</sub> |
+| <sub>3</sub> | <sub>ConsistencyScore</sub> | <sub>Variation across recent attempts</sub> | <sub>0.0 to 1.0</sub> | <sub>Distinguishes one-off success from stability</sub> |
+| <sub>4</sub> | <sub>OverallScore</sub> | <sub>Weighted aggregate score</sub> | <sub>0.0 to 1.0</sub> | <sub>Supports fast clinician and learner interpretation</sub> |
 
 ## Tech Stack and Architecture
 
@@ -135,12 +153,12 @@ SpeechBuddyAI uses .NET MAUI and C# to keep mobile and desktop targets in one co
 
 ### Current vs Planned Stack
 
-| # | Layer | Current (Implemented) | Planned Direction | Why This Matters |
+| <sub>#</sub> | <sub>Layer</sub> | <sub>Current Implemented</sub> | <sub>Planned Direction</sub> | <sub>Why This Matters</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | UI Shell | .NET MAUI Shell with tab navigation | Same, with richer state and chart controls | Maintains cross-platform consistency |
-| 2 | Scoring Service | AiSpeechService with transparent component formulas | Adapter-friendly architecture for offline/online models | Future model upgrades without UI rewrite |
-| 3 | Persistence | JSON app-local file in M1 | SQLite for richer queries and analytics | Enables trend views and reporting depth |
-| 4 | Practice Content | AiTextService generated words | Constraint-aware generators and personalized assignments | Improves carryover and relevance |
+| <sub>1</sub> | <sub>UI Shell</sub> | <sub>.NET MAUI Shell with tab navigation</sub> | <sub>Same plus richer state and chart controls</sub> | <sub>Maintains cross-platform consistency</sub> |
+| <sub>2</sub> | <sub>Scoring Service</sub> | <sub>AiSpeechService with transparent formulas</sub> | <sub>Adapter-friendly offline and online models</sub> | <sub>Model upgrades without UI rewrite</sub> |
+| <sub>3</sub> | <sub>Persistence</sub> | <sub>JSON app-local file in M1</sub> | <sub>SQLite for richer queries and analytics</sub> | <sub>Enables deeper trend views and reporting</sub> |
+| <sub>4</sub> | <sub>Practice Content</sub> | <sub>AiTextService generated words</sub> | <sub>Constraint-aware personalized assignments</sub> | <sub>Improves carryover and relevance</sub> |
 
 > [!TIP]
 > Preserve service boundaries now so later migration from JSON to SQLite and from heuristics to model-based scoring remains low-risk.
@@ -191,11 +209,11 @@ Where each component is clamped to $[0,1]$ before aggregation.
 
 ### Why This Formula and Not a Single Black Box Score
 
-| # | Option | Advantage | Limitation | Decision |
+| <sub>#</sub> | <sub>Option</sub> | <sub>Advantage</sub> | <sub>Limitation</sub> | <sub>Decision</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | Single confidence score | Simple output | Low interpretability and difficult debugging | Not chosen for M1 |
-| 2 | Weighted components (current) | Transparent and tunable | Not yet full phonetic rigor | Chosen for M1 |
-| 3 | Learned end-to-end score | Potentially higher accuracy | Data and explainability burden | Deferred until later milestones |
+| <sub>1</sub> | <sub>Single confidence score</sub> | <sub>Simple output</sub> | <sub>Low interpretability and difficult debugging</sub> | <sub>Not chosen for M1</sub> |
+| <sub>2</sub> | <sub>Weighted components current</sub> | <sub>Transparent and tunable</sub> | <sub>Not yet full phonetic rigor</sub> | <sub>Chosen for M1</sub> |
+| <sub>3</sub> | <sub>Learned end-to-end score</sub> | <sub>Potentially higher accuracy</sub> | <sub>Data and explainability burden</sub> | <sub>Deferred to later milestones</sub> |
 
 ### Consistency Computation Rationale
 
@@ -213,11 +231,11 @@ This formulation is included because it aligns with CAPT literature and supports
 
 ### M1 to M3 Algorithm Progression
 
-| # | Stage | Method | What Improves | Risks |
+| <sub>#</sub> | <sub>Stage</sub> | <sub>Method</sub> | <sub>What Improves</sub> | <sub>Risks</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | M1 | Deterministic weighted heuristics | Speed, transparency, debuggability | Limited phonetic depth |
-| 2 | M2 | Lexicon-backed phoneme checks | Better target-specific diagnostics | Lexicon and alignment complexity |
-| 3 | M3 | GOP-like or segmentation-free features | Higher diagnostic fidelity and benchmarking potential | Model and data pipeline overhead |
+| <sub>1</sub> | <sub>M1</sub> | <sub>Deterministic weighted heuristics</sub> | <sub>Speed, transparency, and debuggability</sub> | <sub>Limited phonetic depth</sub> |
+| <sub>2</sub> | <sub>M2</sub> | <sub>Lexicon-backed phoneme checks</sub> | <sub>Better target-specific diagnostics</sub> | <sub>Lexicon and alignment complexity</sub> |
+| <sub>3</sub> | <sub>M3</sub> | <sub>GOP-like or segmentation-free features</sub> | <sub>Higher diagnostic fidelity and benchmarking</sub> | <sub>Model and data pipeline overhead</sub> |
 
 ### Formula and Algorithm Catalog (CAPT, MDD, and Speech Therapy)
 
@@ -261,23 +279,23 @@ The project roadmap intentionally prioritizes free and public resources so the s
 
 ### Integration Candidates
 
-| # | Tool | Type | License or Terms | Why Consider It |
+| <sub>#</sub> | <sub>Tool</sub> | <sub>Type</sub> | <sub>License or Terms</sub> | <sub>Why Consider It</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | Vosk | Offline STT toolkit | Apache-2.0 | On-device recognition path for privacy-first deployments |
-| 2 | whisper.cpp | Offline ASR inference engine | MIT | Broad platform support and efficient local inference |
-| 3 | CMUdict | Pronunciation lexicon | Free unrestricted use notice | Canonical pronunciation references for phone-level logic |
-| 4 | Datamuse API | Word association and suggestions | Public usage with limits and API key changes timeline | Practice list generation and topic expansion |
+| <sub>1</sub> | <sub>Vosk</sub> | <sub>Offline STT toolkit</sub> | <sub>Apache-2.0</sub> | <sub>On-device recognition for privacy-first deployments</sub> |
+| <sub>2</sub> | <sub>whisper.cpp</sub> | <sub>Offline ASR inference engine</sub> | <sub>MIT</sub> | <sub>Broad platform support and efficient local inference</sub> |
+| <sub>3</sub> | <sub>CMUdict</sub> | <sub>Pronunciation lexicon</sub> | <sub>Free unrestricted use notice</sub> | <sub>Canonical references for phone-level logic</sub> |
+| <sub>4</sub> | <sub>Datamuse API</sub> | <sub>Word association and suggestions</sub> | <sub>Public usage with limits and key timeline notes</sub> | <sub>Practice list generation and topic expansion</sub> |
 
 > [!IMPORTANT]
 > Datamuse policy text currently notes API-key-related changes from 2027 and request limits, so production integration should include caching and fallback behavior.
 
 ### External Project Pattern Mapping
 
-| # | Open Project | Pattern | Practical Adoption in SpeechBuddyAI |
+| <sub>#</sub> | <sub>Open Project</sub> | <sub>Pattern</sub> | <sub>Practical Adoption in SpeechBuddyAI</sub> |
 | --- | --- | --- | --- |
-| 1 | fulldecent/vowel-practice | Focused vowel visual training | Add optional vowel-target mini mode for articulation sessions |
-| 2 | assinscreedFC/ortholyse | Local-first transcription and metrics | Strengthen local evaluation/report pathways |
-| 3 | KorayUlusan/delayed-auditory-feedback-online | DAF intervention tooling | Add configurable fluency support exercise mode |
+| <sub>1</sub> | <sub>fulldecent/vowel-practice</sub> | <sub>Focused vowel visual training</sub> | <sub>Add optional vowel-target mini mode</sub> |
+| <sub>2</sub> | <sub>assinscreedFC/ortholyse</sub> | <sub>Local-first transcription and metrics</sub> | <sub>Strengthen local evaluation and reporting pathways</sub> |
+| <sub>3</sub> | <sub>KorayUlusan/delayed-auditory-feedback-online</sub> | <sub>DAF intervention tooling</sub> | <sub>Add configurable fluency support mode</sub> |
 
 > [!NOTE]
 > These are architecture inspirations and workflow ideas, not source-code reuse.
@@ -289,28 +307,28 @@ The project roadmap intentionally prioritizes free and public resources so the s
 
 ### 1) Practice Attempt Scoring
 
-| # | Contract | Input | Output | Current Status |
+| <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Current Status</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | evaluateAttempt | targetSound, transcript | phoneme, fluency, consistency, overall, errorPattern | Implemented in M1 |
-| 2 | persistAttempt | ProgressEntry payload | stored entry id and timestamp | Implemented in M1 |
-| 3 | listAttempts | optional target filter | ordered attempt history | Implemented in M1 |
+| <sub>1</sub> | <sub>evaluateAttempt</sub> | <sub>targetSound, transcript</sub> | <sub>phoneme, fluency, consistency, overall, errorPattern</sub> | <sub>Implemented in M1</sub> |
+| <sub>2</sub> | <sub>persistAttempt</sub> | <sub>ProgressEntry payload</sub> | <sub>stored entry id and timestamp</sub> | <sub>Implemented in M1</sub> |
+| <sub>3</sub> | <sub>listAttempts</sub> | <sub>optional target filter</sub> | <sub>ordered attempt history</sub> | <sub>Implemented in M1</sub> |
 
 > [!TIP]
 > Keep output fields stable so model upgrades can be drop-in replacements.
 
 ### 2) Practice Content Generation
 
-| # | Contract | Input | Output | Current Status |
+| <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Current Status</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | generatePracticeWords | targetSound | word list for drills | Implemented baseline |
-| 2 | generateAssignments | historical weak patterns | home plan with rationale | Planned M2 |
+| <sub>1</sub> | <sub>generatePracticeWords</sub> | <sub>targetSound</sub> | <sub>word list for drills</sub> | <sub>Implemented baseline</sub> |
+| <sub>2</sub> | <sub>generateAssignments</sub> | <sub>historical weak patterns</sub> | <sub>home plan with rationale</sub> | <sub>Planned M2</sub> |
 
 ### 3) Notes and Reporting
 
-| # | Contract | Input | Output | Current Status |
+| <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Current Status</sub> |
 | --- | --- | --- | --- | --- |
-| 1 | summarizeSessionNotes | free text notes | structured summary | Planned M5 |
-| 2 | exportReport | session id and format | shareable artifact | Planned M5 |
+| <sub>1</sub> | <sub>summarizeSessionNotes</sub> | <sub>free text notes</sub> | <sub>structured summary</sub> | <sub>Planned M5</sub> |
+| <sub>2</sub> | <sub>exportReport</sub> | <sub>session id and format</sub> | <sub>shareable artifact</sub> | <sub>Planned M5</sub> |
 
 </details>
 
@@ -350,27 +368,27 @@ flowchart TD
 
 ### Label Taxonomy Summary
 
-| # | Label Group | Example Labels | Purpose |
+| <sub>#</sub> | <sub>Label Group</sub> | <sub>Example Labels</sub> | <sub>Purpose</sub> |
 | --- | --- | --- | --- |
-| 1 | Type | type:bug, type:feature, type:task | Classify issue intent |
-| 2 | Status | status:triage, status:ready, status:blocked | Track workflow state |
-| 3 | Domain | domain:therapy-core, domain:ai-integration | Map workstream ownership |
-| 4 | Roadmap | roadmap:m1..roadmap:m5 | Tie work to roadmap milestone |
-| 5 | Priority | priority:p0-critical..priority:p3-low | Support execution ordering |
+| <sub>1</sub> | <sub>Type</sub> | <sub>type:bug, type:feature, type:task</sub> | <sub>Classify issue intent</sub> |
+| <sub>2</sub> | <sub>Status</sub> | <sub>status:triage, status:ready, status:blocked</sub> | <sub>Track workflow state</sub> |
+| <sub>3</sub> | <sub>Domain</sub> | <sub>domain:therapy-core, domain:ai-integration</sub> | <sub>Map workstream ownership</sub> |
+| <sub>4</sub> | <sub>Roadmap</sub> | <sub>roadmap:m1 to roadmap:m5</sub> | <sub>Tie work to roadmap milestone</sub> |
+| <sub>5</sub> | <sub>Priority</sub> | <sub>priority:p0 to priority:p3</sub> | <sub>Support execution ordering</sub> |
 
 > [!IMPORTANT]
 > Every issue should include both technical acceptance criteria and clinical rationale.
 
 ### GitHub Markdown Features Used in This README
 
-| # | Feature | Why It Is Used Here |
+| <sub>#</sub> | <sub>Feature</sub> | <sub>Why It Is Used Here</sub> |
 | --- | --- | --- |
-| 1 | Shields badges | Surface status and stack metadata at a glance |
-| 2 | GitHub Alerts | Highlight risk, guidance, and required context clearly |
-| 3 | Mermaid diagrams | Represent architecture and workflow as executable documentation |
-| 4 | Collapsible details blocks | Keep README readable while preserving deep technical content |
-| 5 | Math blocks | Document scoring formulas unambiguously |
-| 6 | Dense comparison tables | Accelerate decision-making for contributors |
+| <sub>1</sub> | <sub>Shields badges</sub> | <sub>Surface status and stack metadata quickly</sub> |
+| <sub>2</sub> | <sub>GitHub alerts</sub> | <sub>Highlight risk and guidance clearly</sub> |
+| <sub>3</sub> | <sub>Mermaid diagrams</sub> | <sub>Represent architecture and workflow clearly</sub> |
+| <sub>4</sub> | <sub>Collapsible details blocks</sub> | <sub>Keep README readable with deep content</sub> |
+| <sub>5</sub> | <sub>Math blocks</sub> | <sub>Document scoring formulas unambiguously</sub> |
+| <sub>6</sub> | <sub>Dense comparison tables</sub> | <sub>Accelerate contributor decision-making</sub> |
 
 > [!NOTE]
 > GitHub docs confirm support for Mermaid diagrams, alerts, and details blocks in Markdown contexts like repository files and discussions.
