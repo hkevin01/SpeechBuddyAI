@@ -9,4 +9,6 @@ public sealed class TrendPoint
     public double ConfidenceScore { get; init; }
     public string ConfidenceLabel => $"{ConfidenceScore:P0}";
     public double ConfidenceBarWidth { get; init; }
+    public double ModerateGuideOffset { get; init; }
+    public double HighGuideOffset { get; init; }
 }

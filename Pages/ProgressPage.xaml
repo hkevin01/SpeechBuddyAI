@@ -21,6 +21,10 @@
                             <Label Text="Confidence" VerticalTextAlignment="Center" />
                         </HorizontalStackLayout>
                     </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="14">
+                        <Label x:Name="ModerateThresholdLabel" Text="Moderate threshold: -" />
+                        <Label x:Name="HighThresholdLabel" Text="High threshold: -" />
+                    </HorizontalStackLayout>
                     <CollectionView x:Name="TrendCollection" HeightRequest="180">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
@@ -28,20 +32,34 @@
                                     <Label Text="{Binding AttemptIndex, StringFormat='#{0}'}" VerticalTextAlignment="Center" />
                                     <VerticalStackLayout Grid.Column="1" Spacing="3">
                                         <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                            <BoxView Color="#4C8EDA"
-                                                    HeightRequest="10"
-                                                    WidthRequest="{Binding BarWidth}"
-                                                    HorizontalOptions="Start" />
+                                            <Grid Grid.Column="0" WidthRequest="260" HorizontalOptions="Start">
+                                                <BoxView Color="#4C8EDA"
+                                                        HeightRequest="10"
+                                                        WidthRequest="{Binding BarWidth}"
+                                                        HorizontalOptions="Start" />
+                                            </Grid>
                                             <Label Grid.Column="1"
                                                    Text="{Binding ScoreLabel}"
                                                    Margin="8,0,0,0"
                                                    VerticalTextAlignment="Center" />
                                         </Grid>
                                         <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                            <BoxView Color="#2F9E44"
-                                                    HeightRequest="10"
-                                                    WidthRequest="{Binding ConfidenceBarWidth}"
-                                                    HorizontalOptions="Start" />
+                                            <Grid Grid.Column="0" WidthRequest="260" HorizontalOptions="Start">
+                                                <BoxView Color="#F8D7A0"
+                                                        WidthRequest="1"
+                                                        HeightRequest="10"
+                                                        HorizontalOptions="Start"
+                                                        TranslationX="{Binding ModerateGuideOffset}" />
+                                                <BoxView Color="#F08C00"
+                                                        WidthRequest="1"
+                                                        HeightRequest="10"
+                                                        HorizontalOptions="Start"
+                                                        TranslationX="{Binding HighGuideOffset}" />
+                                                <BoxView Color="#2F9E44"
+                                                        HeightRequest="10"
+                                                        WidthRequest="{Binding ConfidenceBarWidth}"
+                                                        HorizontalOptions="Start" />
+                                            </Grid>
                                             <Label Grid.Column="1"
                                                    Text="{Binding ConfidenceLabel}"
                                                    Margin="8,0,0,0"
