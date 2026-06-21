@@ -219,6 +219,27 @@ This formulation is included because it aligns with CAPT literature and supports
 | 2 | M2 | Lexicon-backed phoneme checks | Better target-specific diagnostics | Lexicon and alignment complexity |
 | 3 | M3 | GOP-like or segmentation-free features | Higher diagnostic fidelity and benchmarking potential | Model and data pipeline overhead |
 
+### Formula and Algorithm Catalog (CAPT, MDD, and Speech Therapy)
+
+| # | Algorithm or Formula | Expression | Where It Helps in Speech Therapy | Why It Matters for SpeechBuddyAI | Reference |
+| --- | --- | --- | --- | --- | --- |
+| 1 | <sub>Weighted composite score</sub> | <sub>$S=0.60S_p+0.25S_f+0.15S_c$</sub> | <sub>Combines articulation, fluency, and stability into one interpretable score</sub> | <sub>Current core scoring contract in app workflow</sub> | <sub><a href="https://arxiv.org/abs/2506.19315">JCAPT</a></sub> |
+| 2 | <sub>Classic GOP</sub> | <sub>$\text{GOP}(p)=\frac{1}{T_p}\sum\log P(p\mid o_t)-\max_{q\neq p}\frac{1}{T_p}\sum\log P(q\mid o_t)$</sub> | <sub>Phone-level mispronunciation feedback</sub> | <sub>Planned upgrade path for diagnostic precision</sub> | <sub><a href="https://www.isca-archive.org/interspeech_2019/sudhakara19_interspeech.html">Sudhakara et al. 2019</a></sub> |
+| 3 | <sub>Segmentation-free GOP (GOP-SF)</sub> | <sub>Alignment-free posterior scoring across candidate segmentations</sub> | <sub>Reduces forced-alignment error in MDD</sub> | <sub>High-value candidate for M3+ model layer</sub> | <sub><a href="https://arxiv.org/abs/2507.16838">Cao et al. 2025</a></sub> |
+| 4 | <sub>Word Error Rate (WER)</sub> | <sub>$\text{WER}=\frac{S+D+I}{N}$</sub> | <sub>Measures transcript quality before pronunciation scoring</sub> | <sub>Useful for validating STT adapter quality gates</sub> | <sub><a href="https://en.wikipedia.org/wiki/Word_error_rate">WER definition</a></sub> |
+| 5 | <sub>Character Error Rate (CER)</sub> | <sub>$\text{CER}=\frac{S_c+D_c+I_c}{N_c}$</sub> | <sub>Fine-grained transcript accuracy where spelling variation matters</sub> | <sub>Useful for phoneme-proxy transcript checks</sub> | <sub><a href="https://apxml.com/courses/applied-speech-recognition/chapter-6-evaluating-deploying-asr-systems/asr-performance-metrics-wer-cer">ASR metrics reference</a></sub> |
+| 6 | <sub>F1 score for MDD</sub> | <sub>$F1=\frac{2PR}{P+R}$</sub> | <sub>Balances precision and recall in error detection</sub> | <sub>Needed for future benchmark-based evaluation</sub> | <sub><a href="https://arxiv.org/abs/2606.05569">Tu et al. 2026</a></sub> |
+| 7 | <sub>Dynamic Time Warping (DTW)</sub> | <sub>$D(i,j)=d(i,j)+\min\{D(i-1,j),D(i,j-1),D(i-1,j-1)\}$</sub> | <sub>Temporal alignment for variable speaking rate</sub> | <sub>Potential alignment utility for constrained drills</sub> | <sub><a href="https://en.wikipedia.org/wiki/Dynamic_time_warping">DTW reference</a></sub> |
+| 8 | <sub>Exponential smoothing trend (EWMA)</sub> | <sub>$E_t=\alpha x_t+(1-\alpha)E_{t-1}$</sub> | <sub>Smooths noisy session trajectories</sub> | <sub>Supports stable progress interpretation on dashboard</sub> | <sub><a href="https://otexts.com/fpp3/ses.html">SES reference</a></sub> |
+| 9 | <sub>z-score normalization</sub> | <sub>$z=\frac{x-\mu}{\sigma}$</sub> | <sub>Normalizes score components across targets/sessions</sub> | <sub>Needed when comparing mixed target difficulty</sub> | <sub><a href="https://en.wikipedia.org/wiki/Standard_score">z-score reference</a></sub> |
+| 10 | <sub>Readability control (Flesch Reading Ease)</sub> | <sub>$206.835-1.015\frac{W}{S}-84.6\frac{SYL}{W}$</sub> | <sub>Keeps parent summaries understandable</sub> | <sub>Improves communication quality in M5 reports</sub> | <sub><a href="https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests">Flesch reference</a></sub> |
+| 11 | <sub>SNR estimate</sub> | <sub>$\text{SNR}_{dB}=10\log_{10}(P_s/P_n)$</sub> | <sub>Detects noisy captures that can corrupt scoring</sub> | <sub>Useful pre-check before scoring decisions</sub> | <sub><a href="https://en.wikipedia.org/wiki/Signal-to-noise_ratio">SNR reference</a></sub> |
+| 12 | <sub>Adaptive repetition interval</sub> | <sub>$I_{n+1}=I_n(1+\alpha R_n-\beta E_n)$</sub> | <sub>Schedules home exercises by retention and errors</sub> | <sub>Supports M2 assignment quality and carryover</sub> | <sub><a href="https://www.supermemo.com/en/archives1990-2015/english/ol/sm2">SM-2 style spacing concept</a></sub> |
+
+This table is designed as a practical algorithm menu rather than a theory dump. The core idea is to separate formulas needed immediately for production-safe behavior from formulas that should be introduced only when evaluation infrastructure is ready. For the current app, weighted composite scoring, consistency estimation, and trend smoothing have the strongest implementation value because they directly improve user-facing reliability.
+
+The second key point is that CAPT/MDD quality is often bottlenecked by alignment and data quality, not only by model architecture. That is why metrics like WER, CER, SNR, and F1 are listed alongside GOP and joint modeling methods. In practice, SpeechBuddyAI should gate advanced scoring with data-quality checks and clear diagnostics so users understand when a score is high-confidence versus low-confidence.
+
 ## Public Libraries and API Strategy
 
 The project roadmap intentionally prioritizes free and public resources so the system remains reproducible for open development.
@@ -343,14 +364,39 @@ flowchart TD
 
 This list captures articles and arXiv references used to inform architecture and algorithm choices.
 
-### CAPT, MDD, and Scoring Papers
+### CAPT, MDD, and Scoring Papers (Linked)
 
-1. Korzekwa et al. - Computer-assisted Pronunciation Training - Speech synthesis is almost all you need, arXiv:2207.00774, DOI: 10.48550/arXiv.2207.00774
-2. Zhang et al. - speechocean762: An Open-Source Non-native English Speech Corpus For Pronunciation Assessment, arXiv:2104.01378, DOI: 10.48550/arXiv.2104.01378
-3. Yang et al. - JCAPT: A Joint Modeling Approach for CAPT, arXiv:2506.19315, DOI: 10.48550/arXiv.2506.19315
-4. Cao et al. - Segmentation-free Goodness of Pronunciation, arXiv:2507.16838, DOI: 10.48550/arXiv.2507.16838
-5. Tu et al. - Domain-Aware Mispronunciation Detection and Diagnosis Using Language-Specific Statistical Graphs, arXiv:2606.05569, DOI: 10.48550/arXiv.2606.05569
-6. Sudhakara et al. - An Improved Goodness of Pronunciation (GoP) Measure, INTERSPEECH 2019
+| # | Paper | Focus Area | Practical Use in Project | DOI | Direct Link |
+| --- | --- | --- | --- | --- | --- |
+| 1 | <sub>Korzekwa et al.</sub> | <sub>Synthetic speech for CAPT data augmentation</sub> | <sub>Informs augmentation strategy for mispronunciation detection robustness</sub> | <sub>10.48550/arXiv.2207.00774</sub> | <sub><a href="https://arxiv.org/abs/2207.00774">arXiv 2207.00774</a></sub> |
+| 2 | <sub>Zhang et al. (speechocean762)</sub> | <sub>Open benchmark corpus for pronunciation assessment</sub> | <sub>Candidate dataset for offline evaluation and benchmark alignment</sub> | <sub>10.48550/arXiv.2104.01378</sub> | <sub><a href="https://arxiv.org/abs/2104.01378">arXiv 2104.01378</a></sub> |
+| 3 | <sub>Yang et al. (JCAPT)</sub> | <sub>Joint APA + MDD modeling</sub> | <sub>Architecture guidance for combined quality and diagnosis outputs</sub> | <sub>10.48550/arXiv.2506.19315</sub> | <sub><a href="https://arxiv.org/abs/2506.19315">arXiv 2506.19315</a></sub> |
+| 4 | <sub>Cao et al. (GOP-SF)</sub> | <sub>Segmentation-free GOP and phoneme-level assessment</sub> | <sub>Potential M3+ upgrade path for higher diagnosis fidelity</sub> | <sub>10.48550/arXiv.2507.16838</sub> | <sub><a href="https://arxiv.org/abs/2507.16838">arXiv 2507.16838</a></sub> |
+| 5 | <sub>Tu et al.</sub> | <sub>Domain-aware statistical graph MDD</sub> | <sub>Useful for language-specific confusion modeling roadmap</sub> | <sub>10.48550/arXiv.2606.05569</sub> | <sub><a href="https://arxiv.org/abs/2606.05569">arXiv 2606.05569</a></sub> |
+| 6 | <sub>Sudhakara et al.</sub> | <sub>Improved GOP with DNN-HMM transition probabilities</sub> | <sub>Strong baseline reference for interpretable phone-level scoring</sub> | <sub>Interspeech 2019</sub> | <sub><a href="https://www.isca-archive.org/interspeech_2019/sudhakara19_interspeech.html">ISCA page</a></sub> |
+
+This table translates research into implementation value. Instead of listing papers as passive references, each row maps a publication to a concrete project decision, such as benchmark alignment, model choice, or diagnostic strategy. This keeps research work tied to shipping outcomes and avoids academic drift where citations exist but do not change the product.
+
+The linked format also helps team execution. When a milestone task claims to implement "GOP-like scoring" or "domain-aware confusion modeling," contributors can open the exact source quickly and keep terminology consistent across issues, pull requests, and README updates. That consistency improves review quality and keeps AI-related roadmap changes auditable.
+
+### AI and UI Improvement Matrix (Project-Focused)
+
+| # | Improvement Theme | AI or UI Direction | Near-Term Action | Expected User Impact |
+| --- | --- | --- | --- | --- |
+| 1 | <sub>Input quality gating</sub> | <sub>AI reliability</sub> | <sub>Add SNR/noise pre-check before scoring</sub> | <sub>Fewer misleading low-confidence scores</sub> |
+| 2 | <sub>Provider confidence visibility</sub> | <sub>AI transparency</sub> | <sub>Show scoring provider and confidence band in Practice and Progress</sub> | <sub>Users understand why score quality changes</sub> |
+| 3 | <sub>Weak-pattern assignment tuning</sub> | <sub>AI personalization</sub> | <sub>Rank home drills by historical error frequency and recency</sub> | <sub>More relevant home plans and better carryover</sub> |
+| 4 | <sub>Trend explainability</sub> | <sub>UI analytics</sub> | <sub>Add simple textual interpretation beside chart trajectories</sub> | <sub>Clinicians and parents can interpret trends faster</sub> |
+| 5 | <sub>Session comparison view</sub> | <sub>UI workflow</sub> | <sub>Add side-by-side last session vs current session cards</sub> | <sub>Quicker progress review in clinical sessions</sub> |
+| 6 | <sub>Adaptive prompt difficulty</sub> | <sub>AI adaptation</sub> | <sub>Escalate from words to phrases based on sustained consistency</sub> | <sub>Better challenge calibration without overload</sub> |
+| 7 | <sub>Parent summary readability</sub> | <sub>UI communication</sub> | <sub>Apply readability target and sentence simplification in M5 reports</sub> | <sub>Improved understanding and adherence at home</sub> |
+| 8 | <sub>Error pattern drill cards</sub> | <sub>UI coaching</sub> | <sub>Attach micro-coaching tips to each detected error pattern</sub> | <sub>More actionable practice instructions</sub> |
+| 9 | <sub>Offline-first resilience UX</sub> | <sub>AI infrastructure + UI</sub> | <sub>Display fallback state and retry options when primary scorer fails</sub> | <sub>Smoother sessions under unstable connectivity</sub> |
+| 10 | <sub>Benchmark mode</sub> | <sub>AI evaluation</sub> | <sub>Add hidden developer mode to compute WER/F1 on test sets</sub> | <sub>Faster evidence-based model iteration</sub> |
+
+The project should evolve AI and UI together, not as separate tracks. If scoring sophistication improves without clear UI explanation, users will trust the app less. If UI improves without better scoring controls, users will get polished but unreliable feedback. The matrix above keeps those two dimensions synchronized in planning and implementation.
+
+A practical execution approach is to pair each AI enhancement with one visible UX artifact. For example, when fallback scoring is added, show provider source in the result card; when trend smoothing is added, expose the interpretation text that explains why a trend is labeled improving, stable, or declining. This pairing improves usability and creates better testability in reviews.
 
 ### Tooling and Documentation References
 
