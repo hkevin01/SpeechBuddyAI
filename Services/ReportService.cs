@@ -44,6 +44,11 @@ public class ReportService
         return ReportExportFormatter.BuildContent(note, metadataEntries, format);
     }
 
+    public string BuildExportFileName(SessionNote note, ReportExportFormat format)
+    {
+        return ReportExportFormatter.BuildFileName(note, format);
+    }
+
     public async Task<string> ExportReportAsync(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
     {
         if (note is null)
@@ -56,7 +61,7 @@ public class ReportService
             var exportsDir = Path.Combine(FileSystem.AppDataDirectory, "exports");
             Directory.CreateDirectory(exportsDir);
 
-            var fileName = ReportExportFormatter.BuildFileName(note, format);
+            var fileName = BuildExportFileName(note, format);
             var filePath = Path.Combine(exportsDir, fileName);
             var content = BuildExportText(note, metadataEntries ?? Array.Empty<ProgressEntry>(), format);
 

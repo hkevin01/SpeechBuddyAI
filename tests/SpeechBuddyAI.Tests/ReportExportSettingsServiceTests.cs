@@ -51,6 +51,36 @@ public sealed class ReportExportSettingsServiceTests
         Assert.Equal(ReportShareBehavior.ExportAndShare, service.GetDefaultShareBehavior());
     }
 
+    [Fact]
+    public void PreferredExportFormat_DefaultsToPlainText()
+    {
+        var service = new ReportExportSettingsService(new InMemoryStore());
+
+        var format = service.GetPreferredExportFormat();
+
+        Assert.Equal(ReportExportFormat.PlainText, format);
+    }
+
+    [Fact]
+    public void SavePreferredExportFormat_PersistsValue()
+    {
+        var service = new ReportExportSettingsService(new InMemoryStore());
+
+        service.SavePreferredExportFormat(ReportExportFormat.CsvSummary);
+
+        Assert.Equal(ReportExportFormat.CsvSummary, service.GetPreferredExportFormat());
+    }
+
+    [Fact]
+    public void PreferredExportFormat_InvalidStoredValue_FallsBackToPlainText()
+    {
+        var store = new InMemoryStore();
+        store.Set("reports.preferredExportFormat", 77);
+        var service = new ReportExportSettingsService(store);
+
+        Assert.Equal(ReportExportFormat.PlainText, service.GetPreferredExportFormat());
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);

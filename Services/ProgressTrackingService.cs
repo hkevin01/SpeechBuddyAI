@@ -139,6 +139,39 @@ public class ProgressTrackingService
         }
     }
 
+    public async Task<IReadOnlyList<ProgressEntry>> GetEntriesInDateRangeAsync(DateTime startUtc, DateTime endUtc)
+    {
+        var normalizedStart = startUtc;
+        var normalizedEnd = endUtc;
+
+        if (normalizedEnd < normalizedStart)
+        {
+            (normalizedStart, normalizedEnd) = (normalizedEnd, normalizedStart);
+        }
+
+        try
+        {
+            await EnsureInitializedAsync();
+            await _gate.WaitAsync();
+            try
+            {
+                var all = await Database.Table<ProgressEntry>().ToListAsync();
+                return all
+                    .Where(e => e.Timestamp >= normalizedStart && e.Timestamp <= normalizedEnd)
+                    .OrderByDescending(e => e.Timestamp)
+                    .ToList();
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to load entries in date range.", ex);
+        }
+    }
+
     private async Task AddAndSaveAsync(ProgressEntry entry)
     {
         if (entry is null)

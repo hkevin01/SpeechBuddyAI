@@ -15,6 +15,7 @@
     <Compile Include="../../Models/ScoreComponents.cs" Link="Shared/ScoreComponents.cs" />
     <Compile Include="../../Models/ProgressEntry.cs" Link="Shared/ProgressEntry.cs" />
     <Compile Include="../../Models/SessionNote.cs" Link="Shared/SessionNote.cs" />
+    <Compile Include="../../Database/DbConstants.cs" Link="Shared/DbConstants.cs" />
     <Compile Include="../../Services/Confidence/ConfidenceThresholds.cs" Link="Shared/ConfidenceThresholds.cs" />
     <Compile Include="../../Services/Confidence/IConfidenceThresholdProvider.cs" Link="Shared/IConfidenceThresholdProvider.cs" />
     <Compile Include="../../Services/Confidence/IKeyValueStore.cs" Link="Shared/IKeyValueStore.cs" />
@@ -22,10 +23,14 @@
     <Compile Include="../../Services/Storage/ProgressSchemaMigration.cs" Link="Shared/ProgressSchemaMigration.cs" />
     <Compile Include="../../Services/PhonemeWordBankService.cs" Link="Shared/PhonemeWordBankService.cs" />
     <Compile Include="../../Services/DashboardStatsService.cs" Link="Shared/DashboardStatsService.cs" />
+    <Compile Include="../../Services/ReportService.cs" Link="Shared/ReportService.cs" />
+    <Compile Include="../../Services/NoteStorageService.cs" Link="Shared/NoteStorageService.cs" />
     <Compile Include="../../Services/Reports/ReportExportFormat.cs" Link="Shared/ReportExportFormat.cs" />
     <Compile Include="../../Services/Reports/ReportExportFormatter.cs" Link="Shared/ReportExportFormatter.cs" />
     <Compile Include="../../Services/Reports/ReportShareBehavior.cs" Link="Shared/ReportShareBehavior.cs" />
     <Compile Include="../../Services/Reports/ReportExportSettingsService.cs" Link="Shared/ReportExportSettingsService.cs" />
+    <Compile Include="../../Pages/ViewModels/NotesPageViewModel.cs" Link="Shared/NotesPageViewModel.cs" />
+    <Compile Include="Stubs/MauiStubs.cs" />
     <Compile Include="Stubs/SQLiteStubs.cs" />
   </ItemGroup>
 </Project>

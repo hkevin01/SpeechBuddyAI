@@ -1,5 +1,6 @@
 using SpeechBuddyAI.Models;
 using SpeechBuddyAI.Services;
+using SpeechBuddyAI.Pages.ViewModels;
 using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Pages;
@@ -10,9 +11,8 @@ public partial class NotesPage : ContentPage
     private readonly ReportService _reportService;
     private readonly NoteStorageService _noteStorageService;
     private readonly ReportExportSettingsService _reportExportSettingsService;
-
-    private SessionNote? _pendingNote;
-    private SessionNote? _selectedHistoryNote;
+    private readonly NotesPageViewModel _viewModel = new();
+    private bool _hasInitializedDateRange;
 
     public NotesPage()
     {
@@ -26,6 +26,8 @@ public partial class NotesPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        LoadExportPreferences();
+        InitializeDateRangeIfNeeded();
         await RefreshHistoryAsync();
     }
 
@@ -34,7 +36,6 @@ public partial class NotesPage : ContentPage
         SoapSummaryLabel.Text = "Generating clinician summary...";
         ParentSummaryLabel.Text = "Generating parent summary...";
         NoteStatusLabel.Text = string.Empty;
-        _pendingNote = null;
 
         try
         {
@@ -44,8 +45,7 @@ public partial class NotesPage : ContentPage
 
             SoapSummaryLabel.Text = report.SoapSummary;
             ParentSummaryLabel.Text = report.ParentSummary;
-            _pendingNote = report;
-            _selectedHistoryNote = null;
+            _viewModel.SetGeneratedNote(report);
             NotesHistoryCollection.SelectedItem = null;
             NoteStatusLabel.Text = "Summaries ready. Press Save Note to persist.";
         }
@@ -58,7 +58,7 @@ public partial class NotesPage : ContentPage
 
     private async void OnSaveNoteClicked(object? sender, EventArgs e)
     {
-        if (_pendingNote is null)
+        if (_viewModel.PendingNote is null)
         {
             NoteStatusLabel.Text = "Generate summaries first before saving.";
             return;
@@ -66,8 +66,8 @@ public partial class NotesPage : ContentPage
 
         try
         {
-            await _noteStorageService.SaveNoteAsync(_pendingNote);
-            _pendingNote = null;
+            await _noteStorageService.SaveNoteAsync(_viewModel.PendingNote);
+            _viewModel.MarkSaved();
             NoteStatusLabel.Text = "Note saved.";
             await RefreshHistoryAsync();
         }
@@ -90,7 +90,7 @@ public partial class NotesPage : ContentPage
                 return;
             }
 
-            var metadataEntries = await _progressTrackingService.GetRecentEntriesAsync(30);
+            var metadataEntries = await GetMetadataEntriesForSelectedRangeAsync();
             var format = GetSelectedExportFormat();
             var filePath = await _reportService.ExportReportAsync(note, metadataEntries, format);
             NoteStatusLabel.Text = $"Report exported: {Path.GetFileName(filePath)}";
@@ -114,7 +114,7 @@ public partial class NotesPage : ContentPage
                 return;
             }
 
-            var metadataEntries = await _progressTrackingService.GetRecentEntriesAsync(30);
+            var metadataEntries = await GetMetadataEntriesForSelectedRangeAsync();
             var format = GetSelectedExportFormat();
             var behavior = _reportExportSettingsService.GetDefaultShareBehavior();
 
@@ -134,6 +134,18 @@ public partial class NotesPage : ContentPage
         }
     }
 
+    private void OnExportFormatChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            _reportExportSettingsService.SavePreferredExportFormat(GetSelectedExportFormat());
+        }
+        catch
+        {
+            // Preference persistence failure should not block page usage.
+        }
+    }
+
     private void OnHistorySelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var selected = e.CurrentSelection?.FirstOrDefault() as SessionNote;
@@ -142,8 +154,7 @@ public partial class NotesPage : ContentPage
             return;
         }
 
-        _selectedHistoryNote = selected;
-        _pendingNote = null;
+        _viewModel.SetSelectedHistoryNote(selected);
 
         RawNoteEditor.Text = selected.RawNote;
         SoapSummaryLabel.Text = string.IsNullOrWhiteSpace(selected.SoapSummary)
@@ -171,28 +182,38 @@ public partial class NotesPage : ContentPage
 
     private async Task<SessionNote?> ResolveLatestExportCandidateAsync()
     {
-        if (_pendingNote is not null)
-        {
-            return _pendingNote;
-        }
-
-        if (_selectedHistoryNote is not null)
-        {
-            return _selectedHistoryNote;
-        }
-
         var recent = await _noteStorageService.GetRecentNotesAsync(1);
-        return recent.FirstOrDefault();
+        return _viewModel.ResolveExportCandidate(recent.FirstOrDefault());
     }
 
     private ReportExportFormat GetSelectedExportFormat()
     {
-        return ExportFormatPicker.SelectedIndex switch
+        return NotesPageViewModel.ExportFormatFromPickerIndex(ExportFormatPicker.SelectedIndex);
+    }
+
+    private void LoadExportPreferences()
+    {
+        var preferred = _reportExportSettingsService.GetPreferredExportFormat();
+        ExportFormatPicker.SelectedIndex = NotesPageViewModel.PickerIndexFromExportFormat(preferred);
+    }
+
+    private void InitializeDateRangeIfNeeded()
+    {
+        if (_hasInitializedDateRange)
         {
-            1 => ReportExportFormat.Markdown,
-            2 => ReportExportFormat.CsvSummary,
-            _ => ReportExportFormat.PlainText
-        };
+            return;
+        }
+
+        var today = DateTime.Today;
+        ExportEndDatePicker.Date = today;
+        ExportStartDatePicker.Date = today.AddDays(-30);
+        _hasInitializedDateRange = true;
+    }
+
+    private async Task<IReadOnlyList<ProgressEntry>> GetMetadataEntriesForSelectedRangeAsync()
+    {
+        var (startUtc, endUtc) = NotesPageViewModel.BuildUtcDateRange(ExportStartDatePicker.Date, ExportEndDatePicker.Date);
+        return await _progressTrackingService.GetEntriesInDateRangeAsync(startUtc, endUtc);
     }
 
     private static T ResolveService<T>() where T : notnull

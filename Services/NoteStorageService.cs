@@ -54,9 +54,10 @@ public sealed class NoteStorageService
             await _gate.WaitAsync();
             try
             {
-                return await Database.Table<SessionNote>()
+                var notes = await Database.Table<SessionNote>()
                     .OrderByDescending(n => n.SessionDateTicks)
                     .ToListAsync();
+                return SortBySessionDateDescending(notes);
             }
             finally { _gate.Release(); }
         }
@@ -76,10 +77,11 @@ public sealed class NoteStorageService
             await _gate.WaitAsync();
             try
             {
-                return await Database.Table<SessionNote>()
+                var notes = await Database.Table<SessionNote>()
                     .OrderByDescending(n => n.SessionDateTicks)
                     .Take(Math.Max(1, take))
                     .ToListAsync();
+                return SelectMostRecent(notes, take);
             }
             finally { _gate.Release(); }
         }
@@ -105,4 +107,18 @@ public sealed class NoteStorageService
 
     private SQLiteAsyncConnection Database =>
         _database ?? throw new InvalidOperationException("Database not initialized.");
+
+    public static IReadOnlyList<SessionNote> SortBySessionDateDescending(IEnumerable<SessionNote> notes)
+    {
+        return (notes ?? Array.Empty<SessionNote>())
+            .OrderByDescending(n => n.SessionDateTicks)
+            .ToList();
+    }
+
+    public static IReadOnlyList<SessionNote> SelectMostRecent(IEnumerable<SessionNote> notes, int take)
+    {
+        return SortBySessionDateDescending(notes)
+            .Take(Math.Max(1, take))
+            .ToList();
+    }
 }

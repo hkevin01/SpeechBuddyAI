@@ -19,7 +19,10 @@
 
             <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                 <Label Text="Export format" VerticalOptions="Center" />
-                <Picker x:Name="ExportFormatPicker" WidthRequest="180" SelectedIndex="0">
+                <Picker x:Name="ExportFormatPicker"
+                        WidthRequest="180"
+                        SelectedIndex="0"
+                        SelectedIndexChanged="OnExportFormatChanged">
                     <Picker.Items>
                         <x:String>Plain Text (.txt)</x:String>
                         <x:String>Markdown (.md)</x:String>
@@ -27,6 +30,23 @@
                     </Picker.Items>
                 </Picker>
             </HorizontalStackLayout>
+
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Export Metadata Window" FontAttributes="Bold" />
+                    <Label Text="Metadata summaries use entries from this date range." FontSize="12" TextColor="#666666" />
+                    <HorizontalStackLayout Spacing="10">
+                        <VerticalStackLayout>
+                            <Label Text="Start" FontSize="12" />
+                            <DatePicker x:Name="ExportStartDatePicker" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout>
+                            <Label Text="End" FontSize="12" />
+                            <DatePicker x:Name="ExportEndDatePicker" />
+                        </VerticalStackLayout>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
 
             <HorizontalStackLayout Spacing="10">
                 <Button Text="Export Latest Report"
