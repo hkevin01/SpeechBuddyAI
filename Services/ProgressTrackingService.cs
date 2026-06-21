@@ -1,5 +1,6 @@
 using SpeechBuddyAI.Database;
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Services.Storage;
 using SQLite;
 
 namespace SpeechBuddyAI.Services;
@@ -238,15 +239,21 @@ public class ProgressTrackingService
 
     private static async Task EnsureSchemaColumnsAsync(SQLiteAsyncConnection db)
     {
-        await TryAddColumnAsync(db, "ConfidenceScore", "REAL NOT NULL DEFAULT 0.0");
-        await TryAddColumnAsync(db, "ConfidenceBand", "TEXT NOT NULL DEFAULT 'Low'");
+        var tableInfo = await db.QueryAsync<TableInfoRow>("PRAGMA table_info(ProgressEntry);");
+        var existingColumns = tableInfo.Select(i => i.Name);
+        var commands = ProgressSchemaMigration.BuildMissingColumnCommands(existingColumns);
+
+        foreach (var command in commands)
+        {
+            await TryExecuteMigrationCommandAsync(db, command);
+        }
     }
 
-    private static async Task TryAddColumnAsync(SQLiteAsyncConnection db, string columnName, string definition)
+    private static async Task TryExecuteMigrationCommandAsync(SQLiteAsyncConnection db, string command)
     {
         try
         {
-            await db.ExecuteAsync($"ALTER TABLE ProgressEntry ADD COLUMN {columnName} {definition};");
+            await db.ExecuteAsync(command);
         }
         catch (SQLiteException ex) when (
             ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
@@ -254,5 +261,11 @@ public class ProgressTrackingService
         {
             // Existing databases may already include this column.
         }
+    }
+
+    private sealed class TableInfoRow
+    {
+        [Column("name")]
+        public string Name { get; init; } = string.Empty;
     }
 }

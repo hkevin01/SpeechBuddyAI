@@ -11,6 +11,7 @@
         <ShellContent Title="Practice" ContentTemplate="{DataTemplate pages:PracticePage}" />
         <ShellContent Title="Progress" ContentTemplate="{DataTemplate pages:ProgressPage}" />
         <ShellContent Title="Notes" ContentTemplate="{DataTemplate pages:NotesPage}" />
+        <ShellContent Title="Settings" ContentTemplate="{DataTemplate pages:SettingsPage}" />
     </TabBar>
 
 </Shell>

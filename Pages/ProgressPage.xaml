@@ -11,21 +11,43 @@
             <Frame BorderColor="#DDDDDD" Padding="10">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Score Trend (Recent Attempts)" FontAttributes="Bold" />
+                    <HorizontalStackLayout Spacing="14">
+                        <HorizontalStackLayout Spacing="4">
+                            <BoxView Color="#4C8EDA" WidthRequest="14" HeightRequest="10" />
+                            <Label Text="Overall" VerticalTextAlignment="Center" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="4">
+                            <BoxView Color="#2F9E44" WidthRequest="14" HeightRequest="10" />
+                            <Label Text="Confidence" VerticalTextAlignment="Center" />
+                        </HorizontalStackLayout>
+                    </HorizontalStackLayout>
                     <CollectionView x:Name="TrendCollection" HeightRequest="180">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,2">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
                                     <Label Text="{Binding AttemptIndex, StringFormat='#{0}'}" VerticalTextAlignment="Center" />
-                                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                        <BoxView Color="#4C8EDA"
-                                                HeightRequest="12"
-                                                WidthRequest="{Binding BarWidth}"
-                                                HorizontalOptions="Start" />
-                                        <Label Grid.Column="1"
-                                               Text="{Binding ScoreLabel}"
-                                               Margin="8,0,0,0"
-                                               VerticalTextAlignment="Center" />
-                                    </Grid>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                            <BoxView Color="#4C8EDA"
+                                                    HeightRequest="10"
+                                                    WidthRequest="{Binding BarWidth}"
+                                                    HorizontalOptions="Start" />
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding ScoreLabel}"
+                                                   Margin="8,0,0,0"
+                                                   VerticalTextAlignment="Center" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                            <BoxView Color="#2F9E44"
+                                                    HeightRequest="10"
+                                                    WidthRequest="{Binding ConfidenceBarWidth}"
+                                                    HorizontalOptions="Start" />
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding ConfidenceLabel}"
+                                                   Margin="8,0,0,0"
+                                                   VerticalTextAlignment="Center" />
+                                        </Grid>
+                                    </VerticalStackLayout>
                                 </Grid>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>

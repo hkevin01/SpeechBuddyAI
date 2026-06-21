@@ -20,11 +20,14 @@ public class TrendAnalysisService
             for (var i = 0; i < points.Length; i++)
             {
                 var score = Math.Max(0.0, Math.Min(1.0, points[i].OverallScore));
+                var confidence = Math.Max(0.0, Math.Min(1.0, points[i].ConfidenceScore));
                 result.Add(new TrendPoint
                 {
                     AttemptIndex = i + 1,
                     Score = score,
-                    BarWidth = 40 + (220 * score)
+                    BarWidth = 40 + (220 * score),
+                    ConfidenceScore = confidence,
+                    ConfidenceBarWidth = 40 + (220 * confidence)
                 });
             }
 

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SpeechBuddyAI.Pages.SettingsPage"
+             Title="Settings">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+            <Label Text="Clinician Confidence Settings" FontSize="22" FontAttributes="Bold" />
+            <Label Text="Tune confidence band thresholds used by scoring feedback." />
+
+            <Frame BorderColor="#DDDDDD" Padding="12">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Moderate threshold" FontAttributes="Bold" />
+                    <Label x:Name="ModerateValueLabel" Text="0.60" />
+                    <Slider x:Name="ModerateSlider"
+                            Minimum="0.20"
+                            Maximum="0.90"
+                            ValueChanged="OnSliderValueChanged" />
+
+                    <Label Text="High threshold" FontAttributes="Bold" />
+                    <Label x:Name="HighValueLabel" Text="0.80" />
+                    <Slider x:Name="HighSlider"
+                            Minimum="0.30"
+                            Maximum="0.98"
+                            ValueChanged="OnSliderValueChanged" />
+
+                    <HorizontalStackLayout Spacing="10">
+                        <Button Text="Save Thresholds"
+                                Clicked="OnSaveClicked"
+                                HorizontalOptions="Fill"
+                                WidthRequest="170" />
+                        <Button Text="Reset Defaults"
+                                Clicked="OnResetClicked"
+                                HorizontalOptions="Fill"
+                                WidthRequest="170" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label x:Name="StatusLabel" Text="Ready." FontAttributes="Italic" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

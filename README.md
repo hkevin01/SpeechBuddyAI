@@ -488,6 +488,8 @@ dotnet build
 - [x] M4: add offline-first adapter interface with fallback strategy
 - [x] M5: add clinician report and parent summary pipeline
 - [x] M5.1: add provider and confidence visibility in Practice and Progress UI
+- [x] M5.2: add clinician-tunable confidence thresholds in Settings
+- [x] M5.3: add lightweight tests for confidence and SQLite migration logic
 
 > [!IMPORTANT]
 > Favor backward-compatible output contracts in service responses so historical data and dashboard rendering remain stable across model and storage upgrades.

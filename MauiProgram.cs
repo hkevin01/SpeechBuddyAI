@@ -17,6 +17,11 @@ public static class MauiProgram
 
             builder.Services.AddSingleton<Services.SpeechScoring.ISpeechScoringAdapter, Services.SpeechScoring.OfflineSpeechScoringAdapter>();
             builder.Services.AddSingleton<Services.SpeechScoring.ISpeechScoringAdapter, Services.SpeechScoring.FallbackCloudSpeechScoringAdapter>();
+            builder.Services.AddSingleton<Services.Confidence.IKeyValueStore, Services.Confidence.MauiPreferencesKeyValueStore>();
+            builder.Services.AddSingleton<Services.Confidence.ConfidenceSettingsService>();
+            builder.Services.AddSingleton<Services.Confidence.IConfidenceThresholdProvider>(sp =>
+                sp.GetRequiredService<Services.Confidence.ConfidenceSettingsService>());
+            builder.Services.AddSingleton<Services.Confidence.ConfidenceCalculator>();
             builder.Services.AddSingleton<Services.AiSpeechService>();
             builder.Services.AddSingleton<Services.AiTextService>();
             builder.Services.AddSingleton<Services.ProgressTrackingService>();
