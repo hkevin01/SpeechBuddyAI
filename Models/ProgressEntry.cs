@@ -23,4 +23,6 @@ public class ProgressEntry
     public int TrialCount { get; set; }
     public string ErrorPattern { get; set; } = string.Empty;
     public string ScoringProvider { get; set; } = "unknown";
+    public double ConfidenceScore { get; set; }
+    public string ConfidenceBand { get; set; } = "Low";
 }

@@ -204,6 +204,7 @@ public class ProgressTrackingService
 
                 _database = new SQLiteAsyncConnection(DbConstants.DatabasePath, DbConstants.Flags);
                 await _database.CreateTableAsync<ProgressEntry>();
+                await EnsureSchemaColumnsAsync(_database);
                 _isInitialized = true;
             }
             finally
@@ -234,4 +235,24 @@ public class ProgressTrackingService
 
     private SQLiteAsyncConnection Database =>
         _database ?? throw new InvalidOperationException("Database is not initialized.");
+
+    private static async Task EnsureSchemaColumnsAsync(SQLiteAsyncConnection db)
+    {
+        await TryAddColumnAsync(db, "ConfidenceScore", "REAL NOT NULL DEFAULT 0.0");
+        await TryAddColumnAsync(db, "ConfidenceBand", "TEXT NOT NULL DEFAULT 'Low'");
+    }
+
+    private static async Task TryAddColumnAsync(SQLiteAsyncConnection db, string columnName, string definition)
+    {
+        try
+        {
+            await db.ExecuteAsync($"ALTER TABLE ProgressEntry ADD COLUMN {columnName} {definition};");
+        }
+        catch (SQLiteException ex) when (
+            ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+        {
+            // Existing databases may already include this column.
+        }
+    }
 }

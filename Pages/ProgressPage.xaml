@@ -48,6 +48,8 @@
                                 <Label Text="{Binding FluencyScore, StringFormat='Fluency: {0:P0}'}" />
                                 <Label Text="{Binding ConsistencyScore, StringFormat='Consistency: {0:P0}'}" />
                                 <Label Text="{Binding OverallScore, StringFormat='Overall: {0:P0}'}" FontAttributes="Bold" />
+                                <Label Text="{Binding ConfidenceScore, StringFormat='Confidence: {0:P0}'}" />
+                                <Label Text="{Binding ConfidenceBand, StringFormat='Confidence Band: {0}'}" />
                                 <Label Text="{Binding ErrorPattern, StringFormat='Pattern: {0}'}" />
                                 <Label Text="{Binding ScoringProvider, StringFormat='Provider: {0}'}" />
                             </VerticalStackLayout>

@@ -3,8 +3,8 @@
 ![Platform](https://img.shields.io/badge/platform-.NET%20MAUI-0b7285)
 ![Language](https://img.shields.io/badge/language-C%23-1f6feb)
 ![UI](https://img.shields.io/badge/ui-XAML-7f5af0)
-![Persistence](https://img.shields.io/badge/persistence-M1%20JSON%20store-f59f00)
-![Roadmap](https://img.shields.io/badge/roadmap-M1%20implemented-1e7f3f)
+![Persistence](https://img.shields.io/badge/persistence-SQLite%20local%20store-2b8a3e)
+![Roadmap](https://img.shields.io/badge/roadmap-M1--M5%20baseline%20implemented-1e7f3f)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 SpeechBuddyAI is a speech therapy companion focused on practical articulation workflows, transparent score components, and session-to-session progress tracking that can be reviewed by clinicians and families. The project is intentionally designed to avoid black-box behavior in early milestones, because trust and interpretability are central in speech practice tools.
@@ -34,7 +34,7 @@ SpeechBuddyAI supports a feedback loop where a learner practices a target sound,
 The app currently demonstrates a complete vertical slice for M1. A user can enter a target sound and transcript, run scoring, see phoneme/fluency/consistency components, and persist the attempt. That same data appears in the progress dashboard so the practice loop produces longitudinal records instead of one-off scores.
 
 > [!NOTE]
-> M1 persistence is currently app-local JSON storage. SQLite remains a planned upgrade for subsequent milestones.
+> Persistence now uses app-local SQLite. Baseline roadmap features through M5 are implemented, including trend analysis, assignment generation, fallback scoring adapters, and report generation.
 
 ## Fast Comparison Tables (Use/Do Not Use)
 
@@ -86,7 +86,7 @@ These tables are intentionally near the top so new contributors can quickly pick
 | <sub>3</sub> | <sub>Cloud sync DB</sub> | <sub>Offline-only deployments</sub> | <sub>Add after local model and privacy policy stabilize</sub> |
 
 > [!IMPORTANT]
-> Keep README claims aligned with code reality. M1 currently uses JSON persistence, not SQLite runtime persistence.
+> Keep README claims aligned with code reality. Runtime persistence is SQLite-based, including schema-safe column migration at service initialization.
 
 ## Current Milestone Status
 
@@ -109,7 +109,7 @@ flowchart TD
     C --> D[Compute phoneme, fluency, consistency]
     D --> E[Compose overall weighted score]
     E --> F[Build ProgressEntry and infer error pattern]
-    F --> G[ProgressTrackingService writes JSON]
+    F --> G[ProgressTrackingService writes SQLite]
     G --> H[ProgressPage reads and renders history]
 ```
 
@@ -157,7 +157,7 @@ SpeechBuddyAI uses .NET MAUI and C# to keep mobile and desktop targets in one co
 | --- | --- | --- | --- | --- |
 | <sub>1</sub> | <sub>UI Shell</sub> | <sub>.NET MAUI Shell with tab navigation</sub> | <sub>Same plus richer state and chart controls</sub> | <sub>Maintains cross-platform consistency</sub> |
 | <sub>2</sub> | <sub>Scoring Service</sub> | <sub>AiSpeechService with transparent formulas</sub> | <sub>Adapter-friendly offline and online models</sub> | <sub>Model upgrades without UI rewrite</sub> |
-| <sub>3</sub> | <sub>Persistence</sub> | <sub>JSON app-local file in M1</sub> | <sub>SQLite for richer queries and analytics</sub> | <sub>Enables deeper trend views and reporting</sub> |
+| <sub>3</sub> | <sub>Persistence</sub> | <sub>SQLite app-local store</sub> | <sub>Schema-safe migrations and richer analytics</sub> | <sub>Enables deeper trend views and reporting</sub> |
 | <sub>4</sub> | <sub>Practice Content</sub> | <sub>AiTextService generated words</sub> | <sub>Constraint-aware personalized assignments</sub> | <sub>Improves carryover and relevance</sub> |
 
 > [!TIP]
@@ -171,7 +171,7 @@ flowchart LR
     B --> C[AiSpeechService]
     B --> D[AiTextService]
     B --> E[ProgressTrackingService]
-    E --> F[(JSON persistence in M1)]
+    E --> F[(SQLite persistence)]
     C --> G[Scoring components]
     G --> E
 ```
@@ -309,7 +309,7 @@ The project roadmap intentionally prioritizes free and public resources so the s
 
 | <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Current Status</sub> |
 | --- | --- | --- | --- | --- |
-| <sub>1</sub> | <sub>evaluateAttempt</sub> | <sub>targetSound, transcript</sub> | <sub>phoneme, fluency, consistency, overall, errorPattern</sub> | <sub>Implemented in M1</sub> |
+| <sub>1</sub> | <sub>evaluateAttempt</sub> | <sub>targetSound, transcript</sub> | <sub>phoneme, fluency, consistency, overall, errorPattern, provider, confidence</sub> | <sub>Implemented through M5.1</sub> |
 | <sub>2</sub> | <sub>persistAttempt</sub> | <sub>ProgressEntry payload</sub> | <sub>stored entry id and timestamp</sub> | <sub>Implemented in M1</sub> |
 | <sub>3</sub> | <sub>listAttempts</sub> | <sub>optional target filter</sub> | <sub>ordered attempt history</sub> | <sub>Implemented in M1</sub> |
 
@@ -321,14 +321,14 @@ The project roadmap intentionally prioritizes free and public resources so the s
 | <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Current Status</sub> |
 | --- | --- | --- | --- | --- |
 | <sub>1</sub> | <sub>generatePracticeWords</sub> | <sub>targetSound</sub> | <sub>word list for drills</sub> | <sub>Implemented baseline</sub> |
-| <sub>2</sub> | <sub>generateAssignments</sub> | <sub>historical weak patterns</sub> | <sub>home plan with rationale</sub> | <sub>Planned M2</sub> |
+| <sub>2</sub> | <sub>generateAssignments</sub> | <sub>historical weak patterns</sub> | <sub>home plan with rationale</sub> | <sub>Implemented in M2 baseline</sub> |
 
 ### 3) Notes and Reporting
 
 | <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Current Status</sub> |
 | --- | --- | --- | --- | --- |
-| <sub>1</sub> | <sub>summarizeSessionNotes</sub> | <sub>free text notes</sub> | <sub>structured summary</sub> | <sub>Planned M5</sub> |
-| <sub>2</sub> | <sub>exportReport</sub> | <sub>session id and format</sub> | <sub>shareable artifact</sub> | <sub>Planned M5</sub> |
+| <sub>1</sub> | <sub>summarizeSessionNotes</sub> | <sub>free text notes</sub> | <sub>structured summary</sub> | <sub>Implemented in M5 baseline</sub> |
+| <sub>2</sub> | <sub>exportReport</sub> | <sub>session id and format</sub> | <sub>shareable artifact</sub> | <sub>Implemented in M5 baseline</sub> |
 
 </details>
 
@@ -339,6 +339,11 @@ The project roadmap intentionally prioritizes free and public resources so the s
 {
   "targetSound": "initial r",
   "transcript": "rain rabbit",
+    "provider": "offline-heuristic",
+    "confidence": {
+        "score": 0.84,
+        "band": "High"
+    },
   "scores": {
     "phonemeScore": 0.90,
     "fluencyScore": 0.73,
@@ -477,11 +482,12 @@ dotnet build
 
 ### Next Milestone-Focused Steps
 
-- [ ] M1.1: move JSON persistence to SQLite while preserving output contracts
-- [ ] M2: add assignment generation from weak pattern history
-- [ ] M3: add charted trend analysis and score trajectory interpretation
-- [ ] M4: add offline-first adapter interface with fallback strategy
-- [ ] M5: add clinician report and parent summary pipeline
+- [x] M1.1: move JSON persistence to SQLite while preserving output contracts
+- [x] M2: add assignment generation from weak pattern history
+- [x] M3: add charted trend analysis and score trajectory interpretation
+- [x] M4: add offline-first adapter interface with fallback strategy
+- [x] M5: add clinician report and parent summary pipeline
+- [x] M5.1: add provider and confidence visibility in Practice and Progress UI
 
 > [!IMPORTANT]
 > Favor backward-compatible output contracts in service responses so historical data and dashboard rendering remain stable across model and storage upgrades.

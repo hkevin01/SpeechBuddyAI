@@ -60,6 +60,8 @@ public class AiSpeechService
             var consistency = ComputeConsistencyScore(priorEntries);
             var adapterResult = await TryScoreWithFallbackAsync(normalizedTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
+            var confidenceScore = ComputeConfidenceScore(scores, normalizedTranscript, priorEntries, adapterResult.Provider);
+            var confidenceBand = ComputeConfidenceBand(confidenceScore);
 
             var trialCount = priorEntries.Count + 1;
             var entry = new ProgressEntry
@@ -74,7 +76,9 @@ public class AiSpeechService
                 OverallScore = scores.OverallScore,
                 TrialCount = trialCount,
                 ErrorPattern = InferErrorPattern(scores),
-                ScoringProvider = adapterResult.Provider
+                ScoringProvider = adapterResult.Provider,
+                ConfidenceScore = confidenceScore,
+                ConfidenceBand = confidenceBand
             };
 
             await _progressTrackingService.AddEntryAsync(entry);
@@ -82,7 +86,10 @@ public class AiSpeechService
             return new PracticeAttemptResult
             {
                 Scores = scores,
-                Entry = entry
+                Entry = entry,
+                Provider = adapterResult.Provider,
+                ConfidenceScore = confidenceScore,
+                ConfidenceBand = confidenceBand
             };
         }
         catch (Exception ex) when (ex is not ArgumentException)
@@ -189,6 +196,50 @@ public class AiSpeechService
         }
 
         return "none";
+    }
+
+    private static double ComputeConfidenceScore(
+        ScoreComponents scores,
+        string transcript,
+        IReadOnlyList<ProgressEntry> priorEntries,
+        string provider)
+    {
+        var normalizedTranscript = (transcript ?? string.Empty).Trim();
+        var tokenCount = normalizedTranscript
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Length;
+
+        var transcriptSignal = Math.Min(tokenCount, 8) / 8.0;
+        var providerBonus = provider.Contains("offline", StringComparison.OrdinalIgnoreCase) ? 0.08 : 0.03;
+        var historySignal = Math.Min(priorEntries.Count, 10) / 10.0;
+        var scoreSpread = Math.Abs(scores.PhonemeScore - scores.FluencyScore);
+        var spreadPenalty = Math.Min(scoreSpread, 0.45);
+
+        var rawScore =
+            (0.45 * scores.OverallScore) +
+            (0.2 * scores.ConsistencyScore) +
+            (0.2 * transcriptSignal) +
+            (0.1 * historySignal) +
+            providerBonus -
+            (0.15 * spreadPenalty);
+
+        return Clamp(rawScore);
+    }
+
+    private static string ComputeConfidenceBand(double confidenceScore)
+    {
+        var score = Clamp(confidenceScore);
+        if (score >= 0.8)
+        {
+            return "High";
+        }
+
+        if (score >= 0.6)
+        {
+            return "Moderate";
+        }
+
+        return "Low";
     }
 
     private static double Clamp(double value)

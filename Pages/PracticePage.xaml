@@ -34,6 +34,8 @@
                     <Label x:Name="FluencyScoreLabel" Text="Fluency: -" />
                     <Label x:Name="ConsistencyScoreLabel" Text="Consistency: -" />
                     <Label x:Name="OverallScoreLabel" Text="Overall: -" FontAttributes="Bold" />
+                    <Label x:Name="ProviderLabel" Text="Provider: -" />
+                    <Label x:Name="ConfidenceLabel" Text="Confidence: -" />
                 </VerticalStackLayout>
             </Frame>
 

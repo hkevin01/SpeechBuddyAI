@@ -35,6 +35,8 @@ public partial class PracticePage : ContentPage
             FluencyScoreLabel.Text = $"Fluency: {result.Scores.FluencyScore:P0}";
             ConsistencyScoreLabel.Text = $"Consistency: {result.Scores.ConsistencyScore:P0}";
             OverallScoreLabel.Text = $"Overall: {result.Scores.OverallScore:P0}";
+            ProviderLabel.Text = $"Provider: {result.Provider}";
+            ConfidenceLabel.Text = $"Confidence: {result.ConfidenceBand} ({result.ConfidenceScore:P0})";
 
             StatusLabel.Text =
                 $"Saved trial {result.Entry.TrialCount} for '{result.Entry.TargetSound}' (pattern: {result.Entry.ErrorPattern}).";
