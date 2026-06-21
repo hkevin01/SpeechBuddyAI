@@ -1,0 +1,57 @@
+# Build artifacts
+bin/
+obj/
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+
+# Visual Studio and VS Code
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET
+*.nupkg
+*.snupkg
+*.cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# MAUI / platform outputs
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Apple
+DerivedData/
+*.xcworkspace
+*.xcuserdata
+*.xcuserstate
+
+# Android / Java
+.gradle/
+local.properties
+captures/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

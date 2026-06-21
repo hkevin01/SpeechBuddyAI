@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SpeechBuddyAI.Pages.HomePage"
+             Title="Home">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+            <Label Text="SpeechBuddy AI" FontSize="28" FontAttributes="Bold" />
+            <Label Text="Therapist companion for articulation practice, progress tracking, and smart notes." />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

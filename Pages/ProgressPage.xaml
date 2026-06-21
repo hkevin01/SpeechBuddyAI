@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SpeechBuddyAI.Pages.ProgressPage"
+             Title="Progress">
+    <VerticalStackLayout Padding="20" Spacing="10">
+        <Label Text="Progress Dashboard" FontSize="22" FontAttributes="Bold" />
+        <Label Text="Charts and session metrics will appear here." />
+    </VerticalStackLayout>
+</ContentPage>
