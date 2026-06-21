@@ -1,7 +1,35 @@
 name: Feature request
 description: Suggest an idea for this project
-labels: [enhancement]
+title: "[Feature]: "
+labels: [type:feature, status:triage, domain:therapy-core]
 body:
+  - type: dropdown
+    id: roadmap_milestone
+    attributes:
+      label: Target roadmap milestone
+      options:
+        - M1 - Baseline Practice Loop
+        - M2 - Home Assignment Generator
+        - M3 - Longitudinal Dashboard
+        - M4 - Hybrid Speech Pipeline
+        - M5 - Clinician Notes and Reports
+        - Future milestone
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impacted_domain
+    attributes:
+      label: Primary domain
+      options:
+        - therapy-core
+        - ai-integration
+        - privacy-and-safety
+        - research-sync
+        - docs
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
@@ -13,5 +41,17 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: done_when
+    attributes:
+      label: Done when
+      description: List acceptance criteria for implementation.
+      placeholder: |
+        - [ ] User-visible behavior is implemented
+        - [ ] Tests or validation steps are documented
+        - [ ] README/docs updated if required
     validations:
       required: true

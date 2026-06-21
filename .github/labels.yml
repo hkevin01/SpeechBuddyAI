@@ -1,0 +1,95 @@
+- name: "type:bug"
+  color: "d73a4a"
+  description: "Something is broken and needs a fix"
+
+- name: "type:feature"
+  color: "0e8a16"
+  description: "New feature request"
+
+- name: "type:task"
+  color: "1d76db"
+  description: "Planned implementation task"
+
+- name: "type:research"
+  color: "5319e7"
+  description: "Research, evidence gathering, or benchmark tracking"
+
+- name: "type:docs"
+  color: "0075ca"
+  description: "Documentation and README updates"
+
+- name: "status:triage"
+  color: "fbca04"
+  description: "Needs initial triage"
+
+- name: "status:ready"
+  color: "0e8a16"
+  description: "Ready for implementation"
+
+- name: "status:in-progress"
+  color: "0052cc"
+  description: "Actively being worked on"
+
+- name: "status:blocked"
+  color: "b60205"
+  description: "Blocked by dependency or external factor"
+
+- name: "status:needs-validation"
+  color: "c2e0c6"
+  description: "Needs verification or acceptance testing"
+
+- name: "priority:p0-critical"
+  color: "b60205"
+  description: "Critical priority"
+
+- name: "priority:p1-high"
+  color: "d93f0b"
+  description: "High priority"
+
+- name: "priority:p2-medium"
+  color: "fbca04"
+  description: "Medium priority"
+
+- name: "priority:p3-low"
+  color: "0e8a16"
+  description: "Low priority"
+
+- name: "domain:therapy-core"
+  color: "0052cc"
+  description: "Core therapy loop and scoring behavior"
+
+- name: "domain:ai-integration"
+  color: "5319e7"
+  description: "AI adapters, prompts, and model integration"
+
+- name: "domain:privacy-and-safety"
+  color: "b60205"
+  description: "Privacy, safety, and consent related changes"
+
+- name: "domain:research-sync"
+  color: "6f42c1"
+  description: "Research tracking and evidence-driven updates"
+
+- name: "domain:docs"
+  color: "0075ca"
+  description: "Project documentation and guides"
+
+- name: "roadmap:m1-baseline-practice-loop"
+  color: "bfd4f2"
+  description: "M1 - Baseline Practice Loop"
+
+- name: "roadmap:m2-home-assignment-generator"
+  color: "bfdadc"
+  description: "M2 - Home Assignment Generator"
+
+- name: "roadmap:m3-longitudinal-dashboard"
+  color: "c5def5"
+  description: "M3 - Longitudinal Dashboard"
+
+- name: "roadmap:m4-hybrid-speech-pipeline"
+  color: "d4c5f9"
+  description: "M4 - Hybrid Speech Pipeline"
+
+- name: "roadmap:m5-clinician-notes-reports"
+  color: "f9d0c4"
+  description: "M5 - Clinician Notes and Reports"

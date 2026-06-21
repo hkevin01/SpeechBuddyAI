@@ -1,7 +1,36 @@
 name: Bug report
 description: File a bug report to help us improve
-labels: [bug]
+title: "[Bug]: "
+labels: [type:bug, status:triage, domain:therapy-core]
 body:
+  - type: dropdown
+    id: roadmap_milestone
+    attributes:
+      label: Roadmap milestone
+      description: Which roadmap phase is impacted?
+      options:
+        - M1 - Baseline Practice Loop
+        - M2 - Home Assignment Generator
+        - M3 - Longitudinal Dashboard
+        - M4 - Hybrid Speech Pipeline
+        - M5 - Clinician Notes and Reports
+        - Cross-milestone
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impacted_domain
+    attributes:
+      label: Impacted domain
+      options:
+        - therapy-core
+        - ai-integration
+        - privacy-and-safety
+        - research-sync
+        - docs
+    validations:
+      required: true
+
   - type: textarea
     id: summary
     attributes:
@@ -21,3 +50,13 @@ body:
       label: Expected behavior
     validations:
       required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Suggested acceptance criteria
+      description: What should be true when this bug is resolved?
+      placeholder: |
+        - [ ] Repro case no longer fails
+        - [ ] Existing related behavior still works
+        - [ ] Regression test added or updated

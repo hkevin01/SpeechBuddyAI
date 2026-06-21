@@ -1,0 +1,67 @@
+name: Roadmap execution task
+description: Track an implementation task tied to the SpeechBuddyAI roadmap
+title: "[Roadmap]: "
+labels: [type:task, status:ready, domain:therapy-core]
+body:
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone
+      options:
+        - M1 - Baseline Practice Loop
+        - M2 - Home Assignment Generator
+        - M3 - Longitudinal Dashboard
+        - M4 - Hybrid Speech Pipeline
+        - M5 - Clinician Notes and Reports
+    validations:
+      required: true
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Workstream
+      options:
+        - therapy-core
+        - ai-integration
+        - privacy-and-safety
+        - research-sync
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What outcome should this task produce?
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: Implementation plan
+      description: Describe intended technical steps.
+      placeholder: |
+        1. Add/update service interface
+        2. Implement provider adapter
+        3. Add tests or validation steps
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Criteria 1
+        - [ ] Criteria 2
+        - [ ] Criteria 3
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and blockers
+      description: Link issues/PRs or list external dependencies.

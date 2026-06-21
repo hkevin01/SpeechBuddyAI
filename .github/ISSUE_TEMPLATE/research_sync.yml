@@ -1,0 +1,57 @@
+name: Research sync and citation update
+description: Track CAPT/speech-therapy paper reviews and evidence-backed implementation ideas
+title: "[Research]: "
+labels: [type:research, domain:research-sync, status:ready]
+body:
+  - type: input
+    id: source_link
+    attributes:
+      label: Primary source URL
+      description: arXiv, journal, benchmark, or project link
+      placeholder: https://arxiv.org/abs/...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: roadmap_milestone
+    attributes:
+      label: Related roadmap milestone
+      options:
+        - M1 - Baseline Practice Loop
+        - M2 - Home Assignment Generator
+        - M3 - Longitudinal Dashboard
+        - M4 - Hybrid Speech Pipeline
+        - M5 - Clinician Notes and Reports
+        - Cross-milestone
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Key findings summary
+      description: What did you learn and why is it relevant?
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_impact
+    attributes:
+      label: Implementation impact
+      description: What should change in the roadmap, code, or evaluation plan?
+      placeholder: |
+        - Proposed code change
+        - Proposed metric change
+        - Proposed documentation update
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: Validation plan
+      description: How will the team verify this change is useful?
+      placeholder: |
+        - Dataset/benchmark to use
+        - Success metric
+        - Risks and fallback plan
