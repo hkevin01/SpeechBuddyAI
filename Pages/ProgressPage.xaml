@@ -3,29 +3,58 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SpeechBuddyAI.Pages.ProgressPage"
              Title="Progress">
-    <Grid Padding="20" RowDefinitions="Auto,*" RowSpacing="10">
-        <Label Text="Progress Dashboard" FontSize="22" FontAttributes="Bold" Grid.Row="0" />
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+            <Label Text="Progress Dashboard" FontSize="22" FontAttributes="Bold" />
+            <Label x:Name="TrajectoryLabel" Text="Trajectory not available yet." />
 
-        <CollectionView x:Name="ProgressCollection" Grid.Row="1">
-            <CollectionView.EmptyView>
-                <Label Text="No attempts saved yet. Score an attempt in Practice." />
-            </CollectionView.EmptyView>
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Frame Margin="0,0,0,10" Padding="10" BorderColor="#DDDDDD">
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="{Binding TargetSound, StringFormat='Target: {0}'}" FontAttributes="Bold" />
-                            <Label Text="{Binding Timestamp, StringFormat='When: {0:yyyy-MM-dd HH:mm}'}" />
-                            <Label Text="{Binding TrialCount, StringFormat='Trial: {0}'}" />
-                            <Label Text="{Binding PhonemeScore, StringFormat='Phoneme: {0:P0}'}" />
-                            <Label Text="{Binding FluencyScore, StringFormat='Fluency: {0:P0}'}" />
-                            <Label Text="{Binding ConsistencyScore, StringFormat='Consistency: {0:P0}'}" />
-                            <Label Text="{Binding OverallScore, StringFormat='Overall: {0:P0}'}" FontAttributes="Bold" />
-                            <Label Text="{Binding ErrorPattern, StringFormat='Pattern: {0}'}" />
-                        </VerticalStackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-    </Grid>
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Score Trend (Recent Attempts)" FontAttributes="Bold" />
+                    <CollectionView x:Name="TrendCollection" HeightRequest="180">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,2">
+                                    <Label Text="{Binding AttemptIndex, StringFormat='#{0}'}" VerticalTextAlignment="Center" />
+                                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                        <BoxView Color="#4C8EDA"
+                                                HeightRequest="12"
+                                                WidthRequest="{Binding BarWidth}"
+                                                HorizontalOptions="Start" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding ScoreLabel}"
+                                               Margin="8,0,0,0"
+                                               VerticalTextAlignment="Center" />
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <CollectionView x:Name="ProgressCollection">
+                <CollectionView.EmptyView>
+                    <Label Text="No attempts saved yet. Score an attempt in Practice." />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="0,0,0,10" Padding="10" BorderColor="#DDDDDD">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding TargetSound, StringFormat='Target: {0}'}" FontAttributes="Bold" />
+                                <Label Text="{Binding Timestamp, StringFormat='When: {0:yyyy-MM-dd HH:mm}'}" />
+                                <Label Text="{Binding TrialCount, StringFormat='Trial: {0}'}" />
+                                <Label Text="{Binding PhonemeScore, StringFormat='Phoneme: {0:P0}'}" />
+                                <Label Text="{Binding FluencyScore, StringFormat='Fluency: {0:P0}'}" />
+                                <Label Text="{Binding ConsistencyScore, StringFormat='Consistency: {0:P0}'}" />
+                                <Label Text="{Binding OverallScore, StringFormat='Overall: {0:P0}'}" FontAttributes="Bold" />
+                                <Label Text="{Binding ErrorPattern, StringFormat='Pattern: {0}'}" />
+                                <Label Text="{Binding ScoringProvider, StringFormat='Provider: {0}'}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

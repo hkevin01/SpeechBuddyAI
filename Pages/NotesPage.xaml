@@ -3,9 +3,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SpeechBuddyAI.Pages.NotesPage"
              Title="Notes">
-    <VerticalStackLayout Padding="20" Spacing="10">
-        <Label Text="Session Notes" FontSize="22" FontAttributes="Bold" />
-        <Editor Placeholder="Type or dictate your note here..." HeightRequest="180" />
-        <Button Text="Summarize to SOAP" />
-    </VerticalStackLayout>
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="10">
+            <Label Text="Session Notes" FontSize="22" FontAttributes="Bold" />
+            <Editor x:Name="RawNoteEditor" Placeholder="Type or dictate your note here..." HeightRequest="180" />
+
+            <Button Text="Generate Clinician + Parent Summaries"
+                    Clicked="OnGenerateSummariesClicked" />
+
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Clinician SOAP Summary" FontAttributes="Bold" />
+                    <Label x:Name="SoapSummaryLabel" Text="No summary generated yet." />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Parent-Friendly Summary" FontAttributes="Bold" />
+                    <Label x:Name="ParentSummaryLabel" Text="No summary generated yet." />
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

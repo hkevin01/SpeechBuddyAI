@@ -1,20 +1,32 @@
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Services.SpeechScoring;
 
 namespace SpeechBuddyAI.Services;
 
 public class AiSpeechService
 {
     private readonly ProgressTrackingService _progressTrackingService;
+    private readonly IReadOnlyList<ISpeechScoringAdapter> _scoringAdapters;
 
-    public AiSpeechService(ProgressTrackingService progressTrackingService)
+    public AiSpeechService(
+        ProgressTrackingService progressTrackingService,
+        IEnumerable<ISpeechScoringAdapter> scoringAdapters)
     {
         _progressTrackingService = progressTrackingService;
+        _scoringAdapters = scoringAdapters
+            .OrderBy(a => a.Priority)
+            .ToArray();
+
+        if (_scoringAdapters.Count == 0)
+        {
+            throw new InvalidOperationException("No speech scoring adapters were registered.");
+        }
     }
 
-    public Task<double> ScorePhonemeAsync(string expectedPhoneme, string transcript)
+    public async Task<double> ScorePhonemeAsync(string expectedPhoneme, string transcript)
     {
-        var scores = ComputeScoreComponents(expectedPhoneme, transcript, 0.5);
-        return Task.FromResult(scores.PhonemeScore);
+        var result = await TryScoreWithFallbackAsync(expectedPhoneme, transcript, Array.Empty<ProgressEntry>());
+        return result.PhonemeScore;
     }
 
     public async Task<PracticeAttemptResult> EvaluateAndPersistAttemptAsync(string targetSound, string transcript)
@@ -29,12 +41,13 @@ public class AiSpeechService
 
         var priorEntries = await _progressTrackingService.GetEntriesForSoundAsync(normalizedTarget);
         var consistency = ComputeConsistencyScore(priorEntries);
-        var scores = ComputeScoreComponents(normalizedTarget, normalizedTranscript, consistency);
+        var adapterResult = await TryScoreWithFallbackAsync(normalizedTarget, normalizedTranscript, priorEntries);
+        var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
 
         var trialCount = priorEntries.Count + 1;
         var entry = new ProgressEntry
         {
-            Timestamp = DateTimeOffset.UtcNow,
+            Timestamp = DateTime.UtcNow,
             TargetSound = normalizedTarget,
             Transcript = normalizedTranscript,
             AccuracyScore = scores.OverallScore,
@@ -43,7 +56,8 @@ public class AiSpeechService
             ConsistencyScore = scores.ConsistencyScore,
             OverallScore = scores.OverallScore,
             TrialCount = trialCount,
-            ErrorPattern = InferErrorPattern(scores)
+            ErrorPattern = InferErrorPattern(scores),
+            ScoringProvider = adapterResult.Provider
         };
 
         await _progressTrackingService.AddEntryAsync(entry);
@@ -55,27 +69,42 @@ public class AiSpeechService
         };
     }
 
-    private static ScoreComponents ComputeScoreComponents(string expectedPhoneme, string transcript, double consistency)
+    private async Task<AdapterScoreResult> TryScoreWithFallbackAsync(
+        string targetSound,
+        string transcript,
+        IReadOnlyList<ProgressEntry> priorEntries)
     {
-        var normalizedExpected = expectedPhoneme.Trim().ToLowerInvariant();
-        var normalizedTranscript = transcript.Trim().ToLowerInvariant();
+        Exception? lastException = null;
 
-        var phoneme = normalizedTranscript.Contains(normalizedExpected, StringComparison.Ordinal)
-            ? 0.9
-            : 0.35;
+        foreach (var adapter in _scoringAdapters)
+        {
+            try
+            {
+                return await adapter.ScoreAsync(targetSound, transcript, priorEntries);
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+            }
+        }
 
-        var expectedLength = Math.Max(1, normalizedExpected.Length);
-        var transcriptLength = Math.Max(1, normalizedTranscript.Length);
-        var ratio = Math.Min(expectedLength, transcriptLength) / (double)Math.Max(expectedLength, transcriptLength);
-        var fluency = Clamp(0.45 + 0.5 * ratio);
+        throw new InvalidOperationException(
+            "No scoring adapter produced a valid score.",
+            lastException);
+    }
 
-        var overall = Clamp(0.6 * phoneme + 0.25 * fluency + 0.15 * consistency);
+    private static ScoreComponents ComposeScoreComponents(double phonemeScore, double fluencyScore, double consistency)
+    {
+        var phoneme = Clamp(phonemeScore);
+        var fluency = Clamp(fluencyScore);
+        var consistencyScore = Clamp(consistency);
+        var overall = Clamp(0.6 * phoneme + 0.25 * fluency + 0.15 * consistencyScore);
 
         return new ScoreComponents
         {
             PhonemeScore = phoneme,
             FluencyScore = fluency,
-            ConsistencyScore = consistency,
+            ConsistencyScore = consistencyScore,
             OverallScore = overall
         };
     }

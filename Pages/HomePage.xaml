@@ -7,6 +7,18 @@
         <VerticalStackLayout Padding="20" Spacing="12">
             <Label Text="SpeechBuddy AI" FontSize="28" FontAttributes="Bold" />
             <Label Text="Therapist companion for articulation practice, progress tracking, and smart notes." />
+
+            <Frame BorderColor="#DDDDDD" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="M2 Home Assignment" FontAttributes="Bold" />
+                    <Button Text="Generate Assignment from Weak Patterns"
+                            Clicked="OnGenerateAssignmentClicked" />
+                    <Label x:Name="AssignmentTitleLabel" Text="No assignment generated yet." FontAttributes="Bold" />
+                    <Label x:Name="AssignmentRationaleLabel" Text="" />
+                    <Label x:Name="AssignmentTargetsLabel" Text="" />
+                    <Label x:Name="AssignmentWordsLabel" Text="" />
+                </VerticalStackLayout>
+            </Frame>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

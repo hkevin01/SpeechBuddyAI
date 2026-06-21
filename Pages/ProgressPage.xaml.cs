@@ -5,17 +5,25 @@ namespace SpeechBuddyAI.Pages;
 public partial class ProgressPage : ContentPage
 {
     private readonly ProgressTrackingService _progressTrackingService;
+    private readonly TrendAnalysisService _trendAnalysisService;
 
     public ProgressPage()
     {
         InitializeComponent();
         _progressTrackingService = ResolveService<ProgressTrackingService>();
+        _trendAnalysisService = ResolveService<TrendAnalysisService>();
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        ProgressCollection.ItemsSource = await _progressTrackingService.GetEntriesAsync();
+
+        var entries = await _progressTrackingService.GetEntriesAsync();
+        ProgressCollection.ItemsSource = entries;
+
+        var trendPoints = _trendAnalysisService.BuildTrendPoints(entries, 12);
+        TrendCollection.ItemsSource = trendPoints;
+        TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(entries);
     }
 
     private static T ResolveService<T>() where T : notnull

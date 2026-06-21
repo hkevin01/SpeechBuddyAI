@@ -1,18 +1,17 @@
+using SpeechBuddyAI.Database;
 using SpeechBuddyAI.Models;
-using System.Text.Json;
+using SQLite;
 
 namespace SpeechBuddyAI.Services;
 
 public class ProgressTrackingService
 {
-    private readonly List<ProgressEntry> _entries = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly string _storagePath;
-    private bool _isLoaded;
+    private SQLiteAsyncConnection? _database;
+    private bool _isInitialized;
 
     public ProgressTrackingService()
     {
-        _storagePath = Path.Combine(FileSystem.AppDataDirectory, "progress_entries.json");
     }
 
     public Task AddEntryAsync(ProgressEntry entry)
@@ -22,13 +21,13 @@ public class ProgressTrackingService
 
     public async Task<IReadOnlyList<ProgressEntry>> GetEntriesAsync()
     {
-        await EnsureLoadedAsync();
+        await EnsureInitializedAsync();
         await _gate.WaitAsync();
         try
         {
-            return _entries
+            return await Database.Table<ProgressEntry>()
                 .OrderByDescending(e => e.Timestamp)
-                .ToArray();
+                .ToListAsync();
         }
         finally
         {
@@ -38,16 +37,61 @@ public class ProgressTrackingService
 
     public async Task<IReadOnlyList<ProgressEntry>> GetEntriesForSoundAsync(string targetSound)
     {
-        await EnsureLoadedAsync();
+        await EnsureInitializedAsync();
         var normalizedTarget = (targetSound ?? string.Empty).Trim().ToLowerInvariant();
 
         await _gate.WaitAsync();
         try
         {
-            return _entries
+            var all = await Database.Table<ProgressEntry>().ToListAsync();
+            return all
                 .Where(e => e.TargetSound.Trim().ToLowerInvariant() == normalizedTarget)
                 .OrderBy(e => e.Timestamp)
-                .ToArray();
+                .ToList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<ProgressEntry>> GetWeakestEntriesAsync(int take = 5)
+    {
+        await EnsureInitializedAsync();
+
+        await _gate.WaitAsync();
+        try
+        {
+            var all = await Database.Table<ProgressEntry>().ToListAsync();
+            return all
+                .GroupBy(e => e.TargetSound)
+                .Select(g => new
+                {
+                    Target = g.Key,
+                    Avg = g.Average(x => x.OverallScore),
+                    Latest = g.OrderByDescending(x => x.Timestamp).First()
+                })
+                .OrderBy(x => x.Avg)
+                .Take(Math.Max(1, take))
+                .Select(x => x.Latest)
+                .ToList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<ProgressEntry>> GetRecentEntriesAsync(int take = 12)
+    {
+        await EnsureInitializedAsync();
+        await _gate.WaitAsync();
+        try
+        {
+            return await Database.Table<ProgressEntry>()
+                .OrderByDescending(e => e.Timestamp)
+                .Take(Math.Max(1, take))
+                .ToListAsync();
         }
         finally
         {
@@ -57,14 +101,23 @@ public class ProgressTrackingService
 
     private async Task AddAndSaveAsync(ProgressEntry entry)
     {
-        await EnsureLoadedAsync();
+        await EnsureInitializedAsync();
 
         await _gate.WaitAsync();
         try
         {
-            entry.Id = _entries.Count == 0 ? 1 : _entries.Max(e => e.Id) + 1;
-            _entries.Add(entry);
-            await PersistUnsafeAsync();
+            if (entry.Timestamp == default)
+            {
+                entry.Timestamp = DateTime.UtcNow;
+            }
+
+            if (entry.TrialCount <= 0)
+            {
+                var prior = await GetEntriesForSoundInternalAsync(entry.TargetSound);
+                entry.TrialCount = prior.Count + 1;
+            }
+
+            await Database.InsertAsync(entry);
         }
         finally
         {
@@ -72,9 +125,9 @@ public class ProgressTrackingService
         }
     }
 
-    private async Task EnsureLoadedAsync()
+    private async Task EnsureInitializedAsync()
     {
-        if (_isLoaded)
+        if (_isInitialized)
         {
             return;
         }
@@ -82,26 +135,14 @@ public class ProgressTrackingService
         await _gate.WaitAsync();
         try
         {
-            if (_isLoaded)
+            if (_isInitialized)
             {
                 return;
             }
 
-            if (File.Exists(_storagePath))
-            {
-                var raw = await File.ReadAllTextAsync(_storagePath);
-                if (!string.IsNullOrWhiteSpace(raw))
-                {
-                    var loaded = JsonSerializer.Deserialize<List<ProgressEntry>>(raw);
-                    if (loaded is not null)
-                    {
-                        _entries.Clear();
-                        _entries.AddRange(loaded);
-                    }
-                }
-            }
-
-            _isLoaded = true;
+            _database = new SQLiteAsyncConnection(DbConstants.DatabasePath, DbConstants.Flags);
+            await _database.CreateTableAsync<ProgressEntry>();
+            _isInitialized = true;
         }
         finally
         {
@@ -109,10 +150,16 @@ public class ProgressTrackingService
         }
     }
 
-    private async Task PersistUnsafeAsync()
+    private async Task<IReadOnlyList<ProgressEntry>> GetEntriesForSoundInternalAsync(string targetSound)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_storagePath)!);
-        var payload = JsonSerializer.Serialize(_entries);
-        await File.WriteAllTextAsync(_storagePath, payload);
+        var normalizedTarget = (targetSound ?? string.Empty).Trim().ToLowerInvariant();
+        var all = await Database.Table<ProgressEntry>().ToListAsync();
+        return all
+            .Where(e => e.TargetSound.Trim().ToLowerInvariant() == normalizedTarget)
+            .OrderBy(e => e.Timestamp)
+            .ToList();
     }
+
+    private SQLiteAsyncConnection Database =>
+        _database ?? throw new InvalidOperationException("Database is not initialized.");
 }
