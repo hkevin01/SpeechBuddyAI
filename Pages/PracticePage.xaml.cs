@@ -16,11 +16,20 @@ public partial class PracticePage : ContentPage
 
     private async void OnScoreAttemptClicked(object? sender, EventArgs e)
     {
+        var target = (TargetSoundEntry.Text ?? string.Empty).Trim();
+        var transcript = (TranscriptEditor.Text ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(target) || string.IsNullOrWhiteSpace(transcript))
+        {
+            StatusLabel.Text = "Enter both target sound and transcript before scoring.";
+            return;
+        }
+
+        StatusLabel.Text = "Scoring attempt...";
+
         try
         {
-            var result = await _aiSpeechService.EvaluateAndPersistAttemptAsync(
-                TargetSoundEntry.Text ?? string.Empty,
-                TranscriptEditor.Text ?? string.Empty);
+            var result = await _aiSpeechService.EvaluateAndPersistAttemptAsync(target, transcript);
 
             PhonemeScoreLabel.Text = $"Phoneme: {result.Scores.PhonemeScore:P0}";
             FluencyScoreLabel.Text = $"Fluency: {result.Scores.FluencyScore:P0}";
@@ -38,9 +47,19 @@ public partial class PracticePage : ContentPage
 
     private async void OnGeneratePracticeListClicked(object? sender, EventArgs e)
     {
-        var target = TargetSoundEntry.Text ?? string.Empty;
-        var words = await _aiTextService.GeneratePracticeWordsAsync(target);
-        PracticeWordsLabel.Text = string.Join(", ", words);
+        var target = (TargetSoundEntry.Text ?? string.Empty).Trim();
+        PracticeWordsLabel.Text = "Generating list...";
+
+        try
+        {
+            var words = await _aiTextService.GeneratePracticeWordsAsync(target);
+            PracticeWordsLabel.Text = string.Join(", ", words);
+        }
+        catch (Exception ex)
+        {
+            PracticeWordsLabel.Text = "Could not generate words.";
+            StatusLabel.Text = ex.Message;
+        }
     }
 
     private static T ResolveService<T>() where T : notnull

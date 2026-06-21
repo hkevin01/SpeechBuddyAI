@@ -16,112 +16,172 @@ public class ProgressTrackingService
 
     public Task AddEntryAsync(ProgressEntry entry)
     {
+        if (entry is null)
+        {
+            throw new ArgumentNullException(nameof(entry));
+        }
+
         return AddAndSaveAsync(entry);
     }
 
     public async Task<IReadOnlyList<ProgressEntry>> GetEntriesAsync()
     {
-        await EnsureInitializedAsync();
-        await _gate.WaitAsync();
         try
         {
-            return await Database.Table<ProgressEntry>()
-                .OrderByDescending(e => e.Timestamp)
-                .ToListAsync();
+            await EnsureInitializedAsync();
+            await _gate.WaitAsync();
+            try
+            {
+                return await Database.Table<ProgressEntry>()
+                    .OrderByDescending(e => e.Timestamp)
+                    .ToListAsync();
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            _gate.Release();
+            throw new InvalidOperationException("Failed to load progress entries.", ex);
         }
     }
 
     public async Task<IReadOnlyList<ProgressEntry>> GetEntriesForSoundAsync(string targetSound)
     {
-        await EnsureInitializedAsync();
         var normalizedTarget = (targetSound ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedTarget))
+        {
+            return Array.Empty<ProgressEntry>();
+        }
 
-        await _gate.WaitAsync();
         try
         {
-            var all = await Database.Table<ProgressEntry>().ToListAsync();
-            return all
-                .Where(e => e.TargetSound.Trim().ToLowerInvariant() == normalizedTarget)
-                .OrderBy(e => e.Timestamp)
-                .ToList();
+            await EnsureInitializedAsync();
+            await _gate.WaitAsync();
+            try
+            {
+                var all = await Database.Table<ProgressEntry>().ToListAsync();
+                return all
+                    .Where(e => (e.TargetSound ?? string.Empty).Trim().ToLowerInvariant() == normalizedTarget)
+                    .OrderBy(e => e.Timestamp)
+                    .ToList();
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            _gate.Release();
+            throw new InvalidOperationException("Failed to load entries for target sound.", ex);
         }
     }
 
     public async Task<IReadOnlyList<ProgressEntry>> GetWeakestEntriesAsync(int take = 5)
     {
-        await EnsureInitializedAsync();
+        var takeCount = Math.Max(1, take);
 
-        await _gate.WaitAsync();
         try
         {
-            var all = await Database.Table<ProgressEntry>().ToListAsync();
-            return all
-                .GroupBy(e => e.TargetSound)
-                .Select(g => new
-                {
-                    Target = g.Key,
-                    Avg = g.Average(x => x.OverallScore),
-                    Latest = g.OrderByDescending(x => x.Timestamp).First()
-                })
-                .OrderBy(x => x.Avg)
-                .Take(Math.Max(1, take))
-                .Select(x => x.Latest)
-                .ToList();
+            await EnsureInitializedAsync();
+            await _gate.WaitAsync();
+            try
+            {
+                var all = await Database.Table<ProgressEntry>().ToListAsync();
+                return all
+                    .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
+                    .GroupBy(e => e.TargetSound)
+                    .Select(g => new
+                    {
+                        Target = g.Key,
+                        Avg = g.Average(x => x.OverallScore),
+                        Latest = g.OrderByDescending(x => x.Timestamp).First()
+                    })
+                    .OrderBy(x => x.Avg)
+                    .Take(takeCount)
+                    .Select(x => x.Latest)
+                    .ToList();
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            _gate.Release();
+            throw new InvalidOperationException("Failed to load weakest entries.", ex);
         }
     }
 
     public async Task<IReadOnlyList<ProgressEntry>> GetRecentEntriesAsync(int take = 12)
     {
-        await EnsureInitializedAsync();
-        await _gate.WaitAsync();
         try
         {
-            return await Database.Table<ProgressEntry>()
-                .OrderByDescending(e => e.Timestamp)
-                .Take(Math.Max(1, take))
-                .ToListAsync();
+            await EnsureInitializedAsync();
+            await _gate.WaitAsync();
+            try
+            {
+                return await Database.Table<ProgressEntry>()
+                    .OrderByDescending(e => e.Timestamp)
+                    .Take(Math.Max(1, take))
+                    .ToListAsync();
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            _gate.Release();
+            throw new InvalidOperationException("Failed to load recent entries.", ex);
         }
     }
 
     private async Task AddAndSaveAsync(ProgressEntry entry)
     {
-        await EnsureInitializedAsync();
+        if (entry is null)
+        {
+            throw new ArgumentNullException(nameof(entry));
+        }
 
-        await _gate.WaitAsync();
+        if (string.IsNullOrWhiteSpace(entry.TargetSound))
+        {
+            throw new ArgumentException("Target sound is required when persisting a progress entry.");
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.Transcript))
+        {
+            throw new ArgumentException("Transcript is required when persisting a progress entry.");
+        }
+
         try
         {
-            if (entry.Timestamp == default)
+            await EnsureInitializedAsync();
+            await _gate.WaitAsync();
+            try
             {
-                entry.Timestamp = DateTime.UtcNow;
-            }
+                if (entry.Timestamp == default)
+                {
+                    entry.Timestamp = DateTime.UtcNow;
+                }
 
-            if (entry.TrialCount <= 0)
+                if (entry.TrialCount <= 0)
+                {
+                    var prior = await GetEntriesForSoundInternalAsync(entry.TargetSound);
+                    entry.TrialCount = prior.Count + 1;
+                }
+
+                await Database.InsertAsync(entry);
+            }
+            finally
             {
-                var prior = await GetEntriesForSoundInternalAsync(entry.TargetSound);
-                entry.TrialCount = prior.Count + 1;
+                _gate.Release();
             }
-
-            await Database.InsertAsync(entry);
         }
-        finally
+        catch (Exception ex) when (ex is not ArgumentException)
         {
-            _gate.Release();
+            throw new InvalidOperationException("Failed to persist progress entry.", ex);
         }
     }
 
@@ -132,30 +192,42 @@ public class ProgressTrackingService
             return;
         }
 
-        await _gate.WaitAsync();
         try
         {
-            if (_isInitialized)
+            await _gate.WaitAsync();
+            try
             {
-                return;
-            }
+                if (_isInitialized)
+                {
+                    return;
+                }
 
-            _database = new SQLiteAsyncConnection(DbConstants.DatabasePath, DbConstants.Flags);
-            await _database.CreateTableAsync<ProgressEntry>();
-            _isInitialized = true;
+                _database = new SQLiteAsyncConnection(DbConstants.DatabasePath, DbConstants.Flags);
+                await _database.CreateTableAsync<ProgressEntry>();
+                _isInitialized = true;
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            _gate.Release();
+            throw new InvalidOperationException("Failed to initialize progress database.", ex);
         }
     }
 
     private async Task<IReadOnlyList<ProgressEntry>> GetEntriesForSoundInternalAsync(string targetSound)
     {
         var normalizedTarget = (targetSound ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedTarget))
+        {
+            return Array.Empty<ProgressEntry>();
+        }
+
         var all = await Database.Table<ProgressEntry>().ToListAsync();
         return all
-            .Where(e => e.TargetSound.Trim().ToLowerInvariant() == normalizedTarget)
+            .Where(e => (e.TargetSound ?? string.Empty).Trim().ToLowerInvariant() == normalizedTarget)
             .OrderBy(e => e.Timestamp)
             .ToList();
     }

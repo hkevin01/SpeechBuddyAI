@@ -18,12 +18,23 @@ public partial class ProgressPage : ContentPage
     {
         base.OnAppearing();
 
-        var entries = await _progressTrackingService.GetEntriesAsync();
-        ProgressCollection.ItemsSource = entries;
+        TrajectoryLabel.Text = "Loading progress...";
 
-        var trendPoints = _trendAnalysisService.BuildTrendPoints(entries, 12);
-        TrendCollection.ItemsSource = trendPoints;
-        TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(entries);
+        try
+        {
+            var entries = await _progressTrackingService.GetEntriesAsync();
+            ProgressCollection.ItemsSource = entries;
+
+            var trendPoints = _trendAnalysisService.BuildTrendPoints(entries, 12);
+            TrendCollection.ItemsSource = trendPoints;
+            TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(entries);
+        }
+        catch (Exception ex)
+        {
+            ProgressCollection.ItemsSource = Array.Empty<object>();
+            TrendCollection.ItemsSource = Array.Empty<object>();
+            TrajectoryLabel.Text = ex.Message;
+        }
     }
 
     private static T ResolveService<T>() where T : notnull
