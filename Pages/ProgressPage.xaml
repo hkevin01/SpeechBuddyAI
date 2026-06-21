@@ -3,8 +3,29 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SpeechBuddyAI.Pages.ProgressPage"
              Title="Progress">
-    <VerticalStackLayout Padding="20" Spacing="10">
-        <Label Text="Progress Dashboard" FontSize="22" FontAttributes="Bold" />
-        <Label Text="Charts and session metrics will appear here." />
-    </VerticalStackLayout>
+    <Grid Padding="20" RowDefinitions="Auto,*" RowSpacing="10">
+        <Label Text="Progress Dashboard" FontSize="22" FontAttributes="Bold" Grid.Row="0" />
+
+        <CollectionView x:Name="ProgressCollection" Grid.Row="1">
+            <CollectionView.EmptyView>
+                <Label Text="No attempts saved yet. Score an attempt in Practice." />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Margin="0,0,0,10" Padding="10" BorderColor="#DDDDDD">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding TargetSound, StringFormat='Target: {0}'}" FontAttributes="Bold" />
+                            <Label Text="{Binding Timestamp, StringFormat='When: {0:yyyy-MM-dd HH:mm}'}" />
+                            <Label Text="{Binding TrialCount, StringFormat='Trial: {0}'}" />
+                            <Label Text="{Binding PhonemeScore, StringFormat='Phoneme: {0:P0}'}" />
+                            <Label Text="{Binding FluencyScore, StringFormat='Fluency: {0:P0}'}" />
+                            <Label Text="{Binding ConsistencyScore, StringFormat='Consistency: {0:P0}'}" />
+                            <Label Text="{Binding OverallScore, StringFormat='Overall: {0:P0}'}" FontAttributes="Bold" />
+                            <Label Text="{Binding ErrorPattern, StringFormat='Pattern: {0}'}" />
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
 </ContentPage>

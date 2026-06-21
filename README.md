@@ -3,322 +3,374 @@
 ![Platform](https://img.shields.io/badge/platform-.NET%20MAUI-0b7285)
 ![Language](https://img.shields.io/badge/language-C%23-1f6feb)
 ![UI](https://img.shields.io/badge/ui-XAML-7f5af0)
-![Storage](https://img.shields.io/badge/storage-SQLite-1e7f3f)
-![Status](https://img.shields.io/badge/status-roadmap%20in%20progress-f59f00)
+![Persistence](https://img.shields.io/badge/persistence-M1%20JSON%20store-f59f00)
+![Roadmap](https://img.shields.io/badge/roadmap-M1%20implemented-1e7f3f)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-SpeechBuddyAI is a speech therapy companion focused on structured articulation practice, guided home assignments, and clinician-visible progress trends. The intent is to keep the app practical for real sessions, which means fast practice loops, understandable scores, and clean note workflows that reduce documentation time.
+SpeechBuddyAI is a speech therapy companion focused on practical articulation workflows, transparent score components, and session-to-session progress tracking that can be reviewed by clinicians and families. The project is intentionally designed to avoid black-box behavior in early milestones, because trust and interpretability are central in speech practice tools.
 
-This README now serves as both a product roadmap and an implementation design brief. It explains what each subsystem does, why it exists, when to use each free library or API option, and how the scoring pipeline can evolve from baseline heuristics to more research-grounded pronunciation assessment.
+This README is both a product guide and a technical implementation reference. It explains what the app does, why each subsystem exists, how scoring is computed, what tradeoffs were chosen, and which free public libraries or APIs are realistic for future expansion.
 
 > [!IMPORTANT]
-> This project is educational and support-oriented software, not a medical device. Outputs are meant to assist clinicians and families, not replace licensed clinical judgment.
+> SpeechBuddyAI is support software and is not a medical device. The outputs should assist therapy planning, not replace professional clinical decision-making.
 
 ## Table of Contents
 
-1. Vision and Scope
-2. Top-Level Comparison Guide
-3. Tech Stack and Why It Was Chosen
-4. Architecture Overview
-5. Roadmap Continuation
-6. Algorithms and Formulas
-7. Free Libraries and Public APIs
-8. Collapsible API Reference
-9. GitHub-Inspired Project Operations
-10. Research and Citations
-11. Local Setup and Build
+1. What This Project Does
+2. Fast Comparison Tables (Use/Do Not Use)
+3. Current Milestone Status
+4. Tech Stack and Architecture
+5. Algorithms and Formulas
+6. Public Libraries and API Strategy
+7. Collapsible API Reference
+8. GitHub Workflow and Tracking
+9. Research Citations
+10. Build, Run, and Practical Notes
 
-## Vision and Scope
+## What This Project Does
 
-SpeechBuddyAI is designed around one central workflow: a learner attempts a target sound or phrase, the system evaluates performance, then the app immediately proposes a next best practice step. That tight loop is critical because speech practice quality depends on immediate and interpretable feedback.
+SpeechBuddyAI supports a feedback loop where a learner practices a target sound, receives component-level scoring feedback, and stores attempts for trend review. In the current M1 implementation, the focus is not on maximizing model complexity, but on making the loop reliable and understandable.
 
-A second design goal is traceability. Every score and recommendation should be explainable through component values like target phoneme match, fluency stability, and repetition trend. This is why the architecture uses explicit score components rather than a single opaque black-box label.
-
-## Top-Level Comparison Guide
-
-The following table is intentionally placed near the top so contributors can quickly decide which integration path to use for the next milestone.
-
-| # | Option | Best Use Case | When Not To Use | What Is Different |
-| --- | --- | --- | --- | --- |
-| 1 | <sub>Offline-first STT (Vosk / whisper.cpp)</sub> | <sub>Privacy-sensitive clinics, unreliable network, on-device feedback loops</sub> | <sub>When you need cloud diarization or managed scaling immediately</sub> | <sub>Audio never has to leave device, deterministic local runtime cost</sub> |
-| 2 | <sub>Cloud STT API</sub> | <sub>Rapid prototyping and broad language support with minimal local setup</sub> | <sub>Strict offline requirements, low-latency edge-only workflows</sub> | <sub>Fast to ship, but incurs network and data governance overhead</sub> |
-| 3 | <sub>Hybrid STT (local primary, cloud fallback)</sub> | <sub>Production apps that need resilience and graceful degradation</sub> | <sub>Very small projects where dual pipelines are too complex</sub> | <sub>Best reliability profile but highest integration complexity</sub> |
+The app currently demonstrates a complete vertical slice for M1. A user can enter a target sound and transcript, run scoring, see phoneme/fluency/consistency components, and persist the attempt. That same data appears in the progress dashboard so the practice loop produces longitudinal records instead of one-off scores.
 
 > [!NOTE]
-> This table helps select deployment posture first, before tuning models.
+> M1 persistence is currently app-local JSON storage. SQLite remains a planned upgrade for subsequent milestones.
 
-For pronunciation scoring strategy, use this quick matrix.
+## Fast Comparison Tables (Use/Do Not Use)
 
-| # | Scoring Strategy | Use When | Avoid When | Why It Matters |
-| --- | --- | --- | --- | --- |
-| 1 | <sub>Rule-based baseline</sub> | <sub>Early MVP and transparent debugging</sub> | <sub>You need strong phoneme-level diagnostics at scale</sub> | <sub>Simple, interpretable, low compute cost</sub> |
-| 2 | <sub>GOP-style phoneme scoring</sub> | <sub>Need per-phoneme feedback and targeted correction drills</sub> | <sub>No reliable canonical phone sequence is available</sub> | <sub>Aligns to CAPT literature and clinician explainability needs</sub> |
-| 3 | <sub>Joint CAPT models (APA + MDD)</sub> | <sub>Research-grade system with annotated corpora and eval pipeline</sub> | <sub>Small team without dataset and MLOps bandwidth</sub> | <sub>Higher potential accuracy with greater implementation burden</sub> |
+These tables are intentionally near the top so new contributors can quickly pick the right technical direction before coding.
+
+### Deployment and Inference Modes
+
+| # | Option | What It Does | Use When | Do Not Use When | How It Works (High Level) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Offline-first STT | Runs recognition on device without sending audio to cloud | Privacy-sensitive workflows and poor connectivity | You require managed cloud diarization now | Capture audio -> local model inference -> score pipeline |
+| 2 | Cloud STT | Delegates recognition to hosted API | Rapid iteration and broad language support | Strict local-only policy or high latency constraints | Capture audio -> upload -> cloud transcript -> score pipeline |
+| 3 | Hybrid STT | Uses local path first and cloud fallback | Production resilience with mixed network conditions | Team cannot maintain two adapters yet | Try local -> if unavailable/fails use cloud -> continue scoring |
 
 > [!TIP]
-> Start with rule-based scoring for product flow validation, then add GOP-like detail, then test joint models only after your annotation and evaluation loop is stable.
+> For this codebase, hybrid is the long-term target, but offline-first should remain the default experience.
 
-## Tech Stack and Why It Was Chosen
+### Scoring Strategy Comparison
 
-SpeechBuddyAI currently uses a pragmatic stack that optimizes for cross-platform reach and iteration speed:
+| # | Strategy | What It Measures | Best For | Not Ideal For | Why Chosen or Deferred |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Rule-based component scoring | Phoneme match proxy, fluency proxy, consistency proxy | MVP reliability and explainability | Fine-grained phonetic diagnostics at scale | Chosen for M1 due transparency and low complexity |
+| 2 | GOP-style scoring | Phoneme-level posterior contrast confidence | Targeted phone-level coaching and minimal pairs | Pipelines without phoneme alignment/lexicon | Planned as M2/M3 enhancement |
+| 3 | Joint APA + MDD models | Overall pronunciation quality plus error diagnosis | Research-grade CAPT with curated benchmark datasets | Small teams without ML ops and annotation capacity | Deferred due complexity and data requirements |
 
-| # | Layer | Current Choice | Why This Choice | Alternative Considered |
-| --- | --- | --- | --- | --- |
-| 1 | <sub>App shell</sub> | <sub>.NET MAUI</sub> | <sub>One C# codebase across Android, iOS, desktop targets</sub> | <sub>Flutter, React Native, Electron</sub> |
-| 2 | <sub>UI</sub> | <sub>XAML pages and shell navigation</sub> | <sub>Strong MAUI integration and maintainable view composition</sub> | <sub>Pure code-behind UI composition</sub> |
-| 3 | <sub>Local data</sub> | <sub>SQLite</sub> | <sub>Simple offline persistence for notes, scores, and plans</sub> | <sub>Realm, LiteDB, cloud-first DBs</sub> |
-| 4 | <sub>AI service abstraction</sub> | <sub>Service classes in Services/</sub> | <sub>Keeps provider changes isolated from page logic</sub> | <sub>Direct provider calls from pages</sub> |
+### Persistence Backends Comparison
 
-> [!NOTE]
-> The technical direction favors architecture that is understandable by small teams, including clinicians who may later contribute to requirements and validation.
+| # | Backend | What It Does | Use When | Avoid When | Migration Notes |
+| --- | --- | --- | --- | --- | --- |
+| 1 | JSON file store (current M1) | Simple local persistence with low setup overhead | Early milestone and local prototype workflows | Need robust query/reporting at scale | Current implementation in ProgressTrackingService |
+| 2 | SQLite (planned) | Relational local database with indexed queries | Dashboard analytics and larger history datasets | Ultra-light demos without query complexity | Planned migration path for M2 or M3 |
+| 3 | Cloud sync DB | Cross-device shared history and backup | Multi-device clinician-family workflows | Offline-only deployments | Add after local model and privacy policy are stable |
 
-## Architecture Overview
+> [!IMPORTANT]
+> Keep README claims aligned with code reality. M1 currently uses JSON persistence, not SQLite runtime persistence.
 
-SpeechBuddyAI is organized to separate UI concerns from therapy logic and from provider-specific AI adapters. This keeps future migration work manageable, especially when swapping STT/TTS providers.
+## Current Milestone Status
+
+M1 is now implemented as an end-to-end slice. It captures practice attempts, computes score components, saves each attempt, and renders persisted entries in the progress view.
+
+| # | M1 Contract Item | Status | Implementation Detail |
+| --- | --- | --- | --- |
+| 1 | Practice input capture | Done | Target and transcript are entered on Practice page |
+| 2 | Component scoring loop | Done | Phoneme, fluency, consistency, and overall score computed |
+| 3 | Persisted score components | Done | ProgressEntry includes component fields and transcript |
+| 4 | Longitudinal attempt list | Done | Progress page loads and displays persisted entries |
+| 5 | Error pattern tag | Done | Simple pattern inference for feedback categorization |
+
+### M1 Runtime Loop
 
 ```mermaid
 flowchart TD
-   A[User Practice Input] --> B[PracticePage and Services]
-   B --> C[Speech Evaluation Pipeline]
-   C --> D[ProgressTrackingService]
-   D --> E[(SQLite)]
-   D --> F[ProgressPage Dashboard]
-   B --> G[AiTextService and AiSpeechService]
-   G --> H[Session Notes and Home Plans]
+    A[User enters target and transcript] --> B[PracticePage event handler]
+    B --> C[AiSpeechService EvaluateAndPersistAttempt]
+    C --> D[Compute phoneme, fluency, consistency]
+    D --> E[Compose overall weighted score]
+    E --> F[Build ProgressEntry and infer error pattern]
+    F --> G[ProgressTrackingService writes JSON]
+    G --> H[ProgressPage reads and renders history]
 ```
 
 > [!NOTE]
-> This diagram shows the central learning loop where every attempt becomes both immediate feedback and long-term trend data.
+> This flow is intentionally deterministic and transparent, making it suitable for milestone validation and debugging.
 
-The current project layout maps cleanly to that loop:
+### M1 Sequence by Component
 
-| # | Folder or File Area | Primary Responsibility | Data In | Data Out |
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant P as PracticePage
+    participant S as AiSpeechService
+    participant T as ProgressTrackingService
+    participant R as ProgressPage
+    U->>P: Enter target + transcript
+    P->>S: EvaluateAndPersistAttemptAsync
+    S->>T: GetEntriesForSoundAsync
+    T-->>S: Prior attempts
+    S->>S: Compute components and overall
+    S->>T: AddEntryAsync
+    T-->>S: Persist success
+    S-->>P: PracticeAttemptResult
+    U->>R: Open Progress tab
+    R->>T: GetEntriesAsync
+    T-->>R: Persisted entries
+```
+
+### M1 Data Shape (Score Components)
+
+| # | Field | Meaning | Range | Why Needed |
 | --- | --- | --- | --- | --- |
-| 1 | <sub>Pages/</sub> | <sub>UI workflows for practice, notes, progress, home</sub> | <sub>User taps, mic actions, selections</sub> | <sub>View model state and service requests</sub> |
-| 2 | <sub>Services/</sub> | <sub>AI calls, score orchestration, persistence triggers</sub> | <sub>Transcripts, audio features, note content</sub> | <sub>Scores, summaries, suggested exercises</sub> |
-| 3 | <sub>Models/</sub> | <sub>Domain entities like ProgressEntry and SessionNote</sub> | <sub>Structured app data</sub> | <sub>Serializable records</sub> |
-| 4 | <sub>Database/</sub> | <sub>Local storage plumbing</sub> | <sub>Model records</sub> | <sub>Queryable historical data</sub> |
+| 1 | PhonemeScore | Target match proxy | 0.0 to 1.0 | Core articulation confidence dimension |
+| 2 | FluencyScore | Stability/length proxy | 0.0 to 1.0 | Captures rhythm/continuity signal in simple form |
+| 3 | ConsistencyScore | Variation across recent attempts | 0.0 to 1.0 | Distinguishes one-off success from stable performance |
+| 4 | OverallScore | Weighted aggregate score | 0.0 to 1.0 | Supports quick clinician and learner interpretation |
+
+## Tech Stack and Architecture
+
+SpeechBuddyAI uses .NET MAUI and C# to keep mobile and desktop targets in one codebase. This keeps early milestones fast to iterate, while still allowing clear separation between pages, services, and models.
+
+### Current vs Planned Stack
+
+| # | Layer | Current (Implemented) | Planned Direction | Why This Matters |
+| --- | --- | --- | --- | --- |
+| 1 | UI Shell | .NET MAUI Shell with tab navigation | Same, with richer state and chart controls | Maintains cross-platform consistency |
+| 2 | Scoring Service | AiSpeechService with transparent component formulas | Adapter-friendly architecture for offline/online models | Future model upgrades without UI rewrite |
+| 3 | Persistence | JSON app-local file in M1 | SQLite for richer queries and analytics | Enables trend views and reporting depth |
+| 4 | Practice Content | AiTextService generated words | Constraint-aware generators and personalized assignments | Improves carryover and relevance |
 
 > [!TIP]
-> Keep business rules in services, not in pages, so therapy logic remains testable.
+> Preserve service boundaries now so later migration from JSON to SQLite and from heuristics to model-based scoring remains low-risk.
 
-The runtime architecture also includes optional online/offline switching.
+### Architecture View
 
 ```mermaid
 flowchart LR
-   A[Audio Capture] --> B{Online Mode?}
-   B -->|No| C[Offline STT Path]
-   B -->|Yes| D[Cloud or Hybrid STT Path]
-   C --> E[Phoneme and Fluency Scoring]
-   D --> E
-   E --> F[Feedback Cards]
-   E --> G[Progress Trends]
+    A[Pages: Practice, Progress, Notes, Home] --> B[Services Layer]
+    B --> C[AiSpeechService]
+    B --> D[AiTextService]
+    B --> E[ProgressTrackingService]
+    E --> F[(JSON persistence in M1)]
+    C --> G[Scoring components]
+    G --> E
 ```
 
-> [!NOTE]
-> This decision point allows the same UI to work in clinic, home, and low-connectivity contexts.
-
-## Roadmap Continuation
-
-The roadmap below continues from the current scaffold and turns it into a complete therapy workflow product.
-
-| # | Milestone | Scope | Why Needed | Exit Criteria |
-| --- | --- | --- | --- | --- |
-| 1 | <sub>M1 - Baseline Practice Loop</sub> | <sub>Record attempt, score, store, show feedback card</sub> | <sub>Core therapeutic interaction</sub> | <sub>User can complete one full attempt-feedback-save cycle</sub> |
-| 2 | <sub>M2 - Home Assignment Generator</sub> | <sub>Template-based plans from weak phonemes and session notes</sub> | <sub>Carryover outside clinic sessions</sub> | <sub>Exportable weekly plan appears with rationale</sub> |
-| 3 | <sub>M3 - Longitudinal Dashboard</sub> | <sub>Session-over-session trend lines and streaks</sub> | <sub>Therapy decisions need trajectory, not snapshots</sub> | <sub>Trends visible for phoneme-level and session-level metrics</sub> |
-| 4 | <sub>M4 - Hybrid Speech Pipeline</sub> | <sub>Offline-first STT with cloud fallback</sub> | <sub>Reliability and privacy balance</sub> | <sub>Seamless fallback with no UI breakage</sub> |
-| 5 | <sub>M5 - Clinician Notes and Reports</sub> | <sub>SOAP-style summaries plus parent-friendly language</sub> | <sub>Documentation and communication efficiency</sub> | <sub>One-click report generation with editable sections</sub> |
-
-> [!IMPORTANT]
-> Milestones are ordered to validate clinical utility before model sophistication.
-
-Implementation sequence for the next coding passes:
+### Data Lifecycle
 
 ```mermaid
 flowchart TD
-   A[M1 Data Contracts] --> B[M1 Scoring Service]
-   B --> C[M1 Practice UI Feedback]
-   C --> D[M2 Assignment Logic]
-   D --> E[M3 Dashboard Queries]
-   E --> F[M4 Offline and Online Adapters]
-   F --> G[M5 Report Builder]
+    A[Input event] --> B[Normalize strings]
+    B --> C[Lookup historical attempts]
+    C --> D[Compute component scores]
+    D --> E[Assign error pattern]
+    E --> F[Persist entry]
+    F --> G[Load for dashboard]
+    G --> H[Display user-facing history]
 ```
 
-> [!NOTE]
-> This is a dependency-safe ordering, minimizing rework while increasing product value at each step.
+### Why This Architecture Was Chosen
+
+The architecture favors readability and composability over early optimization. In speech therapy software, implementation clarity is a product feature because teams need to verify behavior and reason about edge cases with clinicians.
+
+The same structure also makes A/B comparisons easier later. If you introduce a GOP-based scorer, you can keep the same output contract and compare old and new methods in parallel without destabilizing the pages.
 
 ## Algorithms and Formulas
 
-SpeechBuddyAI uses weighted composite scoring so feedback remains interpretable. A simple initial form:
+The current M1 approach uses weighted component scoring instead of a single hidden confidence output. This is a deliberate choice for explainability and iterative calibration.
+
+### Current M1 Formula
 
 $$
-S_{overall} = w_p S_{phoneme} + w_f S_{fluency} + w_c S_{consistency}
+S_{overall} = 0.60 S_{phoneme} + 0.25 S_{fluency} + 0.15 S_{consistency}
 $$
 
-with constraints:
+Where each component is clamped to $[0,1]$ before aggregation.
 
-$$
-w_p + w_f + w_c = 1, \quad 0 \leq w_i \leq 1
-$$
+### Why This Formula and Not a Single Black Box Score
 
-This is preferred over a single opaque confidence score because therapists can tell the learner exactly which dimension to improve.
-
-For target-word pronunciation confidence, a GOP-inspired measure can be approximated as log-posterior contrast:
-
-$$
-GOP(p) = \frac{1}{T_p} \sum_{t \in p} \log P(p \mid o_t) - \max_{q \neq p} \frac{1}{T_p} \sum_{t \in p} \log P(q \mid o_t)
-$$
-
-where $p$ is target phoneme, $o_t$ are frame-level acoustic observations, and $T_p$ is aligned frame count.
-
-For home practice scheduling, a forgetting-curve-aware interval update can start with:
-
-$$
-I_{n+1} = I_n \cdot (1 + \alpha \cdot R_n - \beta \cdot E_n)
-$$
-
-where $R_n$ is recent retention proxy and $E_n$ is weighted error rate.
-
-| # | Algorithm | Purpose | Chosen Instead Of | Why This Choice |
+| # | Option | Advantage | Limitation | Decision |
 | --- | --- | --- | --- | --- |
-| 1 | <sub>Weighted composite score</sub> | <sub>Readable session feedback</sub> | <sub>Single latent confidence output</sub> | <sub>High interpretability and tunable behavior</sub> |
-| 2 | <sub>GOP-like phoneme contrast</sub> | <sub>Phone-level correction hints</sub> | <sub>Word-only correctness labels</sub> | <sub>Supports targeted drills and minimal pairs</sub> |
-| 3 | <sub>Adaptive interval update</sub> | <sub>Home practice timing</sub> | <sub>Fixed daily repetition schedule</sub> | <sub>Balances burden and retention</sub> |
+| 1 | Single confidence score | Simple output | Low interpretability and difficult debugging | Not chosen for M1 |
+| 2 | Weighted components (current) | Transparent and tunable | Not yet full phonetic rigor | Chosen for M1 |
+| 3 | Learned end-to-end score | Potentially higher accuracy | Data and explainability burden | Deferred until later milestones |
 
-> [!NOTE]
-> Formula complexity should increase only after baseline explainability is validated with clinicians.
+### Consistency Computation Rationale
 
-The score pipeline can be represented as follows:
+Consistency is estimated from recent score variance for the same target sound. Lower variance maps to higher consistency, which helps separate stable improvement from random fluctuation.
 
-```mermaid
-flowchart LR
-   A[Transcript and Audio Frames] --> B[Alignment and Phone Mapping]
-   B --> C[GOP-like Feature Extraction]
-   C --> D[Fluency and Stability Features]
-   D --> E[Weighted Score Composer]
-   E --> F[Actionable Feedback Text]
-```
+This gives the dashboard a more clinically useful behavior. Two attempts with the same current phoneme score can be interpreted differently if one learner is stable and another is oscillating.
 
-> [!TIP]
-> Keep intermediate features stored for auditability and future model retraining.
+### Future GOP-Compatible Formula (Planned)
 
-## Free Libraries and Public APIs
+$$
+GOP(p) = \frac{1}{T_p}\sum_{t \in p} \log P(p \mid o_t) - \max_{q \ne p}\frac{1}{T_p}\sum_{t \in p} \log P(q \mid o_t)
+$$
 
-The following options are prioritized because they are free/open and practical for incremental integration in a .NET MAUI codebase.
+This formulation is included because it aligns with CAPT literature and supports phoneme-level diagnosis beyond the current heuristic approximation.
 
-| # | Library or API | Category | License or Access Model | Why Relevant to SpeechBuddyAI |
+### M1 to M3 Algorithm Progression
+
+| # | Stage | Method | What Improves | Risks |
 | --- | --- | --- | --- | --- |
-| 1 | <sub>Vosk</sub> | <sub>Offline STT</sub> | <sub>Apache-2.0</sub> | <sub>On-device recognition and streaming support across many languages</sub> |
-| 2 | <sub>whisper.cpp</sub> | <sub>Offline STT</sub> | <sub>MIT</sub> | <sub>High-performance local inference with broad platform support and .NET bindings ecosystem</sub> |
-| 3 | <sub>CMUdict</sub> | <sub>Pronunciation lexicon</sub> | <sub>Free unrestricted use notice</sub> | <sub>Canonical phoneme targets for scoring and minimal pair generation</sub> |
-| 4 | <sub>Datamuse API</sub> | <sub>Word suggestion API</sub> | <sub>Public free tier with daily limit policy</sub> | <sub>Generate related words and topic-constrained practice content</sub> |
+| 1 | M1 | Deterministic weighted heuristics | Speed, transparency, debuggability | Limited phonetic depth |
+| 2 | M2 | Lexicon-backed phoneme checks | Better target-specific diagnostics | Lexicon and alignment complexity |
+| 3 | M3 | GOP-like or segmentation-free features | Higher diagnostic fidelity and benchmarking potential | Model and data pipeline overhead |
+
+## Public Libraries and API Strategy
+
+The project roadmap intentionally prioritizes free and public resources so the system remains reproducible for open development.
+
+### Integration Candidates
+
+| # | Tool | Type | License or Terms | Why Consider It |
+| --- | --- | --- | --- | --- |
+| 1 | Vosk | Offline STT toolkit | Apache-2.0 | On-device recognition path for privacy-first deployments |
+| 2 | whisper.cpp | Offline ASR inference engine | MIT | Broad platform support and efficient local inference |
+| 3 | CMUdict | Pronunciation lexicon | Free unrestricted use notice | Canonical pronunciation references for phone-level logic |
+| 4 | Datamuse API | Word association and suggestions | Public usage with limits and API key changes timeline | Practice list generation and topic expansion |
 
 > [!IMPORTANT]
-> Datamuse currently documents free use with daily request limits and upcoming API key requirements timeline. Treat this as dependency risk and add local caching.
+> Datamuse policy text currently notes API-key-related changes from 2027 and request limits, so production integration should include caching and fallback behavior.
 
-Ideas adapted from relevant GitHub projects:
+### External Project Pattern Mapping
 
-| # | Source Project | Borrowed Idea | How To Apply In SpeechBuddyAI | Priority |
-| --- | --- | --- | --- | --- |
-| 1 | <sub>fulldecent/vowel-practice</sub> | <sub>Formant and vowel-focused practice workflows</sub> | <sub>Add optional vowel mode with simple visual target zones</sub> | <sub>Medium</sub> |
-| 2 | <sub>assinscreedFC/ortholyse</sub> | <sub>Offline transcription plus clinician metrics pipeline</sub> | <sub>Strengthen local-first data flow and report generation</sub> | <sub>High</sub> |
-| 3 | <sub>KorayUlusan/delayed-auditory-feedback-online</sub> | <sub>DAF therapeutic audio feature</sub> | <sub>Add experimental delayed feedback mode for fluency practice</sub> | <sub>Medium</sub> |
-| 4 | <sub>speech-therapy topic repositories</sub> | <sub>Accessibility-first interaction patterns</sub> | <sub>Improve large controls, guided flows, and family mode UX</sub> | <sub>High</sub> |
+| # | Open Project | Pattern | Practical Adoption in SpeechBuddyAI |
+| --- | --- | --- | --- |
+| 1 | fulldecent/vowel-practice | Focused vowel visual training | Add optional vowel-target mini mode for articulation sessions |
+| 2 | assinscreedFC/ortholyse | Local-first transcription and metrics | Strengthen local evaluation/report pathways |
+| 3 | KorayUlusan/delayed-auditory-feedback-online | DAF intervention tooling | Add configurable fluency support exercise mode |
 
 > [!NOTE]
-> These ideas are architectural inspirations, not code imports.
+> These are architecture inspirations and workflow ideas, not source-code reuse.
 
 ## Collapsible API Reference
 
-<details>
-<summary><strong>SpeechBuddyAI planned service contracts (expand)</strong></summary>
+<details open>
+<summary>Speech Evaluation Contracts (Current and Planned)</summary>
 
-### Speech Assessment API
+### 1) Practice Attempt Scoring
 
-| # | Endpoint | Method | Input | Output |
+| # | Contract | Input | Output | Current Status |
 | --- | --- | --- | --- | --- |
-| 1 | <sub>/api/speech/transcribe</sub> | <sub>POST</sub> | <sub>Audio payload or file reference</sub> | <sub>Transcript with token timings</sub> |
-| 2 | <sub>/api/speech/score</sub> | <sub>POST</sub> | <sub>Transcript, target text, optional phoneme map</sub> | <sub>Composite score, phone diagnostics, confidence bands</sub> |
-| 3 | <sub>/api/speech/recommend</sub> | <sub>POST</sub> | <sub>Recent weak phonemes and session context</sub> | <sub>Ranked drills and target word list</sub> |
+| 1 | evaluateAttempt | targetSound, transcript | phoneme, fluency, consistency, overall, errorPattern | Implemented in M1 |
+| 2 | persistAttempt | ProgressEntry payload | stored entry id and timestamp | Implemented in M1 |
+| 3 | listAttempts | optional target filter | ordered attempt history | Implemented in M1 |
 
 > [!TIP]
-> Keep all outputs versioned so future model upgrades do not break historical sessions.
+> Keep output fields stable so model upgrades can be drop-in replacements.
 
-### Session Notes API
+### 2) Practice Content Generation
 
-| # | Endpoint | Method | Input | Output |
+| # | Contract | Input | Output | Current Status |
 | --- | --- | --- | --- | --- |
-| 1 | <sub>/api/notes/summarize</sub> | <sub>POST</sub> | <sub>Clinician free-text notes and session metadata</sub> | <sub>SOAP draft and parent-facing summary</sub> |
-| 2 | <sub>/api/notes/export</sub> | <sub>POST</sub> | <sub>Session id and export format</sub> | <sub>Printable report artifact</sub> |
+| 1 | generatePracticeWords | targetSound | word list for drills | Implemented baseline |
+| 2 | generateAssignments | historical weak patterns | home plan with rationale | Planned M2 |
 
-> [!NOTE]
-> Summary generation should always allow clinician edit before finalization.
+### 3) Notes and Reporting
+
+| # | Contract | Input | Output | Current Status |
+| --- | --- | --- | --- | --- |
+| 1 | summarizeSessionNotes | free text notes | structured summary | Planned M5 |
+| 2 | exportReport | session id and format | shareable artifact | Planned M5 |
 
 </details>
 
-## GitHub-Inspired Project Operations
+<details>
+<summary>Example Response Payload (Illustrative)</summary>
 
-Use GitHub-native patterns so roadmap execution is visible and contributor-friendly.
+```json
+{
+  "targetSound": "initial r",
+  "transcript": "rain rabbit",
+  "scores": {
+    "phonemeScore": 0.90,
+    "fluencyScore": 0.73,
+    "consistencyScore": 0.62,
+    "overallScore": 0.82
+  },
+  "errorPattern": "none",
+  "trialCount": 4,
+  "timestamp": "2026-06-21T10:15:00Z"
+}
+```
+
+</details>
+
+## GitHub Workflow and Tracking
+
+SpeechBuddyAI now uses roadmap-aligned issue templates and labels so milestone execution can be tracked clearly. This keeps implementation tasks connected to goals like M1 scoring reliability, M2 assignment quality, and M3 trend analytics.
 
 ```mermaid
 flowchart TD
-   A[Issue Created] --> B[Discussion and Acceptance Criteria]
-   B --> C[Feature Branch]
-   C --> D[PR with Checklist]
-   D --> E[Review and Tests]
-   E --> F[Merge to Main]
-   F --> G[Release Notes Update]
+    A[Issue Template: Bug, Feature, Roadmap, Research] --> B[Labels attached]
+    B --> C[Milestone tagged]
+    C --> D[PR linked]
+    D --> E[Validation]
+    E --> F[Merge and roadmap update]
 ```
 
-> [!NOTE]
-> This keeps roadmap tasks measurable and reviewable, especially for clinician-facing features.
+### Label Taxonomy Summary
 
-Recommended issue labels and usage:
-
-| # | Label | Purpose | Example Ticket | Merge Gate |
-| --- | --- | --- | --- | --- |
-| 1 | <sub>therapy-core</sub> | <sub>Practice loop and scoring logic</sub> | <sub>Phoneme-level feedback card redesign</sub> | <sub>Manual QA plus unit tests</sub> |
-| 2 | <sub>ai-integration</sub> | <sub>Model/provider adapters and prompts</sub> | <sub>Add offline Vosk adapter</sub> | <sub>Contract tests and fallback checks</sub> |
-| 3 | <sub>privacy-and-safety</sub> | <sub>Data handling and consent features</sub> | <sub>Session export redaction options</sub> | <sub>Security review</sub> |
-| 4 | <sub>research-sync</sub> | <sub>Papers, benchmarks, evaluation method updates</sub> | <sub>GOP-SF experiment notes</sub> | <sub>Reproducibility checklist</sub> |
+| # | Label Group | Example Labels | Purpose |
+| --- | --- | --- | --- |
+| 1 | Type | type:bug, type:feature, type:task | Classify issue intent |
+| 2 | Status | status:triage, status:ready, status:blocked | Track workflow state |
+| 3 | Domain | domain:therapy-core, domain:ai-integration | Map workstream ownership |
+| 4 | Roadmap | roadmap:m1..roadmap:m5 | Tie work to roadmap milestone |
+| 5 | Priority | priority:p0-critical..priority:p3-low | Support execution ordering |
 
 > [!IMPORTANT]
-> Every roadmap item should include clinical rationale, not only technical acceptance criteria.
+> Every issue should include both technical acceptance criteria and clinical rationale.
 
-## Research and Citations
+### GitHub Markdown Features Used in This README
 
-This section tracks references used for architecture and algorithm selection so decisions remain auditable.
+| # | Feature | Why It Is Used Here |
+| --- | --- | --- |
+| 1 | Shields badges | Surface status and stack metadata at a glance |
+| 2 | GitHub Alerts | Highlight risk, guidance, and required context clearly |
+| 3 | Mermaid diagrams | Represent architecture and workflow as executable documentation |
+| 4 | Collapsible details blocks | Keep README readable while preserving deep technical content |
+| 5 | Math blocks | Document scoring formulas unambiguously |
+| 6 | Dense comparison tables | Accelerate decision-making for contributors |
 
-### Foundational CAPT and Pronunciation Assessment
+> [!NOTE]
+> GitHub docs confirm support for Mermaid diagrams, alerts, and details blocks in Markdown contexts like repository files and discussions.
+
+## Research Citations
+
+This list captures articles and arXiv references used to inform architecture and algorithm choices.
+
+### CAPT, MDD, and Scoring Papers
 
 1. Korzekwa et al. - Computer-assisted Pronunciation Training - Speech synthesis is almost all you need, arXiv:2207.00774, DOI: 10.48550/arXiv.2207.00774
-2. Yang et al. - JCAPT: A Joint Modeling Approach for CAPT, arXiv:2506.19315, DOI: 10.48550/arXiv.2506.19315
-3. Cao et al. - Segmentation-free Goodness of Pronunciation, arXiv:2507.16838, DOI: 10.48550/arXiv.2507.16838
-4. Zhang et al. - speechocean762 corpus, arXiv:2104.01378, DOI: 10.48550/arXiv.2104.01378
-5. Sudhakara et al. - Improved GoP with DNN-HMM and transition probabilities, INTERSPEECH 2019
+2. Zhang et al. - speechocean762: An Open-Source Non-native English Speech Corpus For Pronunciation Assessment, arXiv:2104.01378, DOI: 10.48550/arXiv.2104.01378
+3. Yang et al. - JCAPT: A Joint Modeling Approach for CAPT, arXiv:2506.19315, DOI: 10.48550/arXiv.2506.19315
+4. Cao et al. - Segmentation-free Goodness of Pronunciation, arXiv:2507.16838, DOI: 10.48550/arXiv.2507.16838
+5. Tu et al. - Domain-Aware Mispronunciation Detection and Diagnosis Using Language-Specific Statistical Graphs, arXiv:2606.05569, DOI: 10.48550/arXiv.2606.05569
+6. Sudhakara et al. - An Improved Goodness of Pronunciation (GoP) Measure, INTERSPEECH 2019
 
-### Open Projects and API Docs Consulted
+### Tooling and Documentation References
 
-1. Vosk toolkit repository and docs
-2. whisper.cpp repository and docs
-3. Coqui TTS repository
-4. CMUdict repository
-5. Datamuse API documentation
-6. GitHub speech-therapy topic ecosystem and project examples
+1. GitHub Docs - Creating diagrams (Mermaid, GeoJSON, TopoJSON, STL)
+2. GitHub Docs - Organizing information with collapsed sections
+3. Vosk API documentation and repository
+4. whisper.cpp documentation and repository
+5. CMUdict repository and license notice
+6. Datamuse API documentation
 
 > [!TIP]
-> Keep this section current as new roadmap phases are implemented. It helps new contributors understand why specific methods were selected.
+> Keep this section versioned as new roadmap decisions are made, so architectural tradeoffs remain evidence-backed and reviewable.
 
-## Local Setup and Build
-
-The current repository is a MAUI scaffold with domain structure prepared for feature implementation.
+## Build, Run, and Practical Notes
 
 ### Prerequisites
 
-1. .NET SDK compatible with MAUI target version
-2. MAUI workload installed
-3. Platform SDKs as needed (Android/iOS/desktop)
+1. .NET SDK and MAUI workloads available on the host machine.
+2. Platform SDKs for targets you plan to run.
+3. Local filesystem write access for app data persistence.
 
 ### Build
 
@@ -327,13 +379,21 @@ dotnet restore
 dotnet build
 ```
 
-### Immediate Next Coding Tasks
+### Practical M1 Verification Steps
 
-1. Implement score component model in services and persist component-level telemetry.
-2. Add offline speech adapter interface with an initial local provider implementation.
-3. Add first dashboard chart page using stored longitudinal score components.
-4. Add report generation baseline for clinician notes and parent summary.
+1. Open Practice tab.
+2. Enter target sound and transcript.
+3. Press Score Attempt.
+4. Confirm component scores and status text update.
+5. Open Progress tab and verify entry appears with same component values.
+
+### Next Milestone-Focused Steps
+
+- [ ] M1.1: move JSON persistence to SQLite while preserving output contracts
+- [ ] M2: add assignment generation from weak pattern history
+- [ ] M3: add charted trend analysis and score trajectory interpretation
+- [ ] M4: add offline-first adapter interface with fallback strategy
+- [ ] M5: add clinician report and parent summary pipeline
 
 > [!IMPORTANT]
-> Prioritize reliable data contracts and offline persistence first, then model quality improvements.
-
+> Favor backward-compatible output contracts in service responses so historical data and dashboard rendering remain stable across model and storage upgrades.

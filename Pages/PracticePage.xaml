@@ -3,9 +3,46 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SpeechBuddyAI.Pages.PracticePage"
              Title="Practice">
-    <VerticalStackLayout Padding="20" Spacing="10">
-        <Label Text="AI Practice Generator" FontSize="22" FontAttributes="Bold" />
-        <Entry Placeholder="Target sound (e.g., initial R)" />
-        <Button Text="Generate Practice List" />
-    </VerticalStackLayout>
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+            <Label Text="M1 Practice Scoring" FontSize="22" FontAttributes="Bold" />
+            <Label Text="Capture an attempt, compute score components, and persist the result." />
+
+            <Label Text="Target sound" FontAttributes="Bold" />
+            <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or initial r" />
+
+            <Label Text="Attempt transcript" FontAttributes="Bold" />
+            <Editor x:Name="TranscriptEditor" Placeholder="Type recognized transcript here" AutoSize="TextChanges" HeightRequest="120" />
+
+            <HorizontalStackLayout Spacing="10">
+                <Button Text="Score Attempt"
+                        Clicked="OnScoreAttemptClicked"
+                        HorizontalOptions="Fill"
+                        WidthRequest="170" />
+                <Button Text="Generate Practice List"
+                        Clicked="OnGeneratePracticeListClicked"
+                        HorizontalOptions="Fill"
+                        WidthRequest="170" />
+            </HorizontalStackLayout>
+
+            <Label x:Name="StatusLabel" Text="No attempt scored yet." FontAttributes="Italic" />
+
+            <Frame BorderColor="#DDDDDD" Padding="12">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Score Components" FontAttributes="Bold" />
+                    <Label x:Name="PhonemeScoreLabel" Text="Phoneme: -" />
+                    <Label x:Name="FluencyScoreLabel" Text="Fluency: -" />
+                    <Label x:Name="ConsistencyScoreLabel" Text="Consistency: -" />
+                    <Label x:Name="OverallScoreLabel" Text="Overall: -" FontAttributes="Bold" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame BorderColor="#DDDDDD" Padding="12">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Generated Practice Words" FontAttributes="Bold" />
+                    <Label x:Name="PracticeWordsLabel" Text="No words generated yet." />
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
