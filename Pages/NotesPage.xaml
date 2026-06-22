@@ -38,13 +38,59 @@
                     <HorizontalStackLayout Spacing="10">
                         <VerticalStackLayout>
                             <Label Text="Start" FontSize="12" />
-                            <DatePicker x:Name="ExportStartDatePicker" />
+                            <DatePicker x:Name="ExportStartDatePicker"
+                                        DateSelected="OnExportPreviewWindowChanged" />
                         </VerticalStackLayout>
                         <VerticalStackLayout>
                             <Label Text="End" FontSize="12" />
-                            <DatePicker x:Name="ExportEndDatePicker" />
+                            <DatePicker x:Name="ExportEndDatePicker"
+                                        DateSelected="OnExportPreviewWindowChanged" />
                         </VerticalStackLayout>
                     </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Comparison Preview" FontAttributes="Bold" />
+                    <Label x:Name="ComparisonPreviewNarrativeLabel" Text="Comparison narrative: not available yet." LineBreakMode="WordWrap" />
+                    <Label x:Name="ComparisonPreviewNormalizationLabel" Text="Normalization: -" />
+                    <CollectionView x:Name="ComparisonPreviewBadgesCollection"
+                                    SelectionMode="None"
+                                    HeightRequest="52">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="{Binding BorderColor}" BackgroundColor="{Binding BackgroundColor}" Padding="8,4" CornerRadius="10">
+                                    <VerticalStackLayout Spacing="1">
+                                        <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="11" />
+                                        <Label Text="{Binding Value}" FontSize="11" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <CollectionView x:Name="ComparisonPreviewTimelineCollection"
+                                    SelectionMode="None"
+                                    HeightRequest="150">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="#E9ECEF" BackgroundColor="#FAFAFA" Padding="8,6" Margin="0,0,0,6">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding SessionDateText}" FontAttributes="Bold" />
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding AttemptsText}" FontSize="12" />
+                                            <Label Text="{Binding OverallText}" FontSize="12" />
+                                            <Label Text="{Binding ConfidenceText}" FontSize="12" />
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding DeltaText}" FontSize="12" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
                 </VerticalStackLayout>
             </Frame>
 

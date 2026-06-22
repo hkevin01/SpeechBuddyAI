@@ -8,7 +8,7 @@ public static class ReportExportFormatter
         SessionNote note,
         IReadOnlyList<ProgressEntry> metadataEntries,
         ReportExportFormat format,
-        SessionComparisonNormalizationMode normalizationMode = SessionComparisonNormalizationMode.AttemptWeighted)
+        SessionComparisonSnapshot? comparisonSnapshot = null)
     {
         if (note is null)
         {
@@ -16,12 +16,13 @@ public static class ReportExportFormatter
         }
 
         var entries = metadataEntries ?? Array.Empty<ProgressEntry>();
+        var snapshot = comparisonSnapshot ?? new SessionComparisonSnapshot();
 
         return format switch
         {
-            ReportExportFormat.Markdown => BuildMarkdown(note, entries, normalizationMode),
-            ReportExportFormat.CsvSummary => BuildCsvSummary(note, entries, normalizationMode),
-            _ => BuildPlainText(note, entries, normalizationMode)
+            ReportExportFormat.Markdown => BuildMarkdown(note, entries, snapshot),
+            ReportExportFormat.CsvSummary => BuildCsvSummary(note, entries, snapshot),
+            _ => BuildPlainText(note, entries, snapshot)
         };
     }
 
@@ -46,10 +47,9 @@ public static class ReportExportFormatter
     private static string BuildPlainText(
         SessionNote note,
         IReadOnlyList<ProgressEntry> entries,
-        SessionComparisonNormalizationMode normalizationMode)
+        SessionComparisonSnapshot snapshot)
     {
         var sessionDate = note.SessionDate.ToString("yyyy-MM-dd HH:mm 'UTC'");
-        var snapshot = BuildComparisonSnapshot(entries, normalizationMode);
         return
             "SpeechBuddyAI Session Report" + Environment.NewLine +
             "===========================" + Environment.NewLine +
@@ -62,7 +62,7 @@ public static class ReportExportFormatter
             $"Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
-            $"Comparison Normalization: {normalizationMode.ToDisplayLabel()}" + Environment.NewLine +
+            $"Comparison Normalization: {snapshot.NormalizationMode.ToDisplayLabel()}" + Environment.NewLine +
             Environment.NewLine +
             "Comparison Narrative" + Environment.NewLine +
             "--------------------" + Environment.NewLine +
@@ -92,10 +92,9 @@ public static class ReportExportFormatter
     private static string BuildMarkdown(
         SessionNote note,
         IReadOnlyList<ProgressEntry> entries,
-        SessionComparisonNormalizationMode normalizationMode)
+        SessionComparisonSnapshot snapshot)
     {
         var sessionDate = note.SessionDate.ToString("yyyy-MM-dd HH:mm 'UTC'");
-        var snapshot = BuildComparisonSnapshot(entries, normalizationMode);
         return
             "# SpeechBuddyAI Session Report" + Environment.NewLine +
             Environment.NewLine +
@@ -105,7 +104,7 @@ public static class ReportExportFormatter
             $"- Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"- Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"- Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
-            $"- Comparison Normalization: {normalizationMode.ToDisplayLabel()}" + Environment.NewLine +
+            $"- Comparison Normalization: {snapshot.NormalizationMode.ToDisplayLabel()}" + Environment.NewLine +
             Environment.NewLine +
             "## Comparison Narrative" + Environment.NewLine +
             Environment.NewLine +
@@ -135,10 +134,9 @@ public static class ReportExportFormatter
     private static string BuildCsvSummary(
         SessionNote note,
         IReadOnlyList<ProgressEntry> entries,
-        SessionComparisonNormalizationMode normalizationMode)
+        SessionComparisonSnapshot snapshot)
     {
         var sessionDate = note.SessionDate.ToString("yyyy-MM-dd HH:mm 'UTC'");
-        var snapshot = BuildComparisonSnapshot(entries, normalizationMode);
         var lines = new List<string>
         {
             "Metric,Value",
@@ -148,7 +146,7 @@ public static class ReportExportFormatter
             CsvLine("TargetLevelDeltas", BuildTargetDeltaSummary(entries)),
             CsvLine("SessionComparison", BuildSessionComparisonOverview(snapshot)),
             CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
-            CsvLine("ComparisonNormalization", normalizationMode.ToDisplayLabel()),
+            CsvLine("ComparisonNormalization", snapshot.NormalizationMode.ToDisplayLabel()),
             CsvLine("ComparisonNarrative", SafeValue(snapshot.ComparisonNarrative)),
             CsvLine("RollingSessionHistory", BuildCsvTimeline(snapshot.RollingTimeline)),
             CsvLine("TargetComparisonTable", BuildCsvTargetComparison(snapshot.TargetComparisons)),
@@ -228,33 +226,6 @@ public static class ReportExportFormatter
         }
 
         return deltas.Count == 0 ? "n/a" : string.Join(" | ", deltas);
-    }
-
-    private static SessionComparisonSnapshot BuildComparisonSnapshot(
-        IReadOnlyList<ProgressEntry> entries,
-        SessionComparisonNormalizationMode normalizationMode)
-    {
-        var snapshot = new SessionComparisonService().Build(entries, normalizationMode);
-        var narrative = new ComparisonNarrativeGenerator(new TrendAnalysisService()).Generate(snapshot);
-
-        return new SessionComparisonSnapshot
-        {
-            HasCurrentSession = snapshot.HasCurrentSession,
-            HasPreviousSession = snapshot.HasPreviousSession,
-            CurrentSessionDate = snapshot.CurrentSessionDate,
-            CurrentAttemptCount = snapshot.CurrentAttemptCount,
-            CurrentAverageOverall = snapshot.CurrentAverageOverall,
-            CurrentAverageConfidence = snapshot.CurrentAverageConfidence,
-            PreviousSessionDate = snapshot.PreviousSessionDate,
-            PreviousAttemptCount = snapshot.PreviousAttemptCount,
-            PreviousAverageOverall = snapshot.PreviousAverageOverall,
-            PreviousAverageConfidence = snapshot.PreviousAverageConfidence,
-            NormalizationMode = snapshot.NormalizationMode,
-            TargetComparisons = snapshot.TargetComparisons,
-            ConfidenceBandTransitions = snapshot.ConfidenceBandTransitions,
-            RollingTimeline = snapshot.RollingTimeline,
-            ComparisonNarrative = narrative
-        };
     }
 
     private static string BuildSessionComparisonOverview(SessionComparisonSnapshot snapshot)

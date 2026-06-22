@@ -17,6 +17,27 @@ public sealed class ComparisonNarrativeGeneratorTests
             PreviousAverageOverall = 0.60,
             CurrentAverageConfidence = 0.78,
             PreviousAverageConfidence = 0.62,
+            RollingTimeline =
+            [
+                new SessionTimelineItem
+                {
+                    SessionDate = new DateTime(2026, 6, 21),
+                    AverageOverall = 0.82,
+                    AverageConfidence = 0.78,
+                    AttemptCount = 3,
+                    HasComparisonBaseline = true,
+                    OverallDeltaFromPreviousSession = 0.10,
+                    ConfidenceDeltaFromPreviousSession = 0.09
+                },
+                new SessionTimelineItem
+                {
+                    SessionDate = new DateTime(2026, 6, 20),
+                    AverageOverall = 0.72,
+                    AverageConfidence = 0.69,
+                    AttemptCount = 2,
+                    HasComparisonBaseline = false
+                }
+            ],
             TargetComparisons =
             [
                 new TargetComparisonItem
@@ -37,6 +58,7 @@ public sealed class ComparisonNarrativeGeneratorTests
         Assert.Contains("Strong upward improvement", narrative);
         Assert.Contains("r", narrative);
         Assert.Contains("Moderate to High", narrative);
+        Assert.Contains("Across the last 2 sessions in view", narrative);
     }
 
     [Fact]

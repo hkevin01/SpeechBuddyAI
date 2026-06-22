@@ -29,6 +29,7 @@ public static class MauiProgram
             builder.Services.AddSingleton<Services.TrendAnalysisService>();
             builder.Services.AddSingleton<Services.ComparisonNarrativeGenerator>();
             builder.Services.AddSingleton<Services.SessionComparisonService>();
+            builder.Services.AddSingleton<Services.ComparisonExportBuilderService>();
             builder.Services.AddSingleton<Services.ReportService>();
             builder.Services.AddSingleton<Services.Reports.ReportExportSettingsService>();
             builder.Services.AddSingleton<Services.NoteStorageService>();

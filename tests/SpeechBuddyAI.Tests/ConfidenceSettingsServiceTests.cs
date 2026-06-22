@@ -34,6 +34,30 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(SessionComparisonNormalizationMode.AttemptWeighted, service.GetSessionComparisonNormalizationMode());
     }
 
+    [Fact]
+    public void SaveProgressDateRange_PersistsAndOrdersDates()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveProgressDateRange(new DateTime(2026, 6, 20), new DateTime(2026, 6, 5));
+
+        var (start, end) = service.GetProgressDateRange(new DateTime(2026, 6, 22));
+
+        Assert.Equal(new DateTime(2026, 6, 5), start);
+        Assert.Equal(new DateTime(2026, 6, 20), end);
+    }
+
+    [Fact]
+    public void GetProgressDateRange_UsesDefaultWindowWhenUnset()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        var (start, end) = service.GetProgressDateRange(new DateTime(2026, 6, 22));
+
+        Assert.Equal(new DateTime(2026, 5, 23), start);
+        Assert.Equal(new DateTime(2026, 6, 22), end);
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);

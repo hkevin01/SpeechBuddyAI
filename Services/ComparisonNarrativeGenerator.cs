@@ -39,6 +39,22 @@ public sealed class ComparisonNarrativeGenerator
             ? "Target-level changes were limited across the comparison window."
             : $"Largest target movement was {strongestTarget.TargetSound} ({strongestTarget.OverallDelta:+0%;-0%;0%}) with {strongestTarget.PreviousConfidenceBand.ToDisplayName()} to {strongestTarget.CurrentConfidenceBand.ToDisplayName()} confidence movement.";
 
-        return $"{overallPhrase} overall, with {confidencePhrase.ToLowerInvariant()} in confidence. {targetSentence}";
+        var timelineSentence = BuildTimelineSummarySentence(snapshot.RollingTimeline);
+
+        return $"{overallPhrase} overall, with {confidencePhrase.ToLowerInvariant()} in confidence. {targetSentence} {timelineSentence}";
+    }
+
+    private static string BuildTimelineSummarySentence(IReadOnlyList<SessionTimelineItem> rollingTimeline)
+    {
+        if (rollingTimeline.Count < 2)
+        {
+            return "The current view contains a baseline timeline only.";
+        }
+
+        var latest = rollingTimeline[0];
+        var earliest = rollingTimeline[^1];
+        var delta = latest.AverageOverall - earliest.AverageOverall;
+
+        return $"Across the last {rollingTimeline.Count} sessions in view, overall moved {delta:+0%;-0%;0%} from {earliest.AverageOverall:P0} to {latest.AverageOverall:P0}.";
     }
 }

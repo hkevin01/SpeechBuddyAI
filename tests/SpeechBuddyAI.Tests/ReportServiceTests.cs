@@ -11,7 +11,7 @@ public sealed class ReportServiceTests
     [Fact]
     public void BuildExportText_RoutesFormatThroughServiceApi()
     {
-        var service = new ReportService(new ConfidenceSettingsService(new InMemoryStore()));
+        var service = CreateService();
         var note = MakeNote();
         var entries = MakeEntries();
 
@@ -27,7 +27,7 @@ public sealed class ReportServiceTests
     [Fact]
     public async Task ExportReportAsync_UsesSameFileNameAsBuildExportFileName()
     {
-        var service = new ReportService(new ConfidenceSettingsService(new InMemoryStore()));
+        var service = CreateService();
         var note = MakeNote();
         var entries = MakeEntries();
 
@@ -43,6 +43,16 @@ public sealed class ReportServiceTests
 
         var content = await File.ReadAllTextAsync(exportedPath);
         Assert.Contains("# SpeechBuddyAI Session Report", content);
+    }
+
+    private static ReportService CreateService()
+    {
+        var settings = new ConfidenceSettingsService(new InMemoryStore());
+        var builder = new ComparisonExportBuilderService(
+            new SessionComparisonService(),
+            new ComparisonNarrativeGenerator(new TrendAnalysisService()));
+
+        return new ReportService(settings, builder);
     }
 
     private static SessionNote MakeNote()

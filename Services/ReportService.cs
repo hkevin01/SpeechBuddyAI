@@ -8,10 +8,14 @@ namespace SpeechBuddyAI.Services;
 public class ReportService
 {
     private readonly ConfidenceSettingsService _confidenceSettingsService;
+    private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
 
-    public ReportService(ConfidenceSettingsService confidenceSettingsService)
+    public ReportService(
+        ConfidenceSettingsService confidenceSettingsService,
+        ComparisonExportBuilderService comparisonExportBuilderService)
     {
         _confidenceSettingsService = confidenceSettingsService ?? throw new ArgumentNullException(nameof(confidenceSettingsService));
+        _comparisonExportBuilderService = comparisonExportBuilderService ?? throw new ArgumentNullException(nameof(comparisonExportBuilderService));
     }
 
     public Task<SessionNote> GenerateReportsAsync(string rawNote, IReadOnlyList<ProgressEntry> recentEntries)
@@ -50,7 +54,8 @@ public class ReportService
     public string BuildExportText(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
     {
         var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
-        return ReportExportFormatter.BuildContent(note, metadataEntries, format, normalizationMode);
+        var comparisonSnapshot = _comparisonExportBuilderService.Build(metadataEntries ?? Array.Empty<ProgressEntry>(), normalizationMode);
+        return ReportExportFormatter.BuildContent(note, metadataEntries, format, comparisonSnapshot);
     }
 
     public string BuildExportFileName(SessionNote note, ReportExportFormat format)

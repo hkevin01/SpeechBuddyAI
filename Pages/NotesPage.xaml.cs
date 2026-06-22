@@ -1,6 +1,7 @@
 using SpeechBuddyAI.Models;
 using SpeechBuddyAI.Services;
 using SpeechBuddyAI.Pages.ViewModels;
+using SpeechBuddyAI.Services.Confidence;
 using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Pages;
@@ -11,7 +12,10 @@ public partial class NotesPage : ContentPage
     private readonly ReportService _reportService;
     private readonly NoteStorageService _noteStorageService;
     private readonly ReportExportSettingsService _reportExportSettingsService;
+    private readonly ConfidenceSettingsService _confidenceSettingsService;
+    private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
     private readonly NotesPageViewModel _viewModel = new();
+    private readonly ProgressPageViewModel _comparisonPreviewViewModel = new();
     private bool _hasInitializedDateRange;
 
     public NotesPage()
@@ -21,6 +25,8 @@ public partial class NotesPage : ContentPage
         _reportService = ResolveService<ReportService>();
         _noteStorageService = ResolveService<NoteStorageService>();
         _reportExportSettingsService = ResolveService<ReportExportSettingsService>();
+        _confidenceSettingsService = ResolveService<ConfidenceSettingsService>();
+        _comparisonExportBuilderService = ResolveService<ComparisonExportBuilderService>();
     }
 
     protected override async void OnAppearing()
@@ -29,6 +35,7 @@ public partial class NotesPage : ContentPage
         LoadExportPreferences();
         InitializeDateRangeIfNeeded();
         await RefreshHistoryAsync();
+        await RefreshComparisonPreviewAsync();
     }
 
     private async void OnGenerateSummariesClicked(object? sender, EventArgs e)
@@ -167,6 +174,11 @@ public partial class NotesPage : ContentPage
         NoteStatusLabel.Text = $"Loaded note from {selected.SessionDate:yyyy-MM-dd HH:mm}.";
     }
 
+    private async void OnExportPreviewWindowChanged(object? sender, DateChangedEventArgs e)
+    {
+        await RefreshComparisonPreviewAsync();
+    }
+
     private async Task RefreshHistoryAsync()
     {
         try
@@ -214,6 +226,29 @@ public partial class NotesPage : ContentPage
     {
         var (startUtc, endUtc) = NotesPageViewModel.BuildUtcDateRange(ExportStartDatePicker.Date, ExportEndDatePicker.Date);
         return await _progressTrackingService.GetEntriesInDateRangeAsync(startUtc, endUtc);
+    }
+
+    private async Task RefreshComparisonPreviewAsync()
+    {
+        try
+        {
+            var metadataEntries = await GetMetadataEntriesForSelectedRangeAsync();
+            var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
+            var snapshot = _comparisonExportBuilderService.Build(metadataEntries, normalizationMode);
+            var state = _comparisonPreviewViewModel.BuildComparisonViewState(snapshot, snapshot.ComparisonNarrative);
+
+            ComparisonPreviewNarrativeLabel.Text = state.ComparisonNarrativeText;
+            ComparisonPreviewNormalizationLabel.Text = state.NormalizationModeText;
+            ComparisonPreviewBadgesCollection.ItemsSource = state.SummaryBadges;
+            ComparisonPreviewTimelineCollection.ItemsSource = state.TimelineRows;
+        }
+        catch (Exception ex)
+        {
+            ComparisonPreviewNarrativeLabel.Text = $"Comparison narrative: {ex.Message}";
+            ComparisonPreviewNormalizationLabel.Text = "Normalization: -";
+            ComparisonPreviewBadgesCollection.ItemsSource = Array.Empty<object>();
+            ComparisonPreviewTimelineCollection.ItemsSource = Array.Empty<object>();
+        }
     }
 
     private static T ResolveService<T>() where T : notnull

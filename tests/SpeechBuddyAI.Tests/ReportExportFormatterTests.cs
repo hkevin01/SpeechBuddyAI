@@ -10,8 +10,9 @@ public sealed class ReportExportFormatterTests
     {
         var note = MakeNote();
         var entries = MakeEntries();
+        var snapshot = BuildSnapshot(entries);
 
-        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.PlainText);
+        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.PlainText, snapshot);
 
         Assert.Contains("SpeechBuddyAI Session Report", content);
         Assert.Contains("Metadata", content);
@@ -33,8 +34,9 @@ public sealed class ReportExportFormatterTests
     {
         var note = MakeNote();
         var entries = MakeEntries();
+        var snapshot = BuildSnapshot(entries);
 
-        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.Markdown);
+        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.Markdown, snapshot);
 
         Assert.Contains("# SpeechBuddyAI Session Report", content);
         Assert.Contains("- Scoring Providers:", content);
@@ -50,8 +52,9 @@ public sealed class ReportExportFormatterTests
     {
         var note = MakeNote();
         var entries = MakeMultiTargetEntries();
+        var snapshot = BuildSnapshot(entries);
 
-        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.Markdown);
+        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.Markdown, snapshot);
 
         Assert.Contains("- Confidence Movement: 1 Low to Moderate, 1 Moderate to High", content);
         Assert.Contains("| Session | Attempts | Overall | Confidence | Delta vs Prior |", content);
@@ -65,8 +68,9 @@ public sealed class ReportExportFormatterTests
     {
         var note = MakeNote();
         var entries = MakeEntries();
+        var snapshot = BuildSnapshot(entries);
 
-        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.CsvSummary);
+        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.CsvSummary, snapshot);
 
         Assert.Contains("Metric,Value", content);
         Assert.Contains("ScoringProviders", content);
@@ -110,10 +114,20 @@ public sealed class ReportExportFormatterTests
     {
         var note = MakeNote();
         note.RawNote = "line one, with comma and \"quotes\"";
+        var snapshot = BuildSnapshot(MakeEntries());
 
-        var content = ReportExportFormatter.BuildContent(note, MakeEntries(), ReportExportFormat.CsvSummary);
+        var content = ReportExportFormatter.BuildContent(note, MakeEntries(), ReportExportFormat.CsvSummary, snapshot);
 
         Assert.Contains("\"line one, with comma and \"\"quotes\"\"\"", content);
+    }
+
+    private static SessionComparisonSnapshot BuildSnapshot(IReadOnlyList<ProgressEntry> entries)
+    {
+        var builder = new ComparisonExportBuilderService(
+            new SessionComparisonService(),
+            new ComparisonNarrativeGenerator(new TrendAnalysisService()));
+
+        return builder.Build(entries);
     }
 
     private static SessionNote MakeNote()

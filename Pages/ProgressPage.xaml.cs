@@ -9,8 +9,7 @@ public partial class ProgressPage : ContentPage
     private readonly ProgressTrackingService _progressTrackingService;
     private readonly TrendAnalysisService _trendAnalysisService;
     private readonly ConfidenceSettingsService _confidenceSettingsService;
-    private readonly ComparisonNarrativeGenerator _comparisonNarrativeGenerator;
-    private readonly SessionComparisonService _sessionComparisonService;
+    private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
     private readonly ProgressPageViewModel _viewModel;
 
     private IReadOnlyList<Models.ProgressEntry> _allEntries = Array.Empty<Models.ProgressEntry>();
@@ -21,8 +20,7 @@ public partial class ProgressPage : ContentPage
         _progressTrackingService = ResolveService<ProgressTrackingService>();
         _trendAnalysisService = ResolveService<TrendAnalysisService>();
         _confidenceSettingsService = ResolveService<ConfidenceSettingsService>();
-        _comparisonNarrativeGenerator = ResolveService<ComparisonNarrativeGenerator>();
-        _sessionComparisonService = ResolveService<SessionComparisonService>();
+        _comparisonExportBuilderService = ResolveService<ComparisonExportBuilderService>();
         _viewModel = new ProgressPageViewModel();
     }
 
@@ -34,7 +32,8 @@ public partial class ProgressPage : ContentPage
         try
         {
             _allEntries = await _progressTrackingService.GetEntriesAsync();
-            var filterState = _viewModel.BuildFilterState(null, null, DateTime.Now);
+            var savedRange = _confidenceSettingsService.GetProgressDateRange(DateTime.Now);
+            var filterState = _viewModel.BuildFilterState(savedRange.StartDateLocal, savedRange.EndDateLocal, DateTime.Now);
             ProgressStartDatePicker.Date = filterState.StartDateLocal;
             ProgressEndDatePicker.Date = filterState.EndDateLocal;
             DateRangeSummaryLabel.Text = filterState.DateRangeSummaryText;
@@ -63,6 +62,7 @@ public partial class ProgressPage : ContentPage
 
     private void OnDateRangeChanged(object? sender, DateChangedEventArgs e)
     {
+        _confidenceSettingsService.SaveProgressDateRange(ProgressStartDatePicker.Date, ProgressEndDatePicker.Date);
         ApplyFilter((FilterEntry.Text ?? string.Empty).Trim());
     }
 
@@ -88,9 +88,8 @@ public partial class ProgressPage : ContentPage
     private void ApplySessionComparison(IReadOnlyList<Models.ProgressEntry> entries)
     {
         var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
-        var snapshot = _sessionComparisonService.Build(entries, normalizationMode);
-        var narrative = _comparisonNarrativeGenerator.Generate(snapshot);
-        ApplyComparisonState(_viewModel.BuildComparisonViewState(snapshot, narrative));
+        var snapshot = _comparisonExportBuilderService.Build(entries, normalizationMode);
+        ApplyComparisonState(_viewModel.BuildComparisonViewState(snapshot, snapshot.ComparisonNarrative));
     }
 
     private void ApplyComparisonState(ProgressComparisonViewState state)
