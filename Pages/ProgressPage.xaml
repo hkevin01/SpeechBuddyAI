@@ -16,6 +16,22 @@
                        TextChanged="OnFilterTextChanged" />
                 <Button Text="Clear" Clicked="OnFilterClearClicked" WidthRequest="70" />
             </HorizontalStackLayout>
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Comparison Date Range" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="Start" FontSize="12" />
+                            <DatePicker x:Name="ProgressStartDatePicker" DateSelected="OnDateRangeChanged" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="3">
+                            <Label Text="End" FontSize="12" />
+                            <DatePicker x:Name="ProgressEndDatePicker" DateSelected="OnDateRangeChanged" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Label x:Name="DateRangeSummaryLabel" Text="Date range: -" FontSize="12" />
+                </VerticalStackLayout>
+            </Frame>
 
             <Frame BorderColor="#DDDDDD" Padding="10">
                 <VerticalStackLayout Spacing="8">
@@ -47,6 +63,23 @@
                     <Label x:Name="ConfidenceMovementSummaryLabel" Text="Band movement: -" />
                     <Label x:Name="ComparisonNarrativeLabel" Text="Comparison narrative: -" LineBreakMode="WordWrap" />
                     <Label x:Name="NormalizationModeLabel" Text="Normalization: -" />
+                    <CollectionView x:Name="SummaryBadgesCollection"
+                                    SelectionMode="None"
+                                    HeightRequest="52">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="{Binding BorderColor}" BackgroundColor="{Binding BackgroundColor}" Padding="8,4" CornerRadius="10">
+                                    <VerticalStackLayout Spacing="1">
+                                        <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="11" />
+                                        <Label Text="{Binding Value}" FontSize="11" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
                     <Label Text="Target Improvements" FontAttributes="Bold" Margin="0,8,0,0" />
                     <CollectionView x:Name="TargetComparisonChips"
                                     SelectionMode="None"

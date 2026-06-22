@@ -20,6 +20,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("Target-Level Deltas:", content);
         Assert.Contains("Session Comparison:", content);
         Assert.Contains("Comparison Narrative", content);
+        Assert.Contains("Rolling Session History", content);
         Assert.Contains("Per-Target Comparison", content);
         Assert.Contains("offline-heuristic: 2", content);
         Assert.Contains("High: 1", content);
@@ -38,6 +39,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("# SpeechBuddyAI Session Report", content);
         Assert.Contains("- Scoring Providers:", content);
         Assert.Contains("## Comparison Narrative", content);
+        Assert.Contains("## Rolling Session History", content);
         Assert.Contains("## Per-Target Comparison", content);
         Assert.Contains("| Target | Delta | Confidence Move | Current Avg | Previous Avg |", content);
         Assert.Contains("## Clinician SOAP Summary", content);
@@ -52,6 +54,8 @@ public sealed class ReportExportFormatterTests
         var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.Markdown);
 
         Assert.Contains("- Confidence Movement: 1 Low to Moderate, 1 Moderate to High", content);
+        Assert.Contains("| Session | Attempts | Overall | Confidence | Delta vs Prior |", content);
+        Assert.Contains("| 2026-01-24 | 2 | 68 % | 76 % | +20% overall / +23% confidence |", content);
         Assert.Contains("| r | +20% | Moderate to High | 80 % | 60 % |", content);
         Assert.Contains("| s | +20% | Low to Moderate | 55 % | 35 % |", content);
     }
@@ -69,6 +73,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("ConfidenceBands", content);
         Assert.Contains("TargetLevelDeltas", content);
         Assert.Contains("SessionComparison", content);
+        Assert.Contains("RollingSessionHistory", content);
         Assert.Contains("TargetComparisonTable", content);
     }
 

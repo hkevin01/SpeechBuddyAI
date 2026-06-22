@@ -68,6 +68,10 @@ public static class ReportExportFormatter
             "--------------------" + Environment.NewLine +
             SafeValue(snapshot.ComparisonNarrative) + Environment.NewLine +
             Environment.NewLine +
+            "Rolling Session History" + Environment.NewLine +
+            "-----------------------" + Environment.NewLine +
+            BuildPlainTextTimeline(snapshot.RollingTimeline) + Environment.NewLine +
+            Environment.NewLine +
             "Per-Target Comparison" + Environment.NewLine +
             "---------------------" + Environment.NewLine +
             BuildPlainTextTargetComparison(snapshot.TargetComparisons) + Environment.NewLine +
@@ -107,6 +111,10 @@ public static class ReportExportFormatter
             Environment.NewLine +
             SafeValue(snapshot.ComparisonNarrative) + Environment.NewLine +
             Environment.NewLine +
+            "## Rolling Session History" + Environment.NewLine +
+            Environment.NewLine +
+            BuildMarkdownTimeline(snapshot.RollingTimeline) + Environment.NewLine +
+            Environment.NewLine +
             "## Per-Target Comparison" + Environment.NewLine +
             Environment.NewLine +
             BuildMarkdownTargetComparison(snapshot.TargetComparisons) + Environment.NewLine +
@@ -142,6 +150,7 @@ public static class ReportExportFormatter
             CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
             CsvLine("ComparisonNormalization", normalizationMode.ToDisplayLabel()),
             CsvLine("ComparisonNarrative", SafeValue(snapshot.ComparisonNarrative)),
+            CsvLine("RollingSessionHistory", BuildCsvTimeline(snapshot.RollingTimeline)),
             CsvLine("TargetComparisonTable", BuildCsvTargetComparison(snapshot.TargetComparisons)),
             CsvLine("RawNote", string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()),
             CsvLine("SoapSummary", SafeValue(note.SoapSummary)),
@@ -306,6 +315,51 @@ public static class ReportExportFormatter
             " | ",
             targetComparisons.Select(item =>
                 $"{item.TargetSound}:{item.OverallDelta:+0%;-0%;0%} ({item.ConfidenceMovementLabel})"));
+    }
+
+    private static string BuildPlainTextTimeline(IReadOnlyList<SessionTimelineItem> rollingTimeline)
+    {
+        if (rollingTimeline.Count == 0)
+        {
+            return "n/a";
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            rollingTimeline.Select(item =>
+                $"- {item.SessionDate:yyyy-MM-dd}: attempts {item.AttemptCount}, overall {item.AverageOverall:P0}, confidence {item.AverageConfidence:P0}, {(item.HasComparisonBaseline ? $"delta {item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall / {item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
+    }
+
+    private static string BuildMarkdownTimeline(IReadOnlyList<SessionTimelineItem> rollingTimeline)
+    {
+        if (rollingTimeline.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var lines = new List<string>
+        {
+            "| Session | Attempts | Overall | Confidence | Delta vs Prior |",
+            "| --- | --- | --- | --- | --- |"
+        };
+
+        lines.AddRange(rollingTimeline.Select(item =>
+            $"| {item.SessionDate:yyyy-MM-dd} | {item.AttemptCount} | {item.AverageOverall:P0} | {item.AverageConfidence:P0} | {(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall / {item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")} |"));
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildCsvTimeline(IReadOnlyList<SessionTimelineItem> rollingTimeline)
+    {
+        if (rollingTimeline.Count == 0)
+        {
+            return "n/a";
+        }
+
+        return string.Join(
+            " | ",
+            rollingTimeline.Select(item =>
+                $"{item.SessionDate:yyyy-MM-dd}:{item.AttemptCount} attempts,{item.AverageOverall:P0} overall,{item.AverageConfidence:P0} confidence,{(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall/{item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
     }
 
     private static string Normalize(string? value, string fallback)

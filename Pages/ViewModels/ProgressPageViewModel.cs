@@ -1,4 +1,5 @@
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Services.Confidence;
 
 namespace SpeechBuddyAI.Pages.ViewModels;
 
@@ -18,6 +19,29 @@ public sealed class ProgressTimelineRow
     public string DeltaText { get; init; } = string.Empty;
 }
 
+public sealed class ProgressSummaryBadge
+{
+    public string Title { get; init; } = string.Empty;
+    public string Value { get; init; } = string.Empty;
+    public string BackgroundColor { get; init; } = "#F8F9FA";
+    public string BorderColor { get; init; } = "#DEE2E6";
+}
+
+public sealed class ProgressTrendViewState
+{
+    public string TrajectoryText { get; init; } = "Trajectory not available yet.";
+    public string ModerateThresholdText { get; init; } = "Moderate threshold: -";
+    public string HighThresholdText { get; init; } = "High threshold: -";
+    public IReadOnlyList<TrendPoint> TrendPoints { get; init; } = Array.Empty<TrendPoint>();
+}
+
+public sealed class ProgressFilterState
+{
+    public DateTime StartDateLocal { get; init; }
+    public DateTime EndDateLocal { get; init; }
+    public string DateRangeSummaryText { get; init; } = "Date range: -";
+}
+
 public sealed class ProgressComparisonViewState
 {
     public string CurrentSessionDateText { get; init; } = "Date: -";
@@ -34,12 +58,49 @@ public sealed class ProgressComparisonViewState
     public string ComparisonNarrativeText { get; init; } = "Comparison narrative: -";
     public string NormalizationModeText { get; init; } = "Normalization: -";
     public IReadOnlyList<TargetComparisonItem> TargetComparisons { get; init; } = Array.Empty<TargetComparisonItem>();
+    public IReadOnlyList<ProgressSummaryBadge> SummaryBadges { get; init; } = Array.Empty<ProgressSummaryBadge>();
     public IReadOnlyList<ProgressComparisonLegendItem> ConfidenceLegendItems { get; init; } = Array.Empty<ProgressComparisonLegendItem>();
     public IReadOnlyList<ProgressTimelineRow> TimelineRows { get; init; } = Array.Empty<ProgressTimelineRow>();
 }
 
 public sealed class ProgressPageViewModel
 {
+    public static (DateTime StartUtc, DateTime EndUtc) BuildUtcDateRange(DateTime startLocalDate, DateTime endLocalDate)
+    {
+        var normalizedStart = startLocalDate.Date;
+        var normalizedEnd = endLocalDate.Date;
+
+        if (normalizedEnd < normalizedStart)
+        {
+            (normalizedStart, normalizedEnd) = (normalizedEnd, normalizedStart);
+        }
+
+        var localStart = DateTime.SpecifyKind(normalizedStart, DateTimeKind.Local);
+        var localEndExclusive = DateTime.SpecifyKind(normalizedEnd.AddDays(1), DateTimeKind.Local);
+
+        return (localStart.ToUniversalTime(), localEndExclusive.ToUniversalTime().AddTicks(-1));
+    }
+
+    public ProgressFilterState BuildFilterState(DateTime? requestedStartDate, DateTime? requestedEndDate, DateTime referenceDateLocal)
+    {
+        var reference = referenceDateLocal.Date;
+        var fallbackStart = reference.AddDays(-30);
+        var start = (requestedStartDate ?? fallbackStart).Date;
+        var end = (requestedEndDate ?? reference).Date;
+
+        if (end < start)
+        {
+            (start, end) = (end, start);
+        }
+
+        return new ProgressFilterState
+        {
+            StartDateLocal = start,
+            EndDateLocal = end,
+            DateRangeSummaryText = $"Date range: {start:yyyy-MM-dd} to {end:yyyy-MM-dd}"
+        };
+    }
+
     public IReadOnlyList<ProgressEntry> FilterEntries(IReadOnlyList<ProgressEntry> allEntries, string filterText)
     {
         var source = allEntries ?? Array.Empty<ProgressEntry>();
@@ -55,17 +116,53 @@ public sealed class ProgressPageViewModel
             .ToArray();
     }
 
+    public IReadOnlyList<ProgressEntry> FilterEntriesByDateRange(
+        IReadOnlyList<ProgressEntry> entries,
+        DateTime startLocalDate,
+        DateTime endLocalDate)
+    {
+        var source = entries ?? Array.Empty<ProgressEntry>();
+        var (startUtc, endUtc) = BuildUtcDateRange(startLocalDate, endLocalDate);
+
+        return source
+            .Where(entry => entry.Timestamp >= startUtc && entry.Timestamp <= endUtc)
+            .ToArray();
+    }
+
+    public ProgressTrendViewState BuildTrendViewState(
+        IReadOnlyList<ProgressEntry> filteredEntries,
+        TrendAnalysisService trendAnalysisService,
+        ConfidenceThresholds thresholds,
+        int maxPoints = 12)
+    {
+        if (trendAnalysisService is null)
+        {
+            throw new ArgumentNullException(nameof(trendAnalysisService));
+        }
+
+        var points = trendAnalysisService.BuildTrendPoints(filteredEntries, maxPoints);
+        return new ProgressTrendViewState
+        {
+            TrajectoryText = trendAnalysisService.InterpretTrajectory(filteredEntries),
+            ModerateThresholdText = $"Moderate threshold: {thresholds.ModerateThreshold:P0}",
+            HighThresholdText = $"High threshold: {thresholds.HighThreshold:P0}",
+            TrendPoints = ApplyThresholdGuides(points, thresholds)
+        };
+    }
+
     public ProgressComparisonViewState BuildComparisonViewState(SessionComparisonSnapshot snapshot, string narrative)
     {
         var safeSnapshot = snapshot ?? new SessionComparisonSnapshot();
         var safeNarrative = string.IsNullOrWhiteSpace(narrative) ? "No comparison narrative is available yet." : narrative.Trim();
         var legendItems = BuildConfidenceLegendItems();
+        var badges = BuildSummaryBadges(safeSnapshot.TargetComparisons);
 
         if (!safeSnapshot.HasCurrentSession)
         {
             return new ProgressComparisonViewState
             {
                 ComparisonNarrativeText = $"Comparison narrative: {safeNarrative}",
+                SummaryBadges = badges,
                 ConfidenceLegendItems = legendItems
             };
         }
@@ -79,6 +176,7 @@ public sealed class ProgressPageViewModel
             ComparisonNarrativeText = $"Comparison narrative: {safeNarrative}",
             NormalizationModeText = $"Normalization: {safeSnapshot.NormalizationMode.ToDisplayLabel()}",
             TargetComparisons = safeSnapshot.TargetComparisons,
+            SummaryBadges = badges,
             ConfidenceLegendItems = legendItems,
             TimelineRows = safeSnapshot.RollingTimeline.Select(BuildTimelineRow).ToArray()
         };
@@ -101,6 +199,7 @@ public sealed class ProgressPageViewModel
                 ComparisonNarrativeText = state.ComparisonNarrativeText,
                 NormalizationModeText = state.NormalizationModeText,
                 TargetComparisons = state.TargetComparisons,
+                SummaryBadges = state.SummaryBadges,
                 ConfidenceLegendItems = state.ConfidenceLegendItems,
                 TimelineRows = state.TimelineRows
             };
@@ -122,8 +221,45 @@ public sealed class ProgressPageViewModel
             ComparisonNarrativeText = state.ComparisonNarrativeText,
             NormalizationModeText = state.NormalizationModeText,
             TargetComparisons = state.TargetComparisons,
+            SummaryBadges = state.SummaryBadges,
             ConfidenceLegendItems = state.ConfidenceLegendItems,
             TimelineRows = state.TimelineRows
+        };
+    }
+
+    private static IReadOnlyList<ProgressSummaryBadge> BuildSummaryBadges(IReadOnlyList<TargetComparisonItem> targetComparisons)
+    {
+        if (targetComparisons.Count == 0)
+        {
+            return Array.Empty<ProgressSummaryBadge>();
+        }
+
+        var strongestImproved = targetComparisons
+            .OrderByDescending(item => item.OverallDelta)
+            .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        var mostVariable = targetComparisons
+            .OrderByDescending(item => Math.Abs(item.ConfidenceDelta))
+            .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        return new[]
+        {
+            new ProgressSummaryBadge
+            {
+                Title = "Strongest Improved",
+                Value = $"{strongestImproved.TargetSound} ({strongestImproved.OverallDelta:+0%;-0%;0%})",
+                BackgroundColor = strongestImproved.CurrentConfidenceBand.ToChipBackgroundColor(),
+                BorderColor = strongestImproved.CurrentConfidenceBand.ToChipBorderColor()
+            },
+            new ProgressSummaryBadge
+            {
+                Title = "Most Variable",
+                Value = $"{mostVariable.TargetSound} ({mostVariable.ConfidenceDelta:+0%;-0%;0%} confidence)",
+                BackgroundColor = mostVariable.CurrentConfidenceBand.ToChipBackgroundColor(),
+                BorderColor = mostVariable.CurrentConfidenceBand.ToChipBorderColor()
+            }
         };
     }
 
@@ -150,6 +286,27 @@ public sealed class ProgressPageViewModel
                 BorderColor = ConfidenceBand.Low.ToChipBorderColor()
             }
         };
+    }
+
+    private static IReadOnlyList<TrendPoint> ApplyThresholdGuides(
+        IReadOnlyList<TrendPoint> trendPoints,
+        ConfidenceThresholds thresholds)
+    {
+        var moderateOffset = 40 + (220 * thresholds.ModerateThreshold);
+        var highOffset = 40 + (220 * thresholds.HighThreshold);
+
+        return trendPoints
+            .Select(point => new TrendPoint
+            {
+                AttemptIndex = point.AttemptIndex,
+                Score = point.Score,
+                BarWidth = point.BarWidth,
+                ConfidenceScore = point.ConfidenceScore,
+                ConfidenceBarWidth = point.ConfidenceBarWidth,
+                ModerateGuideOffset = moderateOffset,
+                HighGuideOffset = highOffset
+            })
+            .ToArray();
     }
 
     private static ProgressTimelineRow BuildTimelineRow(SessionTimelineItem item)

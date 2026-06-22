@@ -34,6 +34,10 @@ public partial class ProgressPage : ContentPage
         try
         {
             _allEntries = await _progressTrackingService.GetEntriesAsync();
+            var filterState = _viewModel.BuildFilterState(null, null, DateTime.Now);
+            ProgressStartDatePicker.Date = filterState.StartDateLocal;
+            ProgressEndDatePicker.Date = filterState.EndDateLocal;
+            DateRangeSummaryLabel.Text = filterState.DateRangeSummaryText;
             ApplyFilter((FilterEntry.Text ?? string.Empty).Trim());
         }
         catch (Exception ex)
@@ -57,19 +61,27 @@ public partial class ProgressPage : ContentPage
         ApplyFilter(string.Empty);
     }
 
+    private void OnDateRangeChanged(object? sender, DateChangedEventArgs e)
+    {
+        ApplyFilter((FilterEntry.Text ?? string.Empty).Trim());
+    }
+
     private void ApplyFilter(string filterText)
     {
-        var filtered = _viewModel.FilterEntries(_allEntries, filterText);
+        var filterState = _viewModel.BuildFilterState(ProgressStartDatePicker.Date, ProgressEndDatePicker.Date, DateTime.Now);
+        DateRangeSummaryLabel.Text = filterState.DateRangeSummaryText;
+
+        var dateFiltered = _viewModel.FilterEntriesByDateRange(_allEntries, filterState.StartDateLocal, filterState.EndDateLocal);
+        var filtered = _viewModel.FilterEntries(dateFiltered, filterText);
 
         ProgressCollection.ItemsSource = filtered;
 
         var thresholds = _confidenceSettingsService.GetThresholds();
-        ModerateThresholdLabel.Text = $"Moderate threshold: {thresholds.ModerateThreshold:P0}";
-        HighThresholdLabel.Text = $"High threshold: {thresholds.HighThreshold:P0}";
-
-        var trendPoints = _trendAnalysisService.BuildTrendPoints(filtered, 12);
-        TrendCollection.ItemsSource = ApplyThresholdGuides(trendPoints, thresholds);
-        TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(filtered);
+        var trendState = _viewModel.BuildTrendViewState(filtered, _trendAnalysisService, thresholds, 12);
+        ModerateThresholdLabel.Text = trendState.ModerateThresholdText;
+        HighThresholdLabel.Text = trendState.HighThresholdText;
+        TrendCollection.ItemsSource = trendState.TrendPoints;
+        TrajectoryLabel.Text = trendState.TrajectoryText;
         ApplySessionComparison(filtered);
     }
 
@@ -96,30 +108,10 @@ public partial class ProgressPage : ContentPage
         ConfidenceMovementSummaryLabel.Text = state.ConfidenceMovementText;
         ComparisonNarrativeLabel.Text = state.ComparisonNarrativeText;
         NormalizationModeLabel.Text = state.NormalizationModeText;
+        SummaryBadgesCollection.ItemsSource = state.SummaryBadges;
         TargetComparisonChips.ItemsSource = state.TargetComparisons;
         ConfidenceLegendCollection.ItemsSource = state.ConfidenceLegendItems;
         SessionTimelineCollection.ItemsSource = state.TimelineRows;
-    }
-
-    private static IReadOnlyList<Models.TrendPoint> ApplyThresholdGuides(
-        IReadOnlyList<Models.TrendPoint> trendPoints,
-        ConfidenceThresholds thresholds)
-    {
-        var moderateOffset = 40 + (220 * thresholds.ModerateThreshold);
-        var highOffset = 40 + (220 * thresholds.HighThreshold);
-
-        return trendPoints
-            .Select(p => new Models.TrendPoint
-            {
-                AttemptIndex = p.AttemptIndex,
-                Score = p.Score,
-                BarWidth = p.BarWidth,
-                ConfidenceScore = p.ConfidenceScore,
-                ConfidenceBarWidth = p.ConfidenceBarWidth,
-                ModerateGuideOffset = moderateOffset,
-                HighGuideOffset = highOffset
-            })
-            .ToArray();
     }
 
     private static T ResolveService<T>() where T : notnull
