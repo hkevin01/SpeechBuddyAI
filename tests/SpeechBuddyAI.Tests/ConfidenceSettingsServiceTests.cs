@@ -24,14 +24,34 @@ public sealed class ConfidenceSettingsServiceTests
     }
 
     [Fact]
+    public void SessionComparisonSmoothingStrength_DefaultsToBalanced()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        Assert.Equal(SessionComparisonSmoothingStrength.Balanced, service.GetSessionComparisonSmoothingStrength());
+    }
+
+    [Fact]
+    public void SaveSessionComparisonSmoothingStrength_PersistsValue()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveSessionComparisonSmoothingStrength(SessionComparisonSmoothingStrength.Responsive);
+
+        Assert.Equal(SessionComparisonSmoothingStrength.Responsive, service.GetSessionComparisonSmoothingStrength());
+    }
+
+    [Fact]
     public void ResetDefaults_RestoresAttemptWeightedNormalization()
     {
         var service = new ConfidenceSettingsService(new InMemoryStore());
         service.SaveSessionComparisonNormalizationMode(SessionComparisonNormalizationMode.DayWeighted);
+        service.SaveSessionComparisonSmoothingStrength(SessionComparisonSmoothingStrength.Responsive);
 
         service.ResetDefaults();
 
         Assert.Equal(SessionComparisonNormalizationMode.AttemptWeighted, service.GetSessionComparisonNormalizationMode());
+        Assert.Equal(SessionComparisonSmoothingStrength.Balanced, service.GetSessionComparisonSmoothingStrength());
     }
 
     [Fact]

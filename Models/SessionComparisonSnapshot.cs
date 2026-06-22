@@ -63,6 +63,7 @@ public sealed class SessionComparisonSnapshot
     public double PreviousAverageConfidence { get; init; }
 
     public SessionComparisonNormalizationMode NormalizationMode { get; init; } = SessionComparisonNormalizationMode.AttemptWeighted;
+    public SessionComparisonSmoothingStrength SmoothingStrength { get; init; } = SessionComparisonSmoothingStrength.Balanced;
     public IReadOnlyList<TargetComparisonItem> TargetComparisons { get; init; } = Array.Empty<TargetComparisonItem>();
     public IReadOnlyList<ConfidenceBandTransitionCount> ConfidenceBandTransitions { get; init; } = Array.Empty<ConfidenceBandTransitionCount>();
     public IReadOnlyList<SessionTimelineItem> RollingTimeline { get; init; } = Array.Empty<SessionTimelineItem>();

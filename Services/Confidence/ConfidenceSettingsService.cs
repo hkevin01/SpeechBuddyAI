@@ -5,6 +5,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string ModerateThresholdKey = "confidence.moderateThreshold";
     private const string HighThresholdKey = "confidence.highThreshold";
     private const string SessionComparisonNormalizationKey = "comparison.sessionNormalizationMode";
+    private const string SessionComparisonSmoothingStrengthKey = "comparison.smoothingStrength";
     private const string ProgressDateRangeStartKey = "progress.dateRangeStart";
     private const string ProgressDateRangeEndKey = "progress.dateRangeEnd";
     private const string ProgressTargetFilterKey = "progress.targetFilter";
@@ -12,6 +13,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
     public const SessionComparisonNormalizationMode DefaultNormalizationMode = SessionComparisonNormalizationMode.AttemptWeighted;
+    public const SessionComparisonSmoothingStrength DefaultSmoothingStrength = SessionComparisonSmoothingStrength.Balanced;
     public const int DefaultProgressDateRangeDays = 30;
 
     private readonly IKeyValueStore _store;
@@ -53,6 +55,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(ModerateThresholdKey, DefaultModerateThreshold);
         _store.Set(HighThresholdKey, DefaultHighThreshold);
         _store.Set(SessionComparisonNormalizationKey, (double)DefaultNormalizationMode);
+        _store.Set(SessionComparisonSmoothingStrengthKey, (double)DefaultSmoothingStrength);
         _store.Set(ProgressDateRangeStartKey, double.NaN);
         _store.Set(ProgressDateRangeEndKey, double.NaN);
         _store.Set(ProgressTargetFilterKey, string.Empty);
@@ -76,6 +79,26 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         }
 
         _store.Set(SessionComparisonNormalizationKey, (double)mode);
+    }
+
+    public SessionComparisonSmoothingStrength GetSessionComparisonSmoothingStrength()
+    {
+        var stored = _store.Get(SessionComparisonSmoothingStrengthKey, (double)DefaultSmoothingStrength);
+        var strength = (SessionComparisonSmoothingStrength)(int)stored;
+
+        return Enum.IsDefined(typeof(SessionComparisonSmoothingStrength), strength)
+            ? strength
+            : DefaultSmoothingStrength;
+    }
+
+    public void SaveSessionComparisonSmoothingStrength(SessionComparisonSmoothingStrength strength)
+    {
+        if (!Enum.IsDefined(typeof(SessionComparisonSmoothingStrength), strength))
+        {
+            throw new ArgumentOutOfRangeException(nameof(strength));
+        }
+
+        _store.Set(SessionComparisonSmoothingStrengthKey, (double)strength);
     }
 
     public (DateTime StartDateLocal, DateTime EndDateLocal) GetProgressDateRange(DateTime referenceDateLocal)

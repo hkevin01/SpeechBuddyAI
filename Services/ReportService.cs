@@ -8,14 +8,14 @@ namespace SpeechBuddyAI.Services;
 public class ReportService
 {
     private readonly ConfidenceSettingsService _confidenceSettingsService;
-    private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
+    private readonly ComparisonSnapshotCacheService _comparisonSnapshotCacheService;
 
     public ReportService(
         ConfidenceSettingsService confidenceSettingsService,
-        ComparisonExportBuilderService comparisonExportBuilderService)
+        ComparisonSnapshotCacheService comparisonSnapshotCacheService)
     {
         _confidenceSettingsService = confidenceSettingsService ?? throw new ArgumentNullException(nameof(confidenceSettingsService));
-        _comparisonExportBuilderService = comparisonExportBuilderService ?? throw new ArgumentNullException(nameof(comparisonExportBuilderService));
+        _comparisonSnapshotCacheService = comparisonSnapshotCacheService ?? throw new ArgumentNullException(nameof(comparisonSnapshotCacheService));
     }
 
     public Task<SessionNote> GenerateReportsAsync(string rawNote, IReadOnlyList<ProgressEntry> recentEntries)
@@ -54,7 +54,8 @@ public class ReportService
     public string BuildExportText(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
     {
         var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
-        var comparisonSnapshot = _comparisonExportBuilderService.Build(metadataEntries ?? Array.Empty<ProgressEntry>(), normalizationMode);
+        var smoothingStrength = _confidenceSettingsService.GetSessionComparisonSmoothingStrength();
+        var comparisonSnapshot = _comparisonSnapshotCacheService.GetOrBuild(metadataEntries ?? Array.Empty<ProgressEntry>(), normalizationMode, smoothingStrength);
         return ReportExportFormatter.BuildContent(note, metadataEntries, format, comparisonSnapshot);
     }
 
@@ -128,7 +129,8 @@ public class ReportService
             var strongest = recent.OrderByDescending(e => e.OverallScore).FirstOrDefault()?.TargetSound ?? "n/a";
             var weakest = recent.OrderBy(e => e.OverallScore).FirstOrDefault()?.TargetSound ?? "n/a";
             var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
-            var comparison = _comparisonExportBuilderService.Build(safeEntries, normalizationMode);
+            var smoothingStrength = _confidenceSettingsService.GetSessionComparisonSmoothingStrength();
+            var comparison = _comparisonSnapshotCacheService.GetOrBuild(safeEntries, normalizationMode, smoothingStrength);
             var mostVariable = comparison.TargetComparisons
                 .OrderByDescending(item => item.VariabilityIndex)
                 .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
@@ -146,7 +148,7 @@ public class ReportService
         }
     }
 
-    private static string BuildParentSummary(IReadOnlyList<ProgressEntry> entries)
+    private string BuildParentSummary(IReadOnlyList<ProgressEntry> entries)
     {
         var safeEntries = entries ?? Array.Empty<ProgressEntry>();
 
@@ -160,15 +162,55 @@ public class ReportService
 
             var avg = recent.Average(e => e.OverallScore);
             var topFocus = recent.OrderBy(e => e.OverallScore).First().TargetSound;
+            var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
+            var smoothingStrength = _confidenceSettingsService.GetSessionComparisonSmoothingStrength();
+            var comparison = _comparisonSnapshotCacheService.GetOrBuild(safeEntries, normalizationMode, smoothingStrength);
+            var mostVariable = comparison.TargetComparisons
+                .OrderByDescending(item => item.VariabilityIndex)
+                .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()?.TargetSound ?? topFocus;
+            var stabilizing = comparison.TargetComparisons
+                .OrderByDescending(item => item.PreviousSessionVariance - item.CurrentSessionVariance)
+                .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()?.TargetSound;
+
+            var progressSentence = comparison.HasPreviousSession
+                ? BuildParentTrendSentence(comparison)
+                : "This review window is still building a baseline, so the main goal is steady short practice.";
+
+            var stabilizationSentence = string.IsNullOrWhiteSpace(stabilizing)
+                ? string.Empty
+                : $" We saw the steadiest recent practice on '{stabilizing}'.";
 
             return
                 $"Your child completed {recent.Length} recent practice attempts with an average score of {avg:P0}. " +
-                $"The main focus right now is '{topFocus}'. " +
-                "Short, consistent practice sessions with calm repetition will help build more stable speech patterns between visits.";
+                $"The main focus right now is '{topFocus}', and '{mostVariable}' still benefits from the most steady repetition. " +
+                progressSentence + stabilizationSentence +
+                " Short, consistent practice sessions with calm repetition will help build more stable speech patterns between visits.";
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException("Failed to build parent summary.", ex);
         }
+    }
+
+    private static string BuildParentTrendSentence(SessionComparisonSnapshot comparison)
+    {
+        if (!comparison.HasPreviousSession)
+        {
+            return "This review window is still building a baseline, so the main goal is steady short practice.";
+        }
+
+        if (comparison.OverallDelta >= 0.08)
+        {
+            return "Compared with the earlier session in this review window, overall performance is moving upward.";
+        }
+
+        if (comparison.OverallDelta <= -0.08)
+        {
+            return "Compared with the earlier session in this review window, performance was less steady, so gentle repetition will help rebuild consistency.";
+        }
+
+        return "Compared with the earlier session in this review window, performance stayed fairly steady overall.";
     }
 }

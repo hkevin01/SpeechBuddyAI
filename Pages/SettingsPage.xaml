@@ -33,6 +33,16 @@
                         </Picker.Items>
                     </Picker>
 
+                    <Label Text="Timeline smoothing strength" FontAttributes="Bold" Margin="0,6,0,0" />
+                    <Label Text="Choose how aggressively noisy session-to-session changes are smoothed in comparison views and reports." />
+                    <Picker x:Name="ComparisonSmoothingPicker">
+                        <Picker.Items>
+                            <x:String>Conservative smoothing</x:String>
+                            <x:String>Balanced smoothing</x:String>
+                            <x:String>Responsive smoothing</x:String>
+                        </Picker.Items>
+                    </Picker>
+
                     <HorizontalStackLayout Spacing="10">
                         <Button Text="Save Clinician Settings"
                                 Clicked="OnSaveClicked"

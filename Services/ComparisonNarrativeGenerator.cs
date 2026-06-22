@@ -40,8 +40,9 @@ public sealed class ComparisonNarrativeGenerator
             : $"Largest target movement was {strongestTarget.TargetSound} ({strongestTarget.OverallDelta:+0%;-0%;0%}) with {strongestTarget.PreviousConfidenceBand.ToDisplayName()} to {strongestTarget.CurrentConfidenceBand.ToDisplayName()} confidence movement.";
 
         var timelineSentence = BuildTimelineSummarySentence(snapshot.RollingTimeline);
+        var consistencySentence = BuildConsistencySentence(snapshot.TargetComparisons);
 
-        return $"{overallPhrase} overall, with {confidencePhrase.ToLowerInvariant()} in confidence. {targetSentence} {timelineSentence}";
+        return $"{overallPhrase} overall, with {confidencePhrase.ToLowerInvariant()} in confidence. {targetSentence} {timelineSentence} {consistencySentence}";
     }
 
     private static string BuildTimelineSummarySentence(IReadOnlyList<SessionTimelineItem> rollingTimeline)
@@ -53,8 +54,33 @@ public sealed class ComparisonNarrativeGenerator
 
         var latest = rollingTimeline[0];
         var earliest = rollingTimeline[^1];
-        var delta = latest.AverageOverall - earliest.AverageOverall;
+        var delta = latest.SmoothedOverall - earliest.SmoothedOverall;
 
-        return $"Across the last {rollingTimeline.Count} sessions in view, overall moved {delta:+0%;-0%;0%} from {earliest.AverageOverall:P0} to {latest.AverageOverall:P0}.";
+        return $"Across the last {rollingTimeline.Count} sessions in view, smoothed overall moved {delta:+0%;-0%;0%} from {earliest.SmoothedOverall:P0} to {latest.SmoothedOverall:P0}.";
+    }
+
+    private static string BuildConsistencySentence(IReadOnlyList<TargetComparisonItem> targetComparisons)
+    {
+        if (targetComparisons.Count == 0)
+        {
+            return "Consistency change is limited because there are no comparable targets yet.";
+        }
+
+        var stabilizing = targetComparisons
+            .OrderByDescending(item => item.PreviousSessionVariance - item.CurrentSessionVariance)
+            .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        var regressionRisk = targetComparisons
+            .OrderByDescending(item => item.ConsistencyDecay)
+            .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        if ((stabilizing.PreviousSessionVariance - stabilizing.CurrentSessionVariance) <= 0 && regressionRisk.ConsistencyDecay <= 0)
+        {
+            return "Consistency stayed fairly steady across the reviewed sessions.";
+        }
+
+        return $"Most stabilization appeared on {stabilizing.TargetSound}, while {regressionRisk.TargetSound} showed the strongest consistency drift.";
     }
 }

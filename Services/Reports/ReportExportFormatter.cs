@@ -63,6 +63,7 @@ public static class ReportExportFormatter
             $"Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
             $"Comparison Normalization: {snapshot.NormalizationMode.ToDisplayLabel()}" + Environment.NewLine +
+            $"Timeline Smoothing: {snapshot.SmoothingStrength.ToDisplayLabel()}" + Environment.NewLine +
             Environment.NewLine +
             "Comparison Narrative" + Environment.NewLine +
             "--------------------" + Environment.NewLine +
@@ -105,6 +106,7 @@ public static class ReportExportFormatter
             $"- Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"- Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
             $"- Comparison Normalization: {snapshot.NormalizationMode.ToDisplayLabel()}" + Environment.NewLine +
+            $"- Timeline Smoothing: {snapshot.SmoothingStrength.ToDisplayLabel()}" + Environment.NewLine +
             Environment.NewLine +
             "## Comparison Narrative" + Environment.NewLine +
             Environment.NewLine +
@@ -147,6 +149,7 @@ public static class ReportExportFormatter
             CsvLine("SessionComparison", BuildSessionComparisonOverview(snapshot)),
             CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
             CsvLine("ComparisonNormalization", snapshot.NormalizationMode.ToDisplayLabel()),
+            CsvLine("TimelineSmoothing", snapshot.SmoothingStrength.ToDisplayLabel()),
             CsvLine("ComparisonNarrative", SafeValue(snapshot.ComparisonNarrative)),
             CsvLine("RollingSessionHistory", BuildCsvTimeline(snapshot.RollingTimeline)),
             CsvLine("TargetComparisonTable", BuildCsvTargetComparison(snapshot.TargetComparisons)),
@@ -253,7 +256,7 @@ public static class ReportExportFormatter
         return string.Join(
             Environment.NewLine,
             targetComparisons.Select(item =>
-                $"- {item.TargetSound}: {item.OverallDelta:+0%;-0%;0%} overall, {item.ConfidenceMovementLabel}, current {item.CurrentAverageOverall:P0}, previous {item.PreviousAverageOverall:P0}"));
+                $"- {item.TargetSound}: {item.OverallDelta:+0%;-0%;0%} overall, {item.ConfidenceMovementLabel}, current {item.CurrentAverageOverall:P0}, previous {item.PreviousAverageOverall:P0}, variability {item.VariabilityIndex:0.00}, drift {item.ConsistencyDecay:0.000}"));
     }
 
     private static string BuildMarkdownTargetComparison(IReadOnlyList<TargetComparisonItem> targetComparisons)
@@ -265,12 +268,12 @@ public static class ReportExportFormatter
 
         var lines = new List<string>
         {
-            "| Target | Delta | Confidence Move | Current Avg | Previous Avg |",
-            "| --- | --- | --- | --- | --- |"
+            "| Target | Delta | Confidence Move | Current Avg | Previous Avg | Variability | Drift |",
+            "| --- | --- | --- | --- | --- | --- | --- |"
         };
 
         lines.AddRange(targetComparisons.Select(item =>
-            $"| {item.TargetSound} | {item.OverallDelta:+0%;-0%;0%} | {item.ConfidenceMovementLabel} | {item.CurrentAverageOverall:P0} | {item.PreviousAverageOverall:P0} |"));
+            $"| {item.TargetSound} | {item.OverallDelta:+0%;-0%;0%} | {item.ConfidenceMovementLabel} | {item.CurrentAverageOverall:P0} | {item.PreviousAverageOverall:P0} | {item.VariabilityIndex:0.00} | {item.ConsistencyDecay:0.000} |"));
 
         return string.Join(Environment.NewLine, lines);
     }
@@ -285,7 +288,7 @@ public static class ReportExportFormatter
         return string.Join(
             " | ",
             targetComparisons.Select(item =>
-                $"{item.TargetSound}:{item.OverallDelta:+0%;-0%;0%} ({item.ConfidenceMovementLabel})"));
+                $"{item.TargetSound}:{item.OverallDelta:+0%;-0%;0%} ({item.ConfidenceMovementLabel};var {item.VariabilityIndex:0.00};drift {item.ConsistencyDecay:0.000})"));
     }
 
     private static string BuildPlainTextTimeline(IReadOnlyList<SessionTimelineItem> rollingTimeline)
@@ -298,7 +301,7 @@ public static class ReportExportFormatter
         return string.Join(
             Environment.NewLine,
             rollingTimeline.Select(item =>
-                $"- {item.SessionDate:yyyy-MM-dd}: attempts {item.AttemptCount}, overall {item.AverageOverall:P0}, confidence {item.AverageConfidence:P0}, {(item.HasComparisonBaseline ? $"delta {item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall / {item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
+                $"- {item.SessionDate:yyyy-MM-dd}: attempts {item.AttemptCount}, overall {item.AverageOverall:P0}, smoothed overall {item.SmoothedOverall:P0}, confidence {item.AverageConfidence:P0}, {(item.HasComparisonBaseline ? $"delta {item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall / {item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
     }
 
     private static string BuildMarkdownTimeline(IReadOnlyList<SessionTimelineItem> rollingTimeline)
@@ -310,12 +313,12 @@ public static class ReportExportFormatter
 
         var lines = new List<string>
         {
-            "| Session | Attempts | Overall | Confidence | Delta vs Prior |",
-            "| --- | --- | --- | --- | --- |"
+            "| Session | Attempts | Overall | Smoothed Overall | Confidence | Delta vs Prior |",
+            "| --- | --- | --- | --- | --- | --- |"
         };
 
         lines.AddRange(rollingTimeline.Select(item =>
-            $"| {item.SessionDate:yyyy-MM-dd} | {item.AttemptCount} | {item.AverageOverall:P0} | {item.AverageConfidence:P0} | {(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall / {item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")} |"));
+            $"| {item.SessionDate:yyyy-MM-dd} | {item.AttemptCount} | {item.AverageOverall:P0} | {item.SmoothedOverall:P0} | {item.AverageConfidence:P0} | {(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall / {item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")} |"));
 
         return string.Join(Environment.NewLine, lines);
     }
@@ -330,7 +333,7 @@ public static class ReportExportFormatter
         return string.Join(
             " | ",
             rollingTimeline.Select(item =>
-                $"{item.SessionDate:yyyy-MM-dd}:{item.AttemptCount} attempts,{item.AverageOverall:P0} overall,{item.AverageConfidence:P0} confidence,{(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall/{item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
+                $"{item.SessionDate:yyyy-MM-dd}:{item.AttemptCount} attempts,{item.AverageOverall:P0} overall,{item.SmoothedOverall:P0} smoothed,{item.AverageConfidence:P0} confidence,{(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall/{item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
     }
 
     private static string Normalize(string? value, string fallback)

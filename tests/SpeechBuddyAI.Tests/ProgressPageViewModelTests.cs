@@ -91,9 +91,11 @@ public sealed class ProgressPageViewModelTests
 
         Assert.Equal("Normalization: Day-weighted averages", state.NormalizationModeText);
         Assert.Equal("Band movement: No confidence band movement detected.", state.ConfidenceMovementText);
-        Assert.Equal(2, state.SummaryBadges.Count);
+        Assert.Equal(4, state.SummaryBadges.Count);
         Assert.Equal("Strongest Improved", state.SummaryBadges[0].Title);
         Assert.Equal("Most Variable", state.SummaryBadges[1].Title);
+        Assert.Equal("Stabilizing", state.SummaryBadges[2].Title);
+        Assert.Equal("Regression Risk", state.SummaryBadges[3].Title);
         Assert.Equal(2, state.TimelineRows.Count);
         Assert.Contains("+12%", state.TimelineRows[0].DeltaText);
     }

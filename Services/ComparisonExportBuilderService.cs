@@ -17,9 +17,10 @@ public sealed class ComparisonExportBuilderService
 
     public SessionComparisonSnapshot Build(
         IReadOnlyList<ProgressEntry> entries,
-        SessionComparisonNormalizationMode normalizationMode = SessionComparisonNormalizationMode.AttemptWeighted)
+        SessionComparisonNormalizationMode normalizationMode = SessionComparisonNormalizationMode.AttemptWeighted,
+        SessionComparisonSmoothingStrength smoothingStrength = SessionComparisonSmoothingStrength.Balanced)
     {
-        var snapshot = _sessionComparisonService.Build(entries, normalizationMode);
+        var snapshot = _sessionComparisonService.Build(entries, normalizationMode, smoothingStrength);
         var narrative = _comparisonNarrativeGenerator.Generate(snapshot);
 
         return new SessionComparisonSnapshot
@@ -35,6 +36,7 @@ public sealed class ComparisonExportBuilderService
             PreviousAverageOverall = snapshot.PreviousAverageOverall,
             PreviousAverageConfidence = snapshot.PreviousAverageConfidence,
             NormalizationMode = snapshot.NormalizationMode,
+            SmoothingStrength = snapshot.SmoothingStrength,
             TargetComparisons = snapshot.TargetComparisons,
             ConfidenceBandTransitions = snapshot.ConfidenceBandTransitions,
             RollingTimeline = snapshot.RollingTimeline,

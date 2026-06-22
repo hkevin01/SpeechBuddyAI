@@ -13,7 +13,7 @@ public partial class NotesPage : ContentPage
     private readonly NoteStorageService _noteStorageService;
     private readonly ReportExportSettingsService _reportExportSettingsService;
     private readonly ConfidenceSettingsService _confidenceSettingsService;
-    private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
+    private readonly ComparisonSnapshotCacheService _comparisonSnapshotCacheService;
     private readonly NotesPageViewModel _viewModel = new();
     private bool _hasInitializedDateRange;
 
@@ -25,7 +25,7 @@ public partial class NotesPage : ContentPage
         _noteStorageService = ResolveService<NoteStorageService>();
         _reportExportSettingsService = ResolveService<ReportExportSettingsService>();
         _confidenceSettingsService = ResolveService<ConfidenceSettingsService>();
-        _comparisonExportBuilderService = ResolveService<ComparisonExportBuilderService>();
+        _comparisonSnapshotCacheService = ResolveService<ComparisonSnapshotCacheService>();
     }
 
     protected override async void OnAppearing()
@@ -233,7 +233,8 @@ public partial class NotesPage : ContentPage
         {
             var metadataEntries = await GetMetadataEntriesForSelectedRangeAsync();
             var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
-            var snapshot = _comparisonExportBuilderService.Build(metadataEntries, normalizationMode);
+            var smoothingStrength = _confidenceSettingsService.GetSessionComparisonSmoothingStrength();
+            var snapshot = _comparisonSnapshotCacheService.GetOrBuild(metadataEntries, normalizationMode, smoothingStrength);
             var state = _viewModel.BuildComparisonPreviewState(snapshot);
 
             ComparisonPreviewNarrativeLabel.Text = state.ComparisonNarrativeText;

@@ -26,6 +26,7 @@ public partial class SettingsPage : ContentPage
             HighSlider.Value = thresholds.HighThreshold;
             ComparisonNormalizationPicker.SelectedIndex =
                 _settingsService.GetSessionComparisonNormalizationMode() == Models.SessionComparisonNormalizationMode.DayWeighted ? 1 : 0;
+            ComparisonSmoothingPicker.SelectedIndex = (int)_settingsService.GetSessionComparisonSmoothingStrength();
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
@@ -60,6 +61,7 @@ public partial class SettingsPage : ContentPage
                 ? Models.SessionComparisonNormalizationMode.DayWeighted
                 : Models.SessionComparisonNormalizationMode.AttemptWeighted;
             _settingsService.SaveSessionComparisonNormalizationMode(normalizationMode);
+            _settingsService.SaveSessionComparisonSmoothingStrength((Models.SessionComparisonSmoothingStrength)Math.Clamp(ComparisonSmoothingPicker.SelectedIndex, 0, 2));
             StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
@@ -78,6 +80,7 @@ public partial class SettingsPage : ContentPage
             ModerateSlider.Value = thresholds.ModerateThreshold;
             HighSlider.Value = thresholds.HighThreshold;
             ComparisonNormalizationPicker.SelectedIndex = 0;
+            ComparisonSmoothingPicker.SelectedIndex = 1;
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";

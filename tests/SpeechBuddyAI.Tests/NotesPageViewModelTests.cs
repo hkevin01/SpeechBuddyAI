@@ -60,7 +60,7 @@ public sealed class NotesPageViewModelTests
             PreviousAverageOverall = 0.70,
             PreviousAverageConfidence = 0.66,
             NormalizationMode = SessionComparisonNormalizationMode.DayWeighted,
-            ComparisonNarrative = "Strong upward improvement overall. Across the last 2 sessions in view, overall moved +12%.",
+            ComparisonNarrative = "Strong upward improvement overall. Across the last 2 sessions in view, smoothed overall moved +12%.",
             TargetComparisons =
             [
                 new TargetComparisonItem
@@ -90,9 +90,9 @@ public sealed class NotesPageViewModelTests
 
         var state = vm.BuildComparisonPreviewState(snapshot);
 
-        Assert.Equal("Comparison narrative: Strong upward improvement overall. Across the last 2 sessions in view, overall moved +12%.", state.ComparisonNarrativeText);
+        Assert.Equal("Comparison narrative: Strong upward improvement overall. Across the last 2 sessions in view, smoothed overall moved +12%.", state.ComparisonNarrativeText);
         Assert.Equal("Normalization: Day-weighted averages", state.NormalizationModeText);
-        Assert.Single(state.SummaryBadges);
+        Assert.Equal(4, state.SummaryBadges.Count);
         Assert.Single(state.TimelineRows);
     }
 }

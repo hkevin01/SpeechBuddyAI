@@ -57,6 +57,7 @@ public sealed class ProgressComparisonViewState
     public string ConfidenceMovementText { get; init; } = "Band movement: -";
     public string ComparisonNarrativeText { get; init; } = "Comparison narrative: -";
     public string NormalizationModeText { get; init; } = "Normalization: -";
+    public string SmoothingStrengthText { get; init; } = "Smoothing: -";
     public IReadOnlyList<TargetComparisonItem> TargetComparisons { get; init; } = Array.Empty<TargetComparisonItem>();
     public IReadOnlyList<ProgressSummaryBadge> SummaryBadges { get; init; } = Array.Empty<ProgressSummaryBadge>();
     public IReadOnlyList<ProgressComparisonLegendItem> ConfidenceLegendItems { get; init; } = Array.Empty<ProgressComparisonLegendItem>();
@@ -162,6 +163,7 @@ public sealed class ProgressPageViewModel
             return new ProgressComparisonViewState
             {
                 ComparisonNarrativeText = $"Comparison narrative: {safeNarrative}",
+                SmoothingStrengthText = "Smoothing: -",
                 SummaryBadges = badges,
                 ConfidenceLegendItems = legendItems
             };
@@ -175,6 +177,7 @@ public sealed class ProgressPageViewModel
             CurrentSessionConfidenceText = $"Confidence Avg: {safeSnapshot.CurrentAverageConfidence:P0}",
             ComparisonNarrativeText = $"Comparison narrative: {safeNarrative}",
             NormalizationModeText = $"Normalization: {safeSnapshot.NormalizationMode.ToDisplayLabel()}",
+            SmoothingStrengthText = $"Smoothing: {safeSnapshot.SmoothingStrength.ToDisplayLabel()}",
             TargetComparisons = safeSnapshot.TargetComparisons,
             SummaryBadges = badges,
             ConfidenceLegendItems = legendItems,
@@ -198,6 +201,7 @@ public sealed class ProgressPageViewModel
                 ConfidenceMovementText = "Band movement: baseline only",
                 ComparisonNarrativeText = state.ComparisonNarrativeText,
                 NormalizationModeText = state.NormalizationModeText,
+                SmoothingStrengthText = state.SmoothingStrengthText,
                 TargetComparisons = state.TargetComparisons,
                 SummaryBadges = state.SummaryBadges,
                 ConfidenceLegendItems = state.ConfidenceLegendItems,
@@ -220,6 +224,7 @@ public sealed class ProgressPageViewModel
             ConfidenceMovementText = $"Band movement: {safeSnapshot.ConfidenceBandMovementSummary}",
             ComparisonNarrativeText = state.ComparisonNarrativeText,
             NormalizationModeText = state.NormalizationModeText,
+            SmoothingStrengthText = state.SmoothingStrengthText,
             TargetComparisons = state.TargetComparisons,
             SummaryBadges = state.SummaryBadges,
             ConfidenceLegendItems = state.ConfidenceLegendItems,
@@ -244,6 +249,16 @@ public sealed class ProgressPageViewModel
             .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
             .First();
 
+        var stabilizing = targetComparisons
+            .OrderByDescending(item => item.PreviousSessionVariance - item.CurrentSessionVariance)
+            .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        var regressionRisk = targetComparisons
+            .OrderByDescending(item => item.ConsistencyDecay)
+            .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+            .First();
+
         return new[]
         {
             new ProgressSummaryBadge
@@ -259,6 +274,20 @@ public sealed class ProgressPageViewModel
                 Value = $"{mostVariable.TargetSound} ({mostVariable.VariabilityIndex:0.00} variability)",
                 BackgroundColor = mostVariable.CurrentConfidenceBand.ToChipBackgroundColor(),
                 BorderColor = mostVariable.CurrentConfidenceBand.ToChipBorderColor()
+            },
+            new ProgressSummaryBadge
+            {
+                Title = "Stabilizing",
+                Value = $"{stabilizing.TargetSound} ({(stabilizing.PreviousSessionVariance - stabilizing.CurrentSessionVariance):+0.000;-0.000;0.000} variance)",
+                BackgroundColor = "#E8F7EE",
+                BorderColor = "#7BC496"
+            },
+            new ProgressSummaryBadge
+            {
+                Title = "Regression Risk",
+                Value = $"{regressionRisk.TargetSound} ({regressionRisk.ConsistencyDecay:+0.000;-0.000;0.000} drift)",
+                BackgroundColor = "#FFF1F0",
+                BorderColor = "#E59B92"
             }
         };
     }

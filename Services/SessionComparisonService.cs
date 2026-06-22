@@ -9,7 +9,8 @@ public sealed class SessionComparisonService
 
     public SessionComparisonSnapshot Build(
         IReadOnlyList<ProgressEntry> entries,
-        SessionComparisonNormalizationMode normalizationMode = SessionComparisonNormalizationMode.AttemptWeighted)
+        SessionComparisonNormalizationMode normalizationMode = SessionComparisonNormalizationMode.AttemptWeighted,
+        SessionComparisonSmoothingStrength smoothingStrength = SessionComparisonSmoothingStrength.Balanced)
     {
         var source = entries ?? Array.Empty<ProgressEntry>();
 
@@ -25,13 +26,14 @@ public sealed class SessionComparisonService
                 return new SessionComparisonSnapshot();
             }
 
-            var rollingTimeline = BuildRollingTimeline(sessions, normalizationMode);
+            var rollingTimeline = BuildRollingTimeline(sessions, normalizationMode, smoothingStrength);
 
             var current = sessions[0].ToArray();
             var currentSnapshot = new SessionComparisonSnapshot
             {
                 HasCurrentSession = true,
                 NormalizationMode = normalizationMode,
+                SmoothingStrength = smoothingStrength,
                 CurrentSessionDate = sessions[0].Key,
                 CurrentAttemptCount = current.Length,
                 CurrentAverageOverall = ComputeNormalizedAverage(current, normalizationMode, entry => entry.OverallScore),
@@ -45,6 +47,7 @@ public sealed class SessionComparisonService
                 {
                     HasCurrentSession = true,
                     NormalizationMode = normalizationMode,
+                    SmoothingStrength = smoothingStrength,
                     CurrentSessionDate = currentSnapshot.CurrentSessionDate,
                     CurrentAttemptCount = currentSnapshot.CurrentAttemptCount,
                     CurrentAverageOverall = currentSnapshot.CurrentAverageOverall,
@@ -63,6 +66,7 @@ public sealed class SessionComparisonService
                 HasCurrentSession = true,
                 HasPreviousSession = true,
                 NormalizationMode = normalizationMode,
+                SmoothingStrength = smoothingStrength,
                 CurrentSessionDate = currentSnapshot.CurrentSessionDate,
                 CurrentAttemptCount = currentSnapshot.CurrentAttemptCount,
                 CurrentAverageOverall = currentSnapshot.CurrentAverageOverall,
@@ -197,7 +201,8 @@ public sealed class SessionComparisonService
 
     private static IReadOnlyList<SessionTimelineItem> BuildRollingTimeline(
         IReadOnlyList<IGrouping<DateTime, ProgressEntry>> sessions,
-        SessionComparisonNormalizationMode normalizationMode)
+        SessionComparisonNormalizationMode normalizationMode,
+        SessionComparisonSmoothingStrength smoothingStrength)
     {
         var aggregates = sessions
             .Take(RollingTimelineLength)
@@ -227,7 +232,7 @@ public sealed class SessionComparisonService
             }
 
             var previous = smoothed[chronological[i - 1].SessionDate];
-            var alpha = Math.Clamp(0.35 + (0.4 * current.AverageConfidence), 0.35, 0.75);
+            var alpha = ResolveSmoothingAlpha(current.AverageConfidence, smoothingStrength);
             var smoothedOverall = (alpha * current.ConfidenceWeightedOverall) + ((1.0 - alpha) * previous.Overall);
             var smoothedConfidence = (alpha * current.AverageConfidence) + ((1.0 - alpha) * previous.Confidence);
             smoothed[current.SessionDate] = (smoothedOverall, smoothedConfidence);
@@ -258,6 +263,20 @@ public sealed class SessionComparisonService
         }
 
         return timeline;
+    }
+
+    private static double ResolveSmoothingAlpha(
+        double averageConfidence,
+        SessionComparisonSmoothingStrength smoothingStrength)
+    {
+        var confidence = Math.Clamp(averageConfidence, 0.0, 1.0);
+
+        return smoothingStrength switch
+        {
+            SessionComparisonSmoothingStrength.Conservative => Math.Clamp(0.20 + (0.25 * confidence), 0.20, 0.45),
+            SessionComparisonSmoothingStrength.Responsive => Math.Clamp(0.55 + (0.35 * confidence), 0.55, 0.90),
+            _ => Math.Clamp(0.35 + (0.4 * confidence), 0.35, 0.75)
+        };
     }
 
     private static IReadOnlyList<ProgressEntry> ConcatEntries(

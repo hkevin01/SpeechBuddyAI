@@ -9,7 +9,7 @@ public partial class ProgressPage : ContentPage
     private readonly ProgressTrackingService _progressTrackingService;
     private readonly TrendAnalysisService _trendAnalysisService;
     private readonly ConfidenceSettingsService _confidenceSettingsService;
-    private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
+    private readonly ComparisonSnapshotCacheService _comparisonSnapshotCacheService;
     private readonly ProgressPageViewModel _viewModel;
 
     private IReadOnlyList<Models.ProgressEntry> _allEntries = Array.Empty<Models.ProgressEntry>();
@@ -20,7 +20,7 @@ public partial class ProgressPage : ContentPage
         _progressTrackingService = ResolveService<ProgressTrackingService>();
         _trendAnalysisService = ResolveService<TrendAnalysisService>();
         _confidenceSettingsService = ResolveService<ConfidenceSettingsService>();
-        _comparisonExportBuilderService = ResolveService<ComparisonExportBuilderService>();
+        _comparisonSnapshotCacheService = ResolveService<ComparisonSnapshotCacheService>();
         _viewModel = new ProgressPageViewModel();
     }
 
@@ -90,7 +90,8 @@ public partial class ProgressPage : ContentPage
     private void ApplySessionComparison(IReadOnlyList<Models.ProgressEntry> entries)
     {
         var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
-        var snapshot = _comparisonExportBuilderService.Build(entries, normalizationMode);
+        var smoothingStrength = _confidenceSettingsService.GetSessionComparisonSmoothingStrength();
+        var snapshot = _comparisonSnapshotCacheService.GetOrBuild(entries, normalizationMode, smoothingStrength);
         ApplyComparisonState(_viewModel.BuildComparisonViewState(snapshot, snapshot.ComparisonNarrative));
     }
 
