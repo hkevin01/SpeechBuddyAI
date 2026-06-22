@@ -46,14 +46,27 @@ public sealed class ReportServiceTests
         Assert.Contains("# SpeechBuddyAI Session Report", content);
     }
 
+    [Fact]
+    public async Task GenerateReportsAsync_ParentSummaryReflectsComparisonTrendLanguage()
+    {
+        var service = CreateService();
+        var entries = MakeEntries();
+
+        var report = await service.GenerateReportsAsync("Parent communication check", entries);
+
+        Assert.Contains("Compared with the earlier session in this review window", report.ParentSummary);
+        Assert.Contains("steady repetition", report.ParentSummary);
+    }
+
     private static ReportService CreateService()
     {
         var settings = new ConfidenceSettingsService(new InMemoryStore());
         var builder = new ComparisonExportBuilderService(
             new SessionComparisonService(),
             new ComparisonNarrativeGenerator(new TrendAnalysisService()));
+        var cache = new ComparisonSnapshotCacheService(builder);
 
-        return new ReportService(settings, builder);
+        return new ReportService(settings, cache);
     }
 
     private static SessionNote MakeNote()

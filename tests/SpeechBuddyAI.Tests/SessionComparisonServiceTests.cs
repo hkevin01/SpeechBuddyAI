@@ -149,6 +149,25 @@ public sealed class SessionComparisonServiceTests
     }
 
     [Fact]
+    public void Build_WithDifferentSmoothingStrengths_ChangesTimelineResponsiveness()
+    {
+        var service = new SessionComparisonService();
+        var entries = new[]
+        {
+            Entry("r", 0.35, 0.40, new DateTime(2026, 6, 18, 9, 0, 0, DateTimeKind.Utc)),
+            Entry("r", 0.55, 0.55, new DateTime(2026, 6, 19, 9, 0, 0, DateTimeKind.Utc)),
+            Entry("r", 0.85, 0.75, new DateTime(2026, 6, 20, 9, 0, 0, DateTimeKind.Utc))
+        };
+
+        var conservative = service.Build(entries, SessionComparisonNormalizationMode.AttemptWeighted, SessionComparisonSmoothingStrength.Conservative);
+        var responsive = service.Build(entries, SessionComparisonNormalizationMode.AttemptWeighted, SessionComparisonSmoothingStrength.Responsive);
+
+        Assert.Equal(SessionComparisonSmoothingStrength.Conservative, conservative.SmoothingStrength);
+        Assert.Equal(SessionComparisonSmoothingStrength.Responsive, responsive.SmoothingStrength);
+        Assert.True(responsive.RollingTimeline[0].SmoothedOverall > conservative.RollingTimeline[0].SmoothedOverall);
+    }
+
+    [Fact]
     public void Build_PerTargetComparisons_SortedByDeltaMagnitude()
     {
         var service = new SessionComparisonService();
