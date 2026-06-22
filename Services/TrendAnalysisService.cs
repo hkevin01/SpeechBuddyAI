@@ -4,6 +4,26 @@ namespace SpeechBuddyAI.Services;
 
 public class TrendAnalysisService
 {
+    public string DescribePerformanceChange(double delta)
+    {
+        if (delta >= 0.15)
+        {
+            return $"Strong upward improvement ({delta:+0%;-0%;0%})";
+        }
+
+        if (delta >= 0.05)
+        {
+            return $"Moderate improvement ({delta:+0%;-0%;0%})";
+        }
+
+        if (delta > -0.05)
+        {
+            return $"Stable performance ({delta:+0%;-0%;0%})";
+        }
+
+        return $"Downward movement ({delta:+0%;-0%;0%})";
+    }
+
     public IReadOnlyList<TrendPoint> BuildTrendPoints(IReadOnlyList<ProgressEntry> entries, int maxPoints = 12)
     {
         var sourceEntries = entries ?? Array.Empty<ProgressEntry>();
@@ -57,20 +77,20 @@ public class TrendAnalysisService
 
             if (delta >= 0.15)
             {
-                return $"Strong upward trajectory (+{delta:P0}) across the observed window. Keep current drill cadence and consider target expansion.";
+                return $"{DescribePerformanceChange(delta)} across the observed window. Keep current drill cadence and consider target expansion.";
             }
 
             if (delta >= 0.05)
             {
-                return $"Moderate improvement (+{delta:P0}). Continue current plan and reinforce consistency through short daily repetitions.";
+                return $"{DescribePerformanceChange(delta)}. Continue current plan and reinforce consistency through short daily repetitions.";
             }
 
             if (delta > -0.05)
             {
-                return $"Stable trajectory ({delta:P0} change). Consider varying prompts to test generalization and identify hidden bottlenecks.";
+                return $"{DescribePerformanceChange(delta)}. Consider varying prompts to test generalization and identify hidden bottlenecks.";
             }
 
-            return $"Downward trajectory ({delta:P0}). Revisit target complexity and increase guided practice with slower pacing and immediate feedback.";
+            return $"{DescribePerformanceChange(delta)}. Revisit target complexity and increase guided practice with slower pacing and immediate feedback.";
         }
         catch (Exception ex)
         {

@@ -14,6 +14,8 @@
   <ItemGroup>
     <Compile Include="../../Models/ScoreComponents.cs" Link="Shared/ScoreComponents.cs" />
     <Compile Include="../../Models/ProgressEntry.cs" Link="Shared/ProgressEntry.cs" />
+    <Compile Include="../../Models/TrendPoint.cs" Link="Shared/TrendPoint.cs" />
+    <Compile Include="../../Models/SessionComparisonSnapshot.cs" Link="Shared/SessionComparisonSnapshot.cs" />
     <Compile Include="../../Models/SessionNote.cs" Link="Shared/SessionNote.cs" />
     <Compile Include="../../Database/DbConstants.cs" Link="Shared/DbConstants.cs" />
     <Compile Include="../../Services/Confidence/ConfidenceThresholds.cs" Link="Shared/ConfidenceThresholds.cs" />
@@ -23,6 +25,7 @@
     <Compile Include="../../Services/Storage/ProgressSchemaMigration.cs" Link="Shared/ProgressSchemaMigration.cs" />
     <Compile Include="../../Services/PhonemeWordBankService.cs" Link="Shared/PhonemeWordBankService.cs" />
     <Compile Include="../../Services/DashboardStatsService.cs" Link="Shared/DashboardStatsService.cs" />
+    <Compile Include="../../Services/SessionComparisonService.cs" Link="Shared/SessionComparisonService.cs" />
     <Compile Include="../../Services/ReportService.cs" Link="Shared/ReportService.cs" />
     <Compile Include="../../Services/NoteStorageService.cs" Link="Shared/NoteStorageService.cs" />
     <Compile Include="../../Services/Reports/ReportExportFormat.cs" Link="Shared/ReportExportFormat.cs" />

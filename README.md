@@ -495,6 +495,7 @@ dotnet build
 - [x] M6.3: add home dashboard quick stats (attempts, average, streak, most-improved)
 - [x] M6.4: add target-sound filter on Progress dashboard
 - [x] M6.5: add real report export and share flow from Notes
+- [x] M6.6: add current-session vs previous-session comparison cards in Progress
 
 > [!IMPORTANT]
 > Favor backward-compatible output contracts in service responses so historical data and dashboard rendering remain stable across model and storage upgrades.

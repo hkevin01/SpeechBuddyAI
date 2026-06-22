@@ -18,6 +18,9 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("Scoring Providers:", content);
         Assert.Contains("Confidence Bands:", content);
         Assert.Contains("Target-Level Deltas:", content);
+        Assert.Contains("Session Comparison:", content);
+        Assert.Contains("Comparison Narrative", content);
+        Assert.Contains("Per-Target Comparison", content);
         Assert.Contains("offline-heuristic: 2", content);
         Assert.Contains("High: 1", content);
         Assert.Contains("Moderate: 1", content);
@@ -34,7 +37,23 @@ public sealed class ReportExportFormatterTests
 
         Assert.Contains("# SpeechBuddyAI Session Report", content);
         Assert.Contains("- Scoring Providers:", content);
+        Assert.Contains("## Comparison Narrative", content);
+        Assert.Contains("## Per-Target Comparison", content);
+        Assert.Contains("| Target | Delta | Confidence Move | Current Avg | Previous Avg |", content);
         Assert.Contains("## Clinician SOAP Summary", content);
+    }
+
+    [Fact]
+    public void BuildContent_Markdown_MultiTargetComparisonTableIncludesAllTargetsAndBandMovement()
+    {
+        var note = MakeNote();
+        var entries = MakeMultiTargetEntries();
+
+        var content = ReportExportFormatter.BuildContent(note, entries, ReportExportFormat.Markdown);
+
+        Assert.Contains("- Confidence Movement: 1 Low to Moderate, 1 Moderate to High", content);
+        Assert.Contains("| r | +20% | Moderate to High | 80 % | 60 % |", content);
+        Assert.Contains("| s | +20% | Low to Moderate | 55 % | 35 % |", content);
     }
 
     [Fact]
@@ -49,6 +68,8 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("ScoringProviders", content);
         Assert.Contains("ConfidenceBands", content);
         Assert.Contains("TargetLevelDeltas", content);
+        Assert.Contains("SessionComparison", content);
+        Assert.Contains("TargetComparisonTable", content);
     }
 
     [Fact]
@@ -76,6 +97,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("Scoring Providers: n/a", content);
         Assert.Contains("Confidence Bands: n/a", content);
         Assert.Contains("Target-Level Deltas: n/a", content);
+        Assert.Contains("Session Comparison: n/a", content);
     }
 
     [Fact]
@@ -109,6 +131,7 @@ public sealed class ReportExportFormatterTests
                 Timestamp = new DateTime(2026, 1, 20, 10, 0, 0, DateTimeKind.Utc),
                 TargetSound = "r",
                 OverallScore = 0.60,
+                ConfidenceScore = 0.65,
                 ScoringProvider = "offline-heuristic",
                 ConfidenceBand = "Moderate"
             },
@@ -117,8 +140,52 @@ public sealed class ReportExportFormatterTests
                 Timestamp = new DateTime(2026, 1, 24, 10, 0, 0, DateTimeKind.Utc),
                 TargetSound = "r",
                 OverallScore = 0.80,
+                ConfidenceScore = 0.84,
                 ScoringProvider = "offline-heuristic",
                 ConfidenceBand = "High"
+            }
+        ];
+    }
+
+    private static IReadOnlyList<ProgressEntry> MakeMultiTargetEntries()
+    {
+        return
+        [
+            new ProgressEntry
+            {
+                Timestamp = new DateTime(2026, 1, 20, 9, 0, 0, DateTimeKind.Utc),
+                TargetSound = "r",
+                OverallScore = 0.60,
+                ConfidenceScore = 0.65,
+                ScoringProvider = "offline-heuristic",
+                ConfidenceBand = "Moderate"
+            },
+            new ProgressEntry
+            {
+                Timestamp = new DateTime(2026, 1, 20, 10, 0, 0, DateTimeKind.Utc),
+                TargetSound = "s",
+                OverallScore = 0.35,
+                ConfidenceScore = 0.40,
+                ScoringProvider = "offline-heuristic",
+                ConfidenceBand = "Low"
+            },
+            new ProgressEntry
+            {
+                Timestamp = new DateTime(2026, 1, 24, 9, 0, 0, DateTimeKind.Utc),
+                TargetSound = "r",
+                OverallScore = 0.80,
+                ConfidenceScore = 0.84,
+                ScoringProvider = "offline-heuristic",
+                ConfidenceBand = "High"
+            },
+            new ProgressEntry
+            {
+                Timestamp = new DateTime(2026, 1, 24, 10, 0, 0, DateTimeKind.Utc),
+                TargetSound = "s",
+                OverallScore = 0.55,
+                ConfidenceScore = 0.67,
+                ScoringProvider = "offline-heuristic",
+                ConfidenceBand = "Moderate"
             }
         ];
     }

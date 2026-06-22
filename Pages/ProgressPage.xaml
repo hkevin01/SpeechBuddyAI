@@ -19,6 +19,93 @@
 
             <Frame BorderColor="#DDDDDD" Padding="10">
                 <VerticalStackLayout Spacing="8">
+                    <Label Text="Session Comparison" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Frame Grid.Column="0" BorderColor="#DDE7F7" BackgroundColor="#F7FAFF" Padding="8">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="Current Session" FontAttributes="Bold" />
+                                <Label x:Name="CurrentSessionDateLabel" Text="Date: -" />
+                                <Label x:Name="CurrentSessionAttemptsLabel" Text="Attempts: -" />
+                                <Label x:Name="CurrentSessionOverallLabel" Text="Overall Avg: -" />
+                                <Label x:Name="CurrentSessionConfidenceLabel" Text="Confidence Avg: -" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Column="1" BorderColor="#EADCF8" BackgroundColor="#FCF8FF" Padding="8">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="Previous Session" FontAttributes="Bold" />
+                                <Label x:Name="PreviousSessionDateLabel" Text="Date: -" />
+                                <Label x:Name="PreviousSessionAttemptsLabel" Text="Attempts: -" />
+                                <Label x:Name="PreviousSessionOverallLabel" Text="Overall Avg: -" />
+                                <Label x:Name="PreviousSessionConfidenceLabel" Text="Confidence Avg: -" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </Grid>
+                    <HorizontalStackLayout Spacing="14">
+                        <Label x:Name="OverallDeltaLabel" Text="Overall delta: -" />
+                        <Label x:Name="ConfidenceDeltaLabel" Text="Confidence delta: -" />
+                    </HorizontalStackLayout>
+                    <Label x:Name="ConfidenceMovementSummaryLabel" Text="Band movement: -" />
+                    <Label x:Name="ComparisonNarrativeLabel" Text="Comparison narrative: -" LineBreakMode="WordWrap" />
+                    <Label x:Name="NormalizationModeLabel" Text="Normalization: -" />
+                    <Label Text="Target Improvements" FontAttributes="Bold" Margin="0,8,0,0" />
+                    <CollectionView x:Name="TargetComparisonChips"
+                                    SelectionMode="None"
+                                    HeightRequest="60">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="{Binding ChipBorderColor}" BackgroundColor="{Binding ChipBackgroundColor}" Padding="8,4" CornerRadius="12">
+                                    <VerticalStackLayout Spacing="1">
+                                        <Label Text="{Binding TargetSound}" FontAttributes="Bold" />
+                                        <Label Text="{Binding OverallDelta, StringFormat='{0:+0%;-0%;0%}'}" FontSize="12" />
+                                        <Label Text="{Binding ConfidenceMovementLabel}" FontSize="10" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Label Text="Chip Legend" FontAttributes="Bold" FontSize="12" />
+                    <CollectionView x:Name="ConfidenceLegendCollection"
+                                    SelectionMode="None"
+                                    HeightRequest="44">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="{Binding BorderColor}" BackgroundColor="{Binding BackgroundColor}" Padding="8,3" CornerRadius="10">
+                                    <Label Text="{Binding Title}" FontSize="11" />
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Label Text="Recent Session History" FontAttributes="Bold" FontSize="12" />
+                    <CollectionView x:Name="SessionTimelineCollection"
+                                    SelectionMode="None"
+                                    HeightRequest="180">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="#E9ECEF" BackgroundColor="#FAFAFA" Padding="8,6" Margin="0,0,0,6">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding SessionDateText}" FontAttributes="Bold" />
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding AttemptsText}" FontSize="12" />
+                                            <Label Text="{Binding OverallText}" FontSize="12" />
+                                            <Label Text="{Binding ConfidenceText}" FontSize="12" />
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding DeltaText}" FontSize="12" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="8">
                     <Label Text="Score Trend (Recent Attempts)" FontAttributes="Bold" />
                     <HorizontalStackLayout Spacing="14">
                         <HorizontalStackLayout Spacing="4">

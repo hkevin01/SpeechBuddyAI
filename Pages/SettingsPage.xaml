@@ -24,8 +24,17 @@
                             Maximum="0.98"
                             ValueChanged="OnSliderValueChanged" />
 
+                    <Label Text="Session comparison normalization" FontAttributes="Bold" Margin="0,6,0,0" />
+                    <Label Text="Use attempt-weighted averages or balance each target within the session day before comparison." />
+                    <Picker x:Name="ComparisonNormalizationPicker">
+                        <Picker.Items>
+                            <x:String>Attempt-weighted averages</x:String>
+                            <x:String>Day-weighted averages</x:String>
+                        </Picker.Items>
+                    </Picker>
+
                     <HorizontalStackLayout Spacing="10">
-                        <Button Text="Save Thresholds"
+                        <Button Text="Save Clinician Settings"
                                 Clicked="OnSaveClicked"
                                 HorizontalOptions="Fill"
                                 WidthRequest="170" />

@@ -1,5 +1,6 @@
 using SpeechBuddyAI.Services;
 using SpeechBuddyAI.Services.Confidence;
+using SpeechBuddyAI.Pages.ViewModels;
 
 namespace SpeechBuddyAI.Pages;
 
@@ -8,6 +9,9 @@ public partial class ProgressPage : ContentPage
     private readonly ProgressTrackingService _progressTrackingService;
     private readonly TrendAnalysisService _trendAnalysisService;
     private readonly ConfidenceSettingsService _confidenceSettingsService;
+    private readonly ComparisonNarrativeGenerator _comparisonNarrativeGenerator;
+    private readonly SessionComparisonService _sessionComparisonService;
+    private readonly ProgressPageViewModel _viewModel;
 
     private IReadOnlyList<Models.ProgressEntry> _allEntries = Array.Empty<Models.ProgressEntry>();
 
@@ -17,6 +21,9 @@ public partial class ProgressPage : ContentPage
         _progressTrackingService = ResolveService<ProgressTrackingService>();
         _trendAnalysisService = ResolveService<TrendAnalysisService>();
         _confidenceSettingsService = ResolveService<ConfidenceSettingsService>();
+        _comparisonNarrativeGenerator = ResolveService<ComparisonNarrativeGenerator>();
+        _sessionComparisonService = ResolveService<SessionComparisonService>();
+        _viewModel = new ProgressPageViewModel();
     }
 
     protected override async void OnAppearing()
@@ -52,11 +59,7 @@ public partial class ProgressPage : ContentPage
 
     private void ApplyFilter(string filterText)
     {
-        var filtered = string.IsNullOrWhiteSpace(filterText)
-            ? _allEntries
-            : _allEntries
-                .Where(e => e.TargetSound.Contains(filterText, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+        var filtered = _viewModel.FilterEntries(_allEntries, filterText);
 
         ProgressCollection.ItemsSource = filtered;
 
@@ -67,6 +70,35 @@ public partial class ProgressPage : ContentPage
         var trendPoints = _trendAnalysisService.BuildTrendPoints(filtered, 12);
         TrendCollection.ItemsSource = ApplyThresholdGuides(trendPoints, thresholds);
         TrajectoryLabel.Text = _trendAnalysisService.InterpretTrajectory(filtered);
+        ApplySessionComparison(filtered);
+    }
+
+    private void ApplySessionComparison(IReadOnlyList<Models.ProgressEntry> entries)
+    {
+        var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
+        var snapshot = _sessionComparisonService.Build(entries, normalizationMode);
+        var narrative = _comparisonNarrativeGenerator.Generate(snapshot);
+        ApplyComparisonState(_viewModel.BuildComparisonViewState(snapshot, narrative));
+    }
+
+    private void ApplyComparisonState(ProgressComparisonViewState state)
+    {
+        CurrentSessionDateLabel.Text = state.CurrentSessionDateText;
+        CurrentSessionAttemptsLabel.Text = state.CurrentSessionAttemptsText;
+        CurrentSessionOverallLabel.Text = state.CurrentSessionOverallText;
+        CurrentSessionConfidenceLabel.Text = state.CurrentSessionConfidenceText;
+        PreviousSessionDateLabel.Text = state.PreviousSessionDateText;
+        PreviousSessionAttemptsLabel.Text = state.PreviousSessionAttemptsText;
+        PreviousSessionOverallLabel.Text = state.PreviousSessionOverallText;
+        PreviousSessionConfidenceLabel.Text = state.PreviousSessionConfidenceText;
+        OverallDeltaLabel.Text = state.OverallDeltaText;
+        ConfidenceDeltaLabel.Text = state.ConfidenceDeltaText;
+        ConfidenceMovementSummaryLabel.Text = state.ConfidenceMovementText;
+        ComparisonNarrativeLabel.Text = state.ComparisonNarrativeText;
+        NormalizationModeLabel.Text = state.NormalizationModeText;
+        TargetComparisonChips.ItemsSource = state.TargetComparisons;
+        ConfidenceLegendCollection.ItemsSource = state.ConfidenceLegendItems;
+        SessionTimelineCollection.ItemsSource = state.TimelineRows;
     }
 
     private static IReadOnlyList<Models.TrendPoint> ApplyThresholdGuides(

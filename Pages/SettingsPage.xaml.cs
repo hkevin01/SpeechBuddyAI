@@ -24,10 +24,12 @@ public partial class SettingsPage : ContentPage
             var thresholds = _settingsService.GetThresholds();
             ModerateSlider.Value = thresholds.ModerateThreshold;
             HighSlider.Value = thresholds.HighThreshold;
+            ComparisonNormalizationPicker.SelectedIndex =
+                _settingsService.GetSessionComparisonNormalizationMode() == Models.SessionComparisonNormalizationMode.DayWeighted ? 1 : 0;
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
-            StatusLabel.Text = "Current thresholds loaded.";
+            StatusLabel.Text = "Current clinician settings loaded.";
         }
         catch (Exception ex)
         {
@@ -54,7 +56,11 @@ public partial class SettingsPage : ContentPage
         try
         {
             _settingsService.SaveThresholds(moderate, high);
-            StatusLabel.Text = "Thresholds saved.";
+            var normalizationMode = ComparisonNormalizationPicker.SelectedIndex == 1
+                ? Models.SessionComparisonNormalizationMode.DayWeighted
+                : Models.SessionComparisonNormalizationMode.AttemptWeighted;
+            _settingsService.SaveSessionComparisonNormalizationMode(normalizationMode);
+            StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
         {
@@ -71,9 +77,10 @@ public partial class SettingsPage : ContentPage
             var thresholds = _settingsService.GetThresholds();
             ModerateSlider.Value = thresholds.ModerateThreshold;
             HighSlider.Value = thresholds.HighThreshold;
+            ComparisonNormalizationPicker.SelectedIndex = 0;
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
-            StatusLabel.Text = "Thresholds and share behavior reset to defaults.";
+            StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";
         }
         catch (Exception ex)
         {

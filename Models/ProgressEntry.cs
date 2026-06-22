@@ -25,4 +25,7 @@ public class ProgressEntry
     public string ScoringProvider { get; set; } = "unknown";
     public double ConfidenceScore { get; set; }
     public string ConfidenceBand { get; set; } = "Low";
+
+    [Ignore]
+    public ConfidenceBand ConfidenceBandValue => ConfidenceBandExtensions.Parse(ConfidenceBand);
 }

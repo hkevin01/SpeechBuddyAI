@@ -1,6 +1,7 @@
 using Microsoft.Maui.Storage;
 using SpeechBuddyAI.Models;
 using SpeechBuddyAI.Services;
+using SpeechBuddyAI.Services.Confidence;
 using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Tests;
@@ -10,7 +11,7 @@ public sealed class ReportServiceTests
     [Fact]
     public void BuildExportText_RoutesFormatThroughServiceApi()
     {
-        var service = new ReportService();
+        var service = new ReportService(new ConfidenceSettingsService(new InMemoryStore()));
         var note = MakeNote();
         var entries = MakeEntries();
 
@@ -26,7 +27,7 @@ public sealed class ReportServiceTests
     [Fact]
     public async Task ExportReportAsync_UsesSameFileNameAsBuildExportFileName()
     {
-        var service = new ReportService();
+        var service = new ReportService(new ConfidenceSettingsService(new InMemoryStore()));
         var note = MakeNote();
         var entries = MakeEntries();
 
@@ -64,6 +65,7 @@ public sealed class ReportServiceTests
                 Timestamp = new DateTime(2026, 2, 3, 8, 0, 0, DateTimeKind.Utc),
                 TargetSound = "r",
                 OverallScore = 0.55,
+                ConfidenceScore = 0.62,
                 ScoringProvider = "offline-heuristic",
                 ConfidenceBand = "Moderate"
             },
@@ -72,9 +74,25 @@ public sealed class ReportServiceTests
                 Timestamp = new DateTime(2026, 2, 5, 8, 0, 0, DateTimeKind.Utc),
                 TargetSound = "r",
                 OverallScore = 0.76,
+                ConfidenceScore = 0.82,
                 ScoringProvider = "offline-heuristic",
                 ConfidenceBand = "High"
             }
         ];
+    }
+
+    private sealed class InMemoryStore : IKeyValueStore
+    {
+        private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);
+
+        public double Get(string key, double defaultValue)
+        {
+            return _values.TryGetValue(key, out var value) ? value : defaultValue;
+        }
+
+        public void Set(string key, double value)
+        {
+            _values[key] = value;
+        }
     }
 }

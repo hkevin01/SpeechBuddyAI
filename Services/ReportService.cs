@@ -1,11 +1,19 @@
 using SpeechBuddyAI.Models;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
+using SpeechBuddyAI.Services.Confidence;
 using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Services;
 
 public class ReportService
 {
+    private readonly ConfidenceSettingsService _confidenceSettingsService;
+
+    public ReportService(ConfidenceSettingsService confidenceSettingsService)
+    {
+        _confidenceSettingsService = confidenceSettingsService ?? throw new ArgumentNullException(nameof(confidenceSettingsService));
+    }
+
     public Task<SessionNote> GenerateReportsAsync(string rawNote, IReadOnlyList<ProgressEntry> recentEntries)
     {
         var safeRawNote = rawNote ?? string.Empty;
@@ -41,7 +49,8 @@ public class ReportService
 
     public string BuildExportText(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
     {
-        return ReportExportFormatter.BuildContent(note, metadataEntries, format);
+        var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
+        return ReportExportFormatter.BuildContent(note, metadataEntries, format, normalizationMode);
     }
 
     public string BuildExportFileName(SessionNote note, ReportExportFormat format)

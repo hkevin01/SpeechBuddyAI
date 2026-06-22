@@ -4,7 +4,11 @@ namespace SpeechBuddyAI.Services.Reports;
 
 public static class ReportExportFormatter
 {
-    public static string BuildContent(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
+    public static string BuildContent(
+        SessionNote note,
+        IReadOnlyList<ProgressEntry> metadataEntries,
+        ReportExportFormat format,
+        SessionComparisonNormalizationMode normalizationMode = SessionComparisonNormalizationMode.AttemptWeighted)
     {
         if (note is null)
         {
@@ -15,9 +19,9 @@ public static class ReportExportFormatter
 
         return format switch
         {
-            ReportExportFormat.Markdown => BuildMarkdown(note, entries),
-            ReportExportFormat.CsvSummary => BuildCsvSummary(note, entries),
-            _ => BuildPlainText(note, entries)
+            ReportExportFormat.Markdown => BuildMarkdown(note, entries, normalizationMode),
+            ReportExportFormat.CsvSummary => BuildCsvSummary(note, entries, normalizationMode),
+            _ => BuildPlainText(note, entries, normalizationMode)
         };
     }
 
@@ -39,9 +43,13 @@ public static class ReportExportFormatter
         return $"speechbuddy-report-{safeDate:yyyyMMdd-HHmmss}.{extension}";
     }
 
-    private static string BuildPlainText(SessionNote note, IReadOnlyList<ProgressEntry> entries)
+    private static string BuildPlainText(
+        SessionNote note,
+        IReadOnlyList<ProgressEntry> entries,
+        SessionComparisonNormalizationMode normalizationMode)
     {
         var sessionDate = note.SessionDate.ToString("yyyy-MM-dd HH:mm 'UTC'");
+        var snapshot = BuildComparisonSnapshot(entries, normalizationMode);
         return
             "SpeechBuddyAI Session Report" + Environment.NewLine +
             "===========================" + Environment.NewLine +
@@ -52,6 +60,17 @@ public static class ReportExportFormatter
             $"Scoring Providers: {BuildProviderSummary(entries)}" + Environment.NewLine +
             $"Confidence Bands: {BuildConfidenceBandSummary(entries)}" + Environment.NewLine +
             $"Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
+            $"Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
+            $"Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
+            $"Comparison Normalization: {normalizationMode.ToDisplayLabel()}" + Environment.NewLine +
+            Environment.NewLine +
+            "Comparison Narrative" + Environment.NewLine +
+            "--------------------" + Environment.NewLine +
+            SafeValue(snapshot.ComparisonNarrative) + Environment.NewLine +
+            Environment.NewLine +
+            "Per-Target Comparison" + Environment.NewLine +
+            "---------------------" + Environment.NewLine +
+            BuildPlainTextTargetComparison(snapshot.TargetComparisons) + Environment.NewLine +
             Environment.NewLine +
             "Raw Note" + Environment.NewLine +
             "--------" + Environment.NewLine +
@@ -66,9 +85,13 @@ public static class ReportExportFormatter
             SafeValue(note.ParentSummary) + Environment.NewLine;
     }
 
-    private static string BuildMarkdown(SessionNote note, IReadOnlyList<ProgressEntry> entries)
+    private static string BuildMarkdown(
+        SessionNote note,
+        IReadOnlyList<ProgressEntry> entries,
+        SessionComparisonNormalizationMode normalizationMode)
     {
         var sessionDate = note.SessionDate.ToString("yyyy-MM-dd HH:mm 'UTC'");
+        var snapshot = BuildComparisonSnapshot(entries, normalizationMode);
         return
             "# SpeechBuddyAI Session Report" + Environment.NewLine +
             Environment.NewLine +
@@ -76,6 +99,17 @@ public static class ReportExportFormatter
             $"- Scoring Providers: {BuildProviderSummary(entries)}" + Environment.NewLine +
             $"- Confidence Bands: {BuildConfidenceBandSummary(entries)}" + Environment.NewLine +
             $"- Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
+            $"- Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
+            $"- Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
+            $"- Comparison Normalization: {normalizationMode.ToDisplayLabel()}" + Environment.NewLine +
+            Environment.NewLine +
+            "## Comparison Narrative" + Environment.NewLine +
+            Environment.NewLine +
+            SafeValue(snapshot.ComparisonNarrative) + Environment.NewLine +
+            Environment.NewLine +
+            "## Per-Target Comparison" + Environment.NewLine +
+            Environment.NewLine +
+            BuildMarkdownTargetComparison(snapshot.TargetComparisons) + Environment.NewLine +
             Environment.NewLine +
             "## Raw Note" + Environment.NewLine +
             Environment.NewLine +
@@ -90,9 +124,13 @@ public static class ReportExportFormatter
             SafeValue(note.ParentSummary) + Environment.NewLine;
     }
 
-    private static string BuildCsvSummary(SessionNote note, IReadOnlyList<ProgressEntry> entries)
+    private static string BuildCsvSummary(
+        SessionNote note,
+        IReadOnlyList<ProgressEntry> entries,
+        SessionComparisonNormalizationMode normalizationMode)
     {
         var sessionDate = note.SessionDate.ToString("yyyy-MM-dd HH:mm 'UTC'");
+        var snapshot = BuildComparisonSnapshot(entries, normalizationMode);
         var lines = new List<string>
         {
             "Metric,Value",
@@ -100,6 +138,11 @@ public static class ReportExportFormatter
             CsvLine("ScoringProviders", BuildProviderSummary(entries)),
             CsvLine("ConfidenceBands", BuildConfidenceBandSummary(entries)),
             CsvLine("TargetLevelDeltas", BuildTargetDeltaSummary(entries)),
+            CsvLine("SessionComparison", BuildSessionComparisonOverview(snapshot)),
+            CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
+            CsvLine("ComparisonNormalization", normalizationMode.ToDisplayLabel()),
+            CsvLine("ComparisonNarrative", SafeValue(snapshot.ComparisonNarrative)),
+            CsvLine("TargetComparisonTable", BuildCsvTargetComparison(snapshot.TargetComparisons)),
             CsvLine("RawNote", string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()),
             CsvLine("SoapSummary", SafeValue(note.SoapSummary)),
             CsvLine("ParentSummary", SafeValue(note.ParentSummary))
@@ -176,6 +219,93 @@ public static class ReportExportFormatter
         }
 
         return deltas.Count == 0 ? "n/a" : string.Join(" | ", deltas);
+    }
+
+    private static SessionComparisonSnapshot BuildComparisonSnapshot(
+        IReadOnlyList<ProgressEntry> entries,
+        SessionComparisonNormalizationMode normalizationMode)
+    {
+        var snapshot = new SessionComparisonService().Build(entries, normalizationMode);
+        var narrative = new ComparisonNarrativeGenerator(new TrendAnalysisService()).Generate(snapshot);
+
+        return new SessionComparisonSnapshot
+        {
+            HasCurrentSession = snapshot.HasCurrentSession,
+            HasPreviousSession = snapshot.HasPreviousSession,
+            CurrentSessionDate = snapshot.CurrentSessionDate,
+            CurrentAttemptCount = snapshot.CurrentAttemptCount,
+            CurrentAverageOverall = snapshot.CurrentAverageOverall,
+            CurrentAverageConfidence = snapshot.CurrentAverageConfidence,
+            PreviousSessionDate = snapshot.PreviousSessionDate,
+            PreviousAttemptCount = snapshot.PreviousAttemptCount,
+            PreviousAverageOverall = snapshot.PreviousAverageOverall,
+            PreviousAverageConfidence = snapshot.PreviousAverageConfidence,
+            NormalizationMode = snapshot.NormalizationMode,
+            TargetComparisons = snapshot.TargetComparisons,
+            ConfidenceBandTransitions = snapshot.ConfidenceBandTransitions,
+            RollingTimeline = snapshot.RollingTimeline,
+            ComparisonNarrative = narrative
+        };
+    }
+
+    private static string BuildSessionComparisonOverview(SessionComparisonSnapshot snapshot)
+    {
+        if (!snapshot.HasCurrentSession)
+        {
+            return "n/a";
+        }
+
+        if (!snapshot.HasPreviousSession)
+        {
+            return "Baseline only - no previous session available.";
+        }
+
+        return $"Overall {snapshot.OverallDelta:+0%;-0%;0%} | Confidence {snapshot.ConfidenceDelta:+0%;-0%;0%}";
+    }
+
+    private static string BuildPlainTextTargetComparison(IReadOnlyList<TargetComparisonItem> targetComparisons)
+    {
+        if (targetComparisons.Count == 0)
+        {
+            return "n/a";
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            targetComparisons.Select(item =>
+                $"- {item.TargetSound}: {item.OverallDelta:+0%;-0%;0%} overall, {item.ConfidenceMovementLabel}, current {item.CurrentAverageOverall:P0}, previous {item.PreviousAverageOverall:P0}"));
+    }
+
+    private static string BuildMarkdownTargetComparison(IReadOnlyList<TargetComparisonItem> targetComparisons)
+    {
+        if (targetComparisons.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var lines = new List<string>
+        {
+            "| Target | Delta | Confidence Move | Current Avg | Previous Avg |",
+            "| --- | --- | --- | --- | --- |"
+        };
+
+        lines.AddRange(targetComparisons.Select(item =>
+            $"| {item.TargetSound} | {item.OverallDelta:+0%;-0%;0%} | {item.ConfidenceMovementLabel} | {item.CurrentAverageOverall:P0} | {item.PreviousAverageOverall:P0} |"));
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildCsvTargetComparison(IReadOnlyList<TargetComparisonItem> targetComparisons)
+    {
+        if (targetComparisons.Count == 0)
+        {
+            return "n/a";
+        }
+
+        return string.Join(
+            " | ",
+            targetComparisons.Select(item =>
+                $"{item.TargetSound}:{item.OverallDelta:+0%;-0%;0%} ({item.ConfidenceMovementLabel})"));
     }
 
     private static string Normalize(string? value, string fallback)

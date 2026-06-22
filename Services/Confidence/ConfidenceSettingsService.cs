@@ -4,9 +4,11 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
 {
     private const string ModerateThresholdKey = "confidence.moderateThreshold";
     private const string HighThresholdKey = "confidence.highThreshold";
+    private const string SessionComparisonNormalizationKey = "comparison.sessionNormalizationMode";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
+    public const SessionComparisonNormalizationMode DefaultNormalizationMode = SessionComparisonNormalizationMode.AttemptWeighted;
 
     private readonly IKeyValueStore _store;
 
@@ -46,6 +48,27 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     {
         _store.Set(ModerateThresholdKey, DefaultModerateThreshold);
         _store.Set(HighThresholdKey, DefaultHighThreshold);
+        _store.Set(SessionComparisonNormalizationKey, (double)DefaultNormalizationMode);
+    }
+
+    public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
+    {
+        var stored = _store.Get(SessionComparisonNormalizationKey, (double)DefaultNormalizationMode);
+        var mode = (SessionComparisonNormalizationMode)(int)stored;
+
+        return Enum.IsDefined(typeof(SessionComparisonNormalizationMode), mode)
+            ? mode
+            : DefaultNormalizationMode;
+    }
+
+    public void SaveSessionComparisonNormalizationMode(SessionComparisonNormalizationMode mode)
+    {
+        if (!Enum.IsDefined(typeof(SessionComparisonNormalizationMode), mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode));
+        }
+
+        _store.Set(SessionComparisonNormalizationKey, (double)mode);
     }
 
     private static double Clamp(double value)
