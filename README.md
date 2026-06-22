@@ -36,6 +36,14 @@ The app currently demonstrates a complete vertical slice for M1. A user can ente
 > [!NOTE]
 > Persistence now uses app-local SQLite. Baseline roadmap features through M5 are implemented, including trend analysis, assignment generation, fallback scoring adapters, and report generation.
 
+![Practice Flow Demo](./assets/practice-flow-demo.png)
+
+### Practice Loop in Action
+
+The Practice page is where the core feedback loop begins. A learner enters a target phoneme and transcript, presses the "Score Attempt" button, and immediately receives component-level scoring feedback. This visual shows the practice interface with real-time feedback on phoneme accuracy, fluency stability, and consistency patterns. Each attempt captures phoneme, fluency, consistency, and overall scores, which are then persisted for longitudinal tracking.
+
+The transparent component breakdown helps learners and clinicians understand exactly what drove the score rather than seeing a single opaque number. If a child struggles with fluency on one attempt but nails phoneme accuracy, that distinction becomes actionable coaching feedback. Over time, this granular data accumulates in the SQLite store and feeds into the Progress dashboard and clinician reports.
+
 ## Fast Comparison Tables (Use/Do Not Use)
 
 These tables are intentionally near the top so new contributors can quickly pick the right technical direction before coding.
@@ -176,6 +184,14 @@ flowchart LR
     G --> E
 ```
 
+![Architecture Diagram](./assets/architecture-diagram.png)
+
+### Service Layer and Data Flow
+
+The architecture isolates concern areas so that changes to scoring logic do not ripple into persistence or UI rendering. The AiSpeechService owns the scoring contract and component computation, while ProgressTrackingService manages all SQLite transactions. Pages bind to view models that call services, not directly to database calls. This separation enables safe A/B testing of scoring methods and schema migrations without breaking UI stability.
+
+Each service is composed to be testable and replaceable. For example, if a new GOP-based scorer is added in M3, it can implement the same output contract as AiSpeechService and be swapped in without page rewrites. The same pattern applies to persistence: future migration to a cloud backend would require new ProgressTrackingService implementation but zero changes to page code or business logic.
+
 ### Data Lifecycle
 
 ```mermaid
@@ -236,6 +252,14 @@ This formulation is included because it aligns with CAPT literature and supports
 | <sub>1</sub> | <sub>M1</sub> | <sub>Deterministic weighted heuristics</sub> | <sub>Speed, transparency, and debuggability</sub> | <sub>Limited phonetic depth</sub> |
 | <sub>2</sub> | <sub>M2</sub> | <sub>Lexicon-backed phoneme checks</sub> | <sub>Better target-specific diagnostics</sub> | <sub>Lexicon and alignment complexity</sub> |
 | <sub>3</sub> | <sub>M3</sub> | <sub>GOP-like or segmentation-free features</sub> | <sub>Higher diagnostic fidelity and benchmarking</sub> | <sub>Model and data pipeline overhead</sub> |
+
+![Scoring Components Visualization](./assets/scoring-components.png)
+
+### Component Scoring Formula and Rationale
+
+The weighted component model combines phoneme accuracy, fluency stability, and consistency variance into a single interpretable score. Rather than hiding complexity behind a black-box confidence number, this approach surfaces exactly what contributed to each learner's evaluation. A child who scores 0.72 overall with strong phoneme (0.80) but low fluency (0.60) gets clear guidance: articulation is solid, but practice should focus on rhythm and continuity.
+
+Consistency is computed from the variance of recent attempts for the same target. This dimension captures whether a learner can repeat success or if high scores are one-off flukes. It also helps clinicians spot learners who need more drill repetition versus those ready to move to the next target. The formula remains tunable: if clinical feedback suggests different weight distributions, that change is isolated to the weighted aggregation line in AiSpeechService.
 
 ### Formula and Algorithm Catalog (CAPT, MDD, and Speech Therapy)
 
@@ -456,6 +480,22 @@ A practical execution approach is to pair each AI enhancement with one visible U
 
 > [!TIP]
 > Keep this section versioned as new roadmap decisions are made, so architectural tradeoffs remain evidence-backed and reviewable.
+
+![Progress Dashboard View](./assets/progress-dashboard.png)
+
+### Longitudinal Progress Tracking and Filtering
+
+The Progress dashboard aggregates all persisted attempts into a scrollable history and scoped trend view. Clinicians and families can filter by target sound and date range to isolate a practice window. The timeline charts show overall score trajectories with smoothed trend lines to reduce visual noise from single high or low attempts. This view transforms the raw practice loop into a narrative: the learner has been working on /r/ for six weeks, shows upward trend, but with high variance on Fridays suggesting fatigue effects.
+
+The dashboard supports both recent-attempt summaries ("last 5 practice sessions") and full history queries. Each row displays phoneme, fluency, consistency, and overall scores plus the raw transcript, making it easy to spot patterns. For instance, does this learner do better in isolation (/r/ alone) than in blends or final position? Those phonemes are taggable in future milestones, but the data structure already supports filtering by sound family or position once transcripts are parsed.
+
+![Session Notes and Reports](./assets/notes-and-reports.png)
+
+### Clinician Reporting and Parent Summaries
+
+The Notes page is where clinicians compose session summaries, reference the comparison with the previous session, and export finalized reports for parents and other professionals. SOAP structure (Subjective, Objective, Assessment, Plan) guides note writing while auto-populating with longitudinal metrics. The comparison builder highlights wins (e.g., +15% overall from last week) and flags regression risks (consistency drift on /s/) so the Plan section can be precise and evidence-based.
+
+Parent summaries are auto-generated in plain language, avoiding clinical jargon while preserving honesty. Instead of "Low consistency score," the parent reads: "Practice is coming along. The most recent session showed steady attempts on /r/, which is great progress toward independent carryover." Reports can be exported in plain text, Markdown, or CSV formats, making them shareable with other professionals or suitable for EHR integration. Clinicians can also manually edit and save custom notes, which are persisted alongside the auto-generated ones for future reference.
 
 ## Build, Run, and Practical Notes
 
