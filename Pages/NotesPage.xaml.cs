@@ -15,7 +15,6 @@ public partial class NotesPage : ContentPage
     private readonly ConfidenceSettingsService _confidenceSettingsService;
     private readonly ComparisonExportBuilderService _comparisonExportBuilderService;
     private readonly NotesPageViewModel _viewModel = new();
-    private readonly ProgressPageViewModel _comparisonPreviewViewModel = new();
     private bool _hasInitializedDateRange;
 
     public NotesPage()
@@ -235,7 +234,7 @@ public partial class NotesPage : ContentPage
             var metadataEntries = await GetMetadataEntriesForSelectedRangeAsync();
             var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
             var snapshot = _comparisonExportBuilderService.Build(metadataEntries, normalizationMode);
-            var state = _comparisonPreviewViewModel.BuildComparisonViewState(snapshot, snapshot.ComparisonNarrative);
+            var state = _viewModel.BuildComparisonPreviewState(snapshot);
 
             ComparisonPreviewNarrativeLabel.Text = state.ComparisonNarrativeText;
             ComparisonPreviewNormalizationLabel.Text = state.NormalizationModeText;

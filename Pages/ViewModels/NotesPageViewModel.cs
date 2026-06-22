@@ -1,10 +1,13 @@
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Pages.ViewModels;
 using SpeechBuddyAI.Services.Reports;
 
 namespace SpeechBuddyAI.Pages.ViewModels;
 
 public sealed class NotesPageViewModel
 {
+    private readonly ProgressPageViewModel _comparisonPreviewViewModel = new();
+
     public SessionNote? PendingNote { get; private set; }
     public SessionNote? SelectedHistoryNote { get; private set; }
 
@@ -28,6 +31,11 @@ public sealed class NotesPageViewModel
     public SessionNote? ResolveExportCandidate(SessionNote? mostRecentSaved)
     {
         return PendingNote ?? SelectedHistoryNote ?? mostRecentSaved;
+    }
+
+    public ProgressComparisonViewState BuildComparisonPreviewState(SessionComparisonSnapshot snapshot)
+    {
+        return _comparisonPreviewViewModel.BuildComparisonViewState(snapshot, snapshot?.ComparisonNarrative ?? string.Empty);
     }
 
     public static ReportExportFormat ExportFormatFromPickerIndex(int selectedIndex)

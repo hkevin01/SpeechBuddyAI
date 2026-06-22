@@ -7,6 +7,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string SessionComparisonNormalizationKey = "comparison.sessionNormalizationMode";
     private const string ProgressDateRangeStartKey = "progress.dateRangeStart";
     private const string ProgressDateRangeEndKey = "progress.dateRangeEnd";
+    private const string ProgressTargetFilterKey = "progress.targetFilter";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -54,6 +55,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(SessionComparisonNormalizationKey, (double)DefaultNormalizationMode);
         _store.Set(ProgressDateRangeStartKey, double.NaN);
         _store.Set(ProgressDateRangeEndKey, double.NaN);
+        _store.Set(ProgressTargetFilterKey, string.Empty);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -107,6 +109,16 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
 
         _store.Set(ProgressDateRangeStartKey, start.ToOADate());
         _store.Set(ProgressDateRangeEndKey, end.ToOADate());
+    }
+
+    public string GetDefaultProgressTargetFilter()
+    {
+        return (_store.Get(ProgressTargetFilterKey, string.Empty) ?? string.Empty).Trim();
+    }
+
+    public void SaveDefaultProgressTargetFilter(string? targetFilter)
+    {
+        _store.Set(ProgressTargetFilterKey, (targetFilter ?? string.Empty).Trim());
     }
 
     private static double Clamp(double value)

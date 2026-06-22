@@ -240,7 +240,7 @@ public sealed class ProgressPageViewModel
             .First();
 
         var mostVariable = targetComparisons
-            .OrderByDescending(item => Math.Abs(item.ConfidenceDelta))
+            .OrderByDescending(item => item.VariabilityIndex)
             .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
             .First();
 
@@ -256,7 +256,7 @@ public sealed class ProgressPageViewModel
             new ProgressSummaryBadge
             {
                 Title = "Most Variable",
-                Value = $"{mostVariable.TargetSound} ({mostVariable.ConfidenceDelta:+0%;-0%;0%} confidence)",
+                Value = $"{mostVariable.TargetSound} ({mostVariable.VariabilityIndex:0.00} variability)",
                 BackgroundColor = mostVariable.CurrentConfidenceBand.ToChipBackgroundColor(),
                 BorderColor = mostVariable.CurrentConfidenceBand.ToChipBorderColor()
             }

@@ -22,6 +22,7 @@ public sealed class ReportServiceTests
         Assert.Contains("# SpeechBuddyAI Session Report", markdown);
         Assert.Contains("Metric,Value", csv);
         Assert.Contains("SpeechBuddyAI Session Report", text);
+        Assert.Contains("Comparison Narrative", text);
     }
 
     [Fact]

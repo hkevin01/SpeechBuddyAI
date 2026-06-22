@@ -116,7 +116,7 @@ public class ReportService
         }
     }
 
-    private static string BuildSoapSummary(string rawNote, IReadOnlyList<ProgressEntry> entries)
+    private string BuildSoapSummary(string rawNote, IReadOnlyList<ProgressEntry> entries)
     {
         var safeEntries = entries ?? Array.Empty<ProgressEntry>();
         var safeRawNote = rawNote ?? string.Empty;
@@ -127,12 +127,18 @@ public class ReportService
             var average = recent.Length == 0 ? 0.0 : recent.Average(e => e.OverallScore);
             var strongest = recent.OrderByDescending(e => e.OverallScore).FirstOrDefault()?.TargetSound ?? "n/a";
             var weakest = recent.OrderBy(e => e.OverallScore).FirstOrDefault()?.TargetSound ?? "n/a";
+            var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
+            var comparison = _comparisonExportBuilderService.Build(safeEntries, normalizationMode);
+            var mostVariable = comparison.TargetComparisons
+                .OrderByDescending(item => item.VariabilityIndex)
+                .ThenBy(item => item.TargetSound, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()?.TargetSound ?? "n/a";
 
             return
                 "S: " + (string.IsNullOrWhiteSpace(safeRawNote) ? "No subjective note entered." : safeRawNote.Trim()) + Environment.NewLine +
                 $"O: Recent attempts: {recent.Length}, average overall score {average:P0}, strongest target {strongest}, weakest target {weakest}." + Environment.NewLine +
-                "A: Performance indicates emerging stability with observable target-specific variability." + Environment.NewLine +
-                "P: Continue home drills on weaker targets, reinforce successful targets with mixed-context carryover, and reassess next session.";
+                $"A: {comparison.ComparisonNarrative} The most variable target in the current review window is {mostVariable}." + Environment.NewLine +
+                "P: Continue home drills on weaker targets, reinforce successful targets with mixed-context carryover, and monitor the most variable target for stabilization across the next sessions.";
         }
         catch (Exception ex)
         {

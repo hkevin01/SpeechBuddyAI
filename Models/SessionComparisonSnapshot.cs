@@ -11,6 +11,11 @@ public sealed class TargetComparisonItem
     public ConfidenceBand PreviousConfidenceBand { get; init; }
     public int CurrentAttemptCount { get; init; }
     public int PreviousAttemptCount { get; init; }
+    public double CurrentSessionVariance { get; init; }
+    public double PreviousSessionVariance { get; init; }
+    public double RecentSessionVariance { get; init; }
+    public double ConsistencyDecay { get; init; }
+    public double VariabilityIndex { get; init; }
 
     public double OverallDelta => CurrentAverageOverall - PreviousAverageOverall;
     public double ConfidenceDelta => CurrentAverageConfidence - PreviousAverageConfidence;
@@ -34,6 +39,9 @@ public sealed class SessionTimelineItem
     public int AttemptCount { get; init; }
     public double AverageOverall { get; init; }
     public double AverageConfidence { get; init; }
+    public double ConfidenceWeightedOverall { get; init; }
+    public double SmoothedOverall { get; init; }
+    public double SmoothedConfidence { get; init; }
     public bool HasComparisonBaseline { get; init; }
     public double OverallDeltaFromPreviousSession { get; init; }
     public double ConfidenceDeltaFromPreviousSession { get; init; }

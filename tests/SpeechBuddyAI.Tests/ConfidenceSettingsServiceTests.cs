@@ -58,9 +58,20 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(new DateTime(2026, 6, 22), end);
     }
 
+    [Fact]
+    public void SaveDefaultProgressTargetFilter_PersistsTrimmedValue()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveDefaultProgressTargetFilter("  r-blends  ");
+
+        Assert.Equal("r-blends", service.GetDefaultProgressTargetFilter());
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _stringValues = new(StringComparer.Ordinal);
 
         public double Get(string key, double defaultValue)
         {
@@ -70,6 +81,16 @@ public sealed class ConfidenceSettingsServiceTests
         public void Set(string key, double value)
         {
             _values[key] = value;
+        }
+
+        public string Get(string key, string defaultValue)
+        {
+            return _stringValues.TryGetValue(key, out var value) ? value : defaultValue;
+        }
+
+        public void Set(string key, string value)
+        {
+            _stringValues[key] = value;
         }
     }
 }

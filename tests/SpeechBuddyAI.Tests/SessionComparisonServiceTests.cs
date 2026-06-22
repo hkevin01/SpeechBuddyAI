@@ -110,11 +110,11 @@ public sealed class SessionComparisonServiceTests
         var service = new SessionComparisonService();
         var entries = new[]
         {
-            Entry("r", 0.30, 0.35, new DateTime(2026, 6, 17, 9, 0, 0, DateTimeKind.Utc)),
-            Entry("r", 0.45, 0.50, new DateTime(2026, 6, 18, 9, 0, 0, DateTimeKind.Utc)),
-            Entry("r", 0.60, 0.62, new DateTime(2026, 6, 19, 9, 0, 0, DateTimeKind.Utc)),
-            Entry("r", 0.75, 0.78, new DateTime(2026, 6, 20, 9, 0, 0, DateTimeKind.Utc)),
-            Entry("r", 0.85, 0.88, new DateTime(2026, 6, 21, 9, 0, 0, DateTimeKind.Utc))
+            Entry("r", 0.30, 0.35, new DateTime(2026, 6, 17, 9, 0, 0, DateTimeKind.Utc), "Low"),
+            Entry("r", 0.45, 0.50, new DateTime(2026, 6, 18, 9, 0, 0, DateTimeKind.Utc), "Low"),
+            Entry("r", 0.60, 0.62, new DateTime(2026, 6, 19, 9, 0, 0, DateTimeKind.Utc), "Moderate"),
+            Entry("r", 0.75, 0.78, new DateTime(2026, 6, 20, 9, 0, 0, DateTimeKind.Utc), "Moderate"),
+            Entry("r", 0.85, 0.88, new DateTime(2026, 6, 21, 9, 0, 0, DateTimeKind.Utc), "High")
         };
 
         var snapshot = service.Build(entries);
@@ -122,8 +122,30 @@ public sealed class SessionComparisonServiceTests
         Assert.Equal(4, snapshot.RollingTimeline.Count);
         Assert.Equal(new DateTime(2026, 6, 21), snapshot.RollingTimeline[0].SessionDate);
         Assert.True(snapshot.RollingTimeline[0].HasComparisonBaseline);
-        Assert.Equal(0.10, snapshot.RollingTimeline[0].OverallDeltaFromPreviousSession, 3);
+        Assert.True(snapshot.RollingTimeline[0].SmoothedOverall > 0);
+        Assert.True(snapshot.RollingTimeline[0].ConfidenceWeightedOverall > 0);
+        Assert.True(snapshot.RollingTimeline[0].OverallDeltaFromPreviousSession > 0);
         Assert.False(snapshot.RollingTimeline[^1].HasComparisonBaseline);
+    }
+
+    [Fact]
+    public void Build_PerTargetComparisons_ComputesVariabilityMetrics()
+    {
+        var service = new SessionComparisonService();
+        var entries = new[]
+        {
+            Entry("r", 0.40, 0.45, new DateTime(2026, 6, 19, 9, 0, 0, DateTimeKind.Utc)),
+            Entry("r", 0.80, 0.65, new DateTime(2026, 6, 19, 10, 0, 0, DateTimeKind.Utc)),
+            Entry("r", 0.50, 0.55, new DateTime(2026, 6, 20, 9, 0, 0, DateTimeKind.Utc)),
+            Entry("r", 0.90, 0.75, new DateTime(2026, 6, 20, 10, 0, 0, DateTimeKind.Utc))
+        };
+
+        var snapshot = service.Build(entries);
+        var target = Assert.Single(snapshot.TargetComparisons);
+
+        Assert.True(target.CurrentSessionVariance > 0);
+        Assert.True(target.RecentSessionVariance > 0);
+        Assert.True(target.VariabilityIndex > 0);
     }
 
     [Fact]

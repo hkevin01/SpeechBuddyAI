@@ -34,6 +34,7 @@ public partial class ProgressPage : ContentPage
             _allEntries = await _progressTrackingService.GetEntriesAsync();
             var savedRange = _confidenceSettingsService.GetProgressDateRange(DateTime.Now);
             var filterState = _viewModel.BuildFilterState(savedRange.StartDateLocal, savedRange.EndDateLocal, DateTime.Now);
+            FilterEntry.Text = _confidenceSettingsService.GetDefaultProgressTargetFilter();
             ProgressStartDatePicker.Date = filterState.StartDateLocal;
             ProgressEndDatePicker.Date = filterState.EndDateLocal;
             DateRangeSummaryLabel.Text = filterState.DateRangeSummaryText;
@@ -51,6 +52,7 @@ public partial class ProgressPage : ContentPage
 
     private void OnFilterTextChanged(object? sender, TextChangedEventArgs e)
     {
+        _confidenceSettingsService.SaveDefaultProgressTargetFilter(e.NewTextValue);
         ApplyFilter((e.NewTextValue ?? string.Empty).Trim());
     }
 

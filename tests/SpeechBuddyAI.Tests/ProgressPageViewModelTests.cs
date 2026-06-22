@@ -93,6 +93,7 @@ public sealed class ProgressPageViewModelTests
         Assert.Equal("Band movement: No confidence band movement detected.", state.ConfidenceMovementText);
         Assert.Equal(2, state.SummaryBadges.Count);
         Assert.Equal("Strongest Improved", state.SummaryBadges[0].Title);
+        Assert.Equal("Most Variable", state.SummaryBadges[1].Title);
         Assert.Equal(2, state.TimelineRows.Count);
         Assert.Contains("+12%", state.TimelineRows[0].DeltaText);
     }
