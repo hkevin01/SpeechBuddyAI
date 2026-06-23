@@ -17,6 +17,7 @@
     <Compile Include="../../Models/TrendPoint.cs" Link="Shared/TrendPoint.cs" />
     <Compile Include="../../Models/SessionComparisonSnapshot.cs" Link="Shared/SessionComparisonSnapshot.cs" />
     <Compile Include="../../Models/SessionNote.cs" Link="Shared/SessionNote.cs" />
+    <Compile Include="../../Models/HomeAssignment.cs" Link="Shared/HomeAssignment.cs" />
     <Compile Include="../../Database/DbConstants.cs" Link="Shared/DbConstants.cs" />
     <Compile Include="../../Services/Confidence/ConfidenceThresholds.cs" Link="Shared/ConfidenceThresholds.cs" />
     <Compile Include="../../Services/Confidence/IConfidenceThresholdProvider.cs" Link="Shared/IConfidenceThresholdProvider.cs" />
@@ -24,6 +25,7 @@
     <Compile Include="../../Services/Confidence/ConfidenceCalculator.cs" Link="Shared/ConfidenceCalculator.cs" />
     <Compile Include="../../Services/Storage/ProgressSchemaMigration.cs" Link="Shared/ProgressSchemaMigration.cs" />
     <Compile Include="../../Services/PhonemeWordBankService.cs" Link="Shared/PhonemeWordBankService.cs" />
+    <Compile Include="../../Services/AiTextService.cs" Link="Shared/AiTextService.cs" />
     <Compile Include="../../Services/DashboardStatsService.cs" Link="Shared/DashboardStatsService.cs" />
     <Compile Include="../../Services/SessionComparisonService.cs" Link="Shared/SessionComparisonService.cs" />
     <Compile Include="../../Services/ReportService.cs" Link="Shared/ReportService.cs" />

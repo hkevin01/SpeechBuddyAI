@@ -6,6 +6,9 @@ namespace SpeechBuddyAI.Services;
 // Purpose: Generates practice word lists and home assignment plans.
 public class AiTextService
 {
+    private const int MaxFocusTargets = 3;
+    private const int RecentWindow = 5;
+
     private readonly PhonemeWordBankService _wordBank;
 
     public AiTextService(PhonemeWordBankService wordBank)
@@ -38,18 +41,24 @@ public class AiTextService
         }
     }
 
-    public async Task<HomeAssignment> GenerateHomeAssignmentAsync(IReadOnlyList<ProgressEntry> weakEntries)
+    // ID: SVC-TEXT-003
+    // Purpose: Builds a formula-driven assignment plan from persisted attempt history.
+    // Formula: priority = recency * (0.45*severity + 0.20*instability + 0.20*decline + 0.15*frequency)
+    // where severity = 1 - recent mean overall, instability = sqrt(recent variance),
+    // decline = max(0, baseline mean - recent mean), and frequency favors repeated challenges.
+    public async Task<HomeAssignment> GenerateHomeAssignmentAsync(IReadOnlyList<ProgressEntry> history)
     {
-        var sourceEntries = weakEntries ?? Array.Empty<ProgressEntry>();
+        var sourceEntries = history ?? Array.Empty<ProgressEntry>();
 
         try
         {
-            var targets = sourceEntries
-                .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
-                .OrderBy(e => e.OverallScore)
-                .Select(e => e.TargetSound.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(3)
+            var candidates = BuildTargetCandidates(sourceEntries)
+                .OrderByDescending(c => c.Priority)
+                .Take(MaxFocusTargets)
+                .ToArray();
+
+            var targets = candidates
+                .Select(c => c.Target)
                 .ToArray();
 
             if (targets.Length == 0)
@@ -77,8 +86,7 @@ public class AiTextService
                 .Select(g => g.Key)
                 .FirstOrDefault() ?? "mixed_patterns";
 
-            var rationale = $"Focus on {string.Join(", ", targets)} because these targets show lower recent scores. " +
-                            $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed.";
+            var rationale = BuildRationale(candidates, commonPattern);
 
             return new HomeAssignment
             {
@@ -93,4 +101,83 @@ public class AiTextService
             throw new InvalidOperationException("Failed to generate a home assignment from weak-pattern history.", ex);
         }
     }
+
+    private static IReadOnlyList<TargetAssignmentCandidate> BuildTargetCandidates(IReadOnlyList<ProgressEntry> entries)
+    {
+        var now = DateTime.UtcNow;
+
+        return entries
+            .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
+            .GroupBy(e => e.TargetSound.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now))
+            .OrderByDescending(candidate => candidate.Priority)
+            .ToArray();
+    }
+
+    private static TargetAssignmentCandidate BuildTargetCandidate(string target, IReadOnlyList<ProgressEntry> entries, DateTime now)
+    {
+        var ordered = entries.OrderBy(e => e.Timestamp).ToArray();
+        var recent = ordered.TakeLast(Math.Min(RecentWindow, ordered.Length)).ToArray();
+        var baseline = ordered.Take(Math.Min(RecentWindow, ordered.Length)).ToArray();
+
+        var recentMean = recent.Length > 0 ? recent.Average(e => Clamp(e.OverallScore)) : 0.0;
+        var baselineMean = baseline.Length > 0 ? baseline.Average(e => Clamp(e.OverallScore)) : recentMean;
+        var severity = Clamp(1.0 - recentMean);
+        var instability = Math.Sqrt(ComputeVariance(recent.Select(e => Clamp(e.OverallScore)).ToArray()));
+        var decline = Clamp(Math.Max(0.0, baselineMean - recentMean));
+        var frequency = Clamp(Math.Log(entries.Count + 1, 2) / 4.0);
+        var daysSinceLast = Math.Max(0.0, (now - ordered[^1].Timestamp).TotalDays);
+        var recency = Math.Exp(-daysSinceLast / 14.0);
+
+        var basePriority = (0.45 * severity) + (0.20 * instability) + (0.20 * decline) + (0.15 * frequency);
+        var priority = Clamp(basePriority * recency);
+
+        return new TargetAssignmentCandidate(
+            target,
+            priority,
+            severity,
+            instability,
+            decline,
+            entries.Count,
+            ordered[^1].Timestamp);
+    }
+
+    private static string BuildRationale(IReadOnlyList<TargetAssignmentCandidate> candidates, string commonPattern)
+    {
+        if (candidates.Count == 0)
+        {
+            return "No weak patterns found yet. Continue with mixed articulation drills for consistency.";
+        }
+
+        var top = candidates[0];
+        var targetList = string.Join(", ", candidates.Select(c => c.Target));
+        return $"Focus on {targetList} based on weighted priority from recent severity, instability, trend decline, and repetition frequency. " +
+               $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}). " +
+               $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed.";
+    }
+
+    private static double ComputeVariance(IReadOnlyList<double> values)
+    {
+        if (values.Count < 2)
+        {
+            return 0.0;
+        }
+
+        var mean = values.Average();
+        return values.Average(value => Math.Pow(value - mean, 2));
+    }
+
+    private static double Clamp(double value)
+    {
+        return Math.Max(0.0, Math.Min(1.0, value));
+    }
+
+    private sealed record TargetAssignmentCandidate(
+        string Target,
+        double Priority,
+        double Severity,
+        double Instability,
+        double Decline,
+        int Attempts,
+        DateTime LastAttemptAt);
 }

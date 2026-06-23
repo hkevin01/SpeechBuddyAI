@@ -49,8 +49,8 @@ public partial class HomePage : ContentPage
 
         try
         {
-            var weakEntries = await _progressTrackingService.GetWeakestEntriesAsync(5);
-            var assignment = await _aiTextService.GenerateHomeAssignmentAsync(weakEntries);
+            var history = await _progressTrackingService.GetRecentEntriesAsync(120);
+            var assignment = await _aiTextService.GenerateHomeAssignmentAsync(history);
 
             AssignmentTitleLabel.Text = assignment.Title;
             AssignmentRationaleLabel.Text = assignment.Rationale;
