@@ -77,6 +77,10 @@ public static class ReportExportFormatter
             "---------------------" + Environment.NewLine +
             BuildPlainTextTargetComparison(snapshot.TargetComparisons) + Environment.NewLine +
             Environment.NewLine +
+            "Assignment Selection Rationale" + Environment.NewLine +
+            "------------------------------" + Environment.NewLine +
+            BuildPlainTextAssignmentSelection(note) + Environment.NewLine +
+            Environment.NewLine +
             "Raw Note" + Environment.NewLine +
             "--------" + Environment.NewLine +
             (string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()) + Environment.NewLine +
@@ -120,6 +124,10 @@ public static class ReportExportFormatter
             Environment.NewLine +
             BuildMarkdownTargetComparison(snapshot.TargetComparisons) + Environment.NewLine +
             Environment.NewLine +
+            "## Assignment Selection Rationale" + Environment.NewLine +
+            Environment.NewLine +
+            BuildMarkdownAssignmentSelection(note) + Environment.NewLine +
+            Environment.NewLine +
             "## Raw Note" + Environment.NewLine +
             Environment.NewLine +
             (string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()) + Environment.NewLine +
@@ -153,6 +161,8 @@ public static class ReportExportFormatter
             CsvLine("ComparisonNarrative", SafeValue(snapshot.ComparisonNarrative)),
             CsvLine("RollingSessionHistory", BuildCsvTimeline(snapshot.RollingTimeline)),
             CsvLine("TargetComparisonTable", BuildCsvTargetComparison(snapshot.TargetComparisons)),
+            CsvLine("AssignmentSelectionSummary", SafeValue(note.AssignmentSelectionSummary)),
+            CsvLine("AssignmentSelectionDetails", SafeValue(note.AssignmentSelectionDetails)),
             CsvLine("RawNote", string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()),
             CsvLine("SoapSummary", SafeValue(note.SoapSummary)),
             CsvLine("ParentSummary", SafeValue(note.ParentSummary))
@@ -334,6 +344,33 @@ public static class ReportExportFormatter
             " | ",
             rollingTimeline.Select(item =>
                 $"{item.SessionDate:yyyy-MM-dd}:{item.AttemptCount} attempts,{item.AverageOverall:P0} overall,{item.SmoothedOverall:P0} smoothed,{item.AverageConfidence:P0} confidence,{(item.HasComparisonBaseline ? $"{item.OverallDeltaFromPreviousSession:+0%;-0%;0%} overall/{item.ConfidenceDeltaFromPreviousSession:+0%;-0%;0%} confidence" : "baseline")}"));
+    }
+
+    private static string BuildPlainTextAssignmentSelection(SessionNote note)
+    {
+        var snapshotDateText = note.AssignmentSnapshotDate.HasValue
+            ? $"Snapshot Date: {note.AssignmentSnapshotDate.Value:yyyy-MM-dd HH:mm 'UTC'}{Environment.NewLine}"
+            : string.Empty;
+        return
+            snapshotDateText +
+            "Summary: " + SafeValue(note.AssignmentSelectionSummary) + Environment.NewLine +
+            "Details:" + Environment.NewLine +
+            SafeValue(note.AssignmentSelectionDetails);
+    }
+
+    private static string BuildMarkdownAssignmentSelection(SessionNote note)
+    {
+        var lines = new List<string>();
+        if (note.AssignmentSnapshotDate.HasValue)
+        {
+            lines.Add($"- Snapshot Date: {note.AssignmentSnapshotDate.Value:yyyy-MM-dd HH:mm 'UTC'}");
+        }
+
+        lines.Add($"- Summary: {SafeValue(note.AssignmentSelectionSummary)}");
+        lines.Add("- Details:");
+        lines.Add(SafeValue(note.AssignmentSelectionDetails));
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static string Normalize(string? value, string fallback)

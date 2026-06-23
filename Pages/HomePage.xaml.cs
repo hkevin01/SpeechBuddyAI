@@ -1,4 +1,5 @@
 using SpeechBuddyAI.Services;
+using SpeechBuddyAI.Models;
 
 namespace SpeechBuddyAI.Pages;
 
@@ -7,6 +8,7 @@ public partial class HomePage : ContentPage
     private readonly ProgressTrackingService _progressTrackingService;
     private readonly AiTextService _aiTextService;
     private readonly DashboardStatsService _dashboardStatsService;
+    private readonly AssignmentSnapshotService _assignmentSnapshotService;
 
     public HomePage()
     {
@@ -14,6 +16,7 @@ public partial class HomePage : ContentPage
         _progressTrackingService = ResolveService<ProgressTrackingService>();
         _aiTextService = ResolveService<AiTextService>();
         _dashboardStatsService = ResolveService<DashboardStatsService>();
+        _assignmentSnapshotService = ResolveService<AssignmentSnapshotService>();
     }
 
     protected override async void OnAppearing()
@@ -46,11 +49,13 @@ public partial class HomePage : ContentPage
         AssignmentRationaleLabel.Text = string.Empty;
         AssignmentTargetsLabel.Text = string.Empty;
         AssignmentWordsLabel.Text = string.Empty;
+        AssignmentReasonDetailsLabel.Text = string.Empty;
 
         try
         {
             var history = await _progressTrackingService.GetRecentEntriesAsync(120);
             var assignment = await _aiTextService.GenerateHomeAssignmentAsync(history);
+            await _assignmentSnapshotService.SaveSnapshotAsync(assignment, history.Count);
 
             AssignmentTitleLabel.Text = assignment.Title;
             AssignmentRationaleLabel.Text = assignment.Rationale;
@@ -59,6 +64,7 @@ public partial class HomePage : ContentPage
                                               ? "none"
                                               : string.Join(", ", assignment.FocusTargets));
             AssignmentWordsLabel.Text = "Suggested Words: " + string.Join(", ", assignment.SuggestedWords);
+            AssignmentReasonDetailsLabel.Text = BuildFocusReasonSummary(assignment.FocusTargetReasons);
         }
         catch (Exception ex)
         {
@@ -78,5 +84,18 @@ public partial class HomePage : ContentPage
         }
 
         throw new InvalidOperationException($"Service {typeof(T).Name} is not registered.");
+    }
+
+    private static string BuildFocusReasonSummary(IReadOnlyList<AssignmentFocusTargetReason> reasons)
+    {
+        if (reasons is null || reasons.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return "Selection details: " + string.Join(
+            " | ",
+            reasons.Select(reason =>
+                $"{reason.TargetSound} p={reason.PriorityScore:0.00}, seq {reason.PositionSequence}"));
     }
 }

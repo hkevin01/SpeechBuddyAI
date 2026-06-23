@@ -25,6 +25,7 @@ public static class MauiProgram
             builder.Services.AddSingleton<Services.PhonemeWordBankService>();
             builder.Services.AddSingleton<Services.AiSpeechService>();
             builder.Services.AddSingleton<Services.AiTextService>();
+            builder.Services.AddSingleton<Services.AssignmentSnapshotService>();
             builder.Services.AddSingleton<Services.ProgressTrackingService>();
             builder.Services.AddSingleton<Services.TrendAnalysisService>();
             builder.Services.AddSingleton<Services.ComparisonNarrativeGenerator>();

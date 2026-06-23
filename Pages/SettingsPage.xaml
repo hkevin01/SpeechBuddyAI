@@ -43,6 +43,44 @@
                         </Picker.Items>
                     </Picker>
 
+                            <Label Text="Assignment Priority Weights" FontAttributes="Bold" Margin="0,10,0,0" />
+                            <Label Text="Tune how home assignment targets are prioritized using severity, instability, decline trend, and repetition frequency." />
+
+                            <Label Text="Severity weight" FontAttributes="Bold" />
+                            <Label x:Name="AssignmentSeverityValueLabel" Text="45%" />
+                            <Slider x:Name="AssignmentSeveritySlider"
+                                Minimum="0.05"
+                                Maximum="0.80"
+                                ValueChanged="OnSliderValueChanged" />
+
+                            <Label Text="Instability weight" FontAttributes="Bold" />
+                            <Label x:Name="AssignmentInstabilityValueLabel" Text="20%" />
+                            <Slider x:Name="AssignmentInstabilitySlider"
+                                Minimum="0.05"
+                                Maximum="0.70"
+                                ValueChanged="OnSliderValueChanged" />
+
+                            <Label Text="Decline weight" FontAttributes="Bold" />
+                            <Label x:Name="AssignmentDeclineValueLabel" Text="20%" />
+                            <Slider x:Name="AssignmentDeclineSlider"
+                                Minimum="0.05"
+                                Maximum="0.70"
+                                ValueChanged="OnSliderValueChanged" />
+
+                            <Label Text="Frequency weight" FontAttributes="Bold" />
+                            <Label x:Name="AssignmentFrequencyValueLabel" Text="15%" />
+                            <Slider x:Name="AssignmentFrequencySlider"
+                                Minimum="0.05"
+                                Maximum="0.60"
+                                ValueChanged="OnSliderValueChanged" />
+
+                            <Label Text="Low-confidence penalty strength" FontAttributes="Bold" />
+                            <Label x:Name="AssignmentConfidencePenaltyValueLabel" Text="60%" />
+                            <Slider x:Name="AssignmentConfidencePenaltySlider"
+                                Minimum="0.00"
+                                Maximum="1.00"
+                                ValueChanged="OnSliderValueChanged" />
+
                     <HorizontalStackLayout Spacing="10">
                         <Button Text="Save Clinician Settings"
                                 Clicked="OnSaveClicked"

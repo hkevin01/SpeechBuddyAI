@@ -50,6 +50,7 @@
                     <Label x:Name="AssignmentRationaleLabel" Text="" />
                     <Label x:Name="AssignmentTargetsLabel" Text="" />
                     <Label x:Name="AssignmentWordsLabel" Text="" />
+                    <Label x:Name="AssignmentReasonDetailsLabel" Text="" FontSize="12" TextColor="#444" />
                 </VerticalStackLayout>
             </Frame>
         </VerticalStackLayout>

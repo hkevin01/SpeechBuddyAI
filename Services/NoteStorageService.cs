@@ -100,6 +100,7 @@ public sealed class NoteStorageService
             if (_isInitialized) return;
             _database = new SQLiteAsyncConnection(DbConstants.DatabasePath, DbConstants.Flags);
             await _database.CreateTableAsync<SessionNote>();
+            await EnsureSchemaColumnsAsync(_database);
             _isInitialized = true;
         }
         finally { _gate.Release(); }
@@ -120,5 +121,44 @@ public sealed class NoteStorageService
         return SortBySessionDateDescending(notes)
             .Take(Math.Max(1, take))
             .ToList();
+    }
+
+    private static async Task EnsureSchemaColumnsAsync(SQLiteAsyncConnection db)
+    {
+        var tableInfo = await db.QueryAsync<TableInfoRow>("PRAGMA table_info(SessionNote);");
+        var existingColumns = new HashSet<string>(tableInfo.Select(i => i.Name), StringComparer.OrdinalIgnoreCase);
+        var commands = new List<string>();
+
+        if (!existingColumns.Contains("AssignmentSnapshotDateTicks"))
+            commands.Add("ALTER TABLE SessionNote ADD COLUMN AssignmentSnapshotDateTicks INTEGER NOT NULL DEFAULT 0;");
+        if (!existingColumns.Contains("AssignmentSelectionSummary"))
+            commands.Add("ALTER TABLE SessionNote ADD COLUMN AssignmentSelectionSummary TEXT NOT NULL DEFAULT '';");
+        if (!existingColumns.Contains("AssignmentSelectionDetails"))
+            commands.Add("ALTER TABLE SessionNote ADD COLUMN AssignmentSelectionDetails TEXT NOT NULL DEFAULT '';");
+
+        foreach (var command in commands)
+        {
+            await TryExecuteMigrationCommandAsync(db, command);
+        }
+    }
+
+    private static async Task TryExecuteMigrationCommandAsync(SQLiteAsyncConnection db, string command)
+    {
+        try
+        {
+            await db.ExecuteAsync(command);
+        }
+        catch (SQLiteException ex) when (
+            ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+        {
+            // Existing databases may already include this column.
+        }
+    }
+
+    private sealed class TableInfoRow
+    {
+        [Column("name")]
+        public string Name { get; init; } = string.Empty;
     }
 }

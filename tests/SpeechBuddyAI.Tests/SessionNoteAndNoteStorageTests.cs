@@ -25,14 +25,17 @@ public sealed class SessionNoteAndNoteStorageTests
         var idProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.Id));
         var ticksProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.SessionDateTicks));
         var sessionDateProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.SessionDate));
+        var assignmentDateProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentSnapshotDate));
 
         Assert.NotNull(idProperty);
         Assert.NotNull(ticksProperty);
         Assert.NotNull(sessionDateProperty);
+        Assert.NotNull(assignmentDateProperty);
 
         Assert.NotNull(idProperty!.GetCustomAttributes(typeof(PrimaryKeyAttribute), inherit: true).FirstOrDefault());
         Assert.NotNull(ticksProperty!.GetCustomAttributes(typeof(IndexedAttribute), inherit: true).FirstOrDefault());
         Assert.NotNull(sessionDateProperty!.GetCustomAttributes(typeof(IgnoreAttribute), inherit: true).FirstOrDefault());
+        Assert.NotNull(assignmentDateProperty!.GetCustomAttributes(typeof(IgnoreAttribute), inherit: true).FirstOrDefault());
     }
 
     [Fact]

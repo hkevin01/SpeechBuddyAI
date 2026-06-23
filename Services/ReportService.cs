@@ -9,13 +9,16 @@ public class ReportService
 {
     private readonly ConfidenceSettingsService _confidenceSettingsService;
     private readonly ComparisonSnapshotCacheService _comparisonSnapshotCacheService;
+    private readonly AssignmentSnapshotService _assignmentSnapshotService;
 
     public ReportService(
         ConfidenceSettingsService confidenceSettingsService,
-        ComparisonSnapshotCacheService comparisonSnapshotCacheService)
+        ComparisonSnapshotCacheService comparisonSnapshotCacheService,
+        AssignmentSnapshotService assignmentSnapshotService)
     {
         _confidenceSettingsService = confidenceSettingsService ?? throw new ArgumentNullException(nameof(confidenceSettingsService));
         _comparisonSnapshotCacheService = comparisonSnapshotCacheService ?? throw new ArgumentNullException(nameof(comparisonSnapshotCacheService));
+        _assignmentSnapshotService = assignmentSnapshotService ?? throw new ArgumentNullException(nameof(assignmentSnapshotService));
     }
 
     public Task<SessionNote> GenerateReportsAsync(string rawNote, IReadOnlyList<ProgressEntry> recentEntries)
@@ -25,12 +28,17 @@ public class ReportService
 
         try
         {
+            var latestAssignmentSnapshot = await _assignmentSnapshotService.GetLatestSnapshotAsync();
+            var targetReasons = AssignmentSnapshotService.ParseReasons(latestAssignmentSnapshot?.TargetReasonsJson);
             var note = new SessionNote
             {
                 SessionDate = DateTimeOffset.UtcNow,
                 RawNote = safeRawNote,
                 SoapSummary = BuildSoapSummary(safeRawNote, safeEntries),
-                ParentSummary = BuildParentSummary(safeEntries)
+                ParentSummary = BuildParentSummary(safeEntries),
+                AssignmentSnapshotDate = latestAssignmentSnapshot?.SnapshotDate,
+                AssignmentSelectionSummary = latestAssignmentSnapshot?.Rationale ?? "No assignment snapshot available for this report window.",
+                AssignmentSelectionDetails = AssignmentSnapshotService.BuildSelectionDetails(targetReasons)
             };
 
             return Task.FromResult(note);

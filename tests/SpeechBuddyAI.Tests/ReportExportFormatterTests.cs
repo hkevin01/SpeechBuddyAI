@@ -24,6 +24,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("Comparison Narrative", content);
         Assert.Contains("Rolling Session History", content);
         Assert.Contains("Per-Target Comparison", content);
+        Assert.Contains("Assignment Selection Rationale", content);
         Assert.Contains("variability", content);
         Assert.Contains("drift", content);
         Assert.Contains("offline-heuristic: 2", content);
@@ -46,6 +47,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("## Comparison Narrative", content);
         Assert.Contains("## Rolling Session History", content);
         Assert.Contains("## Per-Target Comparison", content);
+        Assert.Contains("## Assignment Selection Rationale", content);
         Assert.Contains("| Target | Delta | Confidence Move | Current Avg | Previous Avg | Variability | Drift |", content);
         Assert.Contains("## Clinician SOAP Summary", content);
     }
@@ -84,6 +86,8 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("TimelineSmoothing", content);
         Assert.Contains("RollingSessionHistory", content);
         Assert.Contains("TargetComparisonTable", content);
+        Assert.Contains("AssignmentSelectionSummary", content);
+        Assert.Contains("AssignmentSelectionDetails", content);
         Assert.Contains("var", content);
         Assert.Contains("drift", content);
     }
@@ -144,7 +148,9 @@ public sealed class ReportExportFormatterTests
             SessionDate = new DateTimeOffset(2026, 1, 25, 14, 30, 0, TimeSpan.Zero),
             RawNote = "Child demonstrated better /r/ in short phrases.",
             SoapSummary = "S: reports home practice. O: accuracy improved. A: gains are emerging. P: continue drills.",
-            ParentSummary = "Great effort today. Keep daily short practice sessions."
+            ParentSummary = "Great effort today. Keep daily short practice sessions.",
+            AssignmentSelectionSummary = "Focus on r and s based on weighted priority.",
+            AssignmentSelectionDetails = "- r: priority 0.72\n- s: priority 0.61"
         };
     }
 

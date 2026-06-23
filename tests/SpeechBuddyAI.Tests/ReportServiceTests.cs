@@ -9,9 +9,32 @@ namespace SpeechBuddyAI.Tests;
 public sealed class ReportServiceTests
 {
     [Fact]
-    public void BuildExportText_RoutesFormatThroughServiceApi()
+    public async Task BuildExportText_RoutesFormatThroughServiceApi()
     {
-        var service = CreateService();
+        var (service, snapshots) = CreateService();
+        await snapshots.SaveSnapshotAsync(new HomeAssignment
+        {
+            Title = "Home Practice Plan",
+            Rationale = "Focus on r and s using weighted priority.",
+            FocusTargets = ["r", "s"],
+            SuggestedWords = ["rabbit", "sun"],
+            FocusTargetReasons =
+            [
+                new AssignmentFocusTargetReason
+                {
+                    TargetSound = "r",
+                    PriorityScore = 0.72,
+                    SeverityScore = 0.61,
+                    InstabilityScore = 0.32,
+                    DeclineScore = 0.22,
+                    FrequencyScore = 0.40,
+                    ConfidenceFactor = 0.84,
+                    PositionSequence = "final -> medial -> initial",
+                    PositionDeltaSummary = "initial +0.02 | medial -0.03 | final -0.06"
+                }
+            ]
+        }, 12);
+
         var note = MakeNote();
         var entries = MakeEntries();
 
@@ -23,12 +46,13 @@ public sealed class ReportServiceTests
         Assert.Contains("Metric,Value", csv);
         Assert.Contains("SpeechBuddyAI Session Report", text);
         Assert.Contains("Comparison Narrative", text);
+        Assert.Contains("Assignment Selection Rationale", text);
     }
 
     [Fact]
     public async Task ExportReportAsync_UsesSameFileNameAsBuildExportFileName()
     {
-        var service = CreateService();
+        var (service, _) = CreateService();
         var note = MakeNote();
         var entries = MakeEntries();
 
@@ -49,7 +73,7 @@ public sealed class ReportServiceTests
     [Fact]
     public async Task GenerateReportsAsync_ParentSummaryReflectsComparisonTrendLanguage()
     {
-        var service = CreateService();
+        var (service, _) = CreateService();
         var entries = MakeEntries();
 
         var report = await service.GenerateReportsAsync("Parent communication check", entries);
@@ -58,15 +82,16 @@ public sealed class ReportServiceTests
         Assert.Contains("steady repetition", report.ParentSummary);
     }
 
-    private static ReportService CreateService()
+    private static (ReportService Service, AssignmentSnapshotService Snapshots) CreateService()
     {
         var settings = new ConfidenceSettingsService(new InMemoryStore());
         var builder = new ComparisonExportBuilderService(
             new SessionComparisonService(),
             new ComparisonNarrativeGenerator(new TrendAnalysisService()));
         var cache = new ComparisonSnapshotCacheService(builder);
+        var assignmentSnapshots = new AssignmentSnapshotService();
 
-        return new ReportService(settings, cache);
+        return (new ReportService(settings, cache, assignmentSnapshots), assignmentSnapshots);
     }
 
     private static SessionNote MakeNote()
@@ -108,6 +133,7 @@ public sealed class ReportServiceTests
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _strings = new(StringComparer.Ordinal);
 
         public double Get(string key, double defaultValue)
         {
@@ -117,6 +143,16 @@ public sealed class ReportServiceTests
         public void Set(string key, double value)
         {
             _values[key] = value;
+        }
+
+        public string Get(string key, string defaultValue)
+        {
+            return _strings.TryGetValue(key, out var value) ? value : defaultValue;
+        }
+
+        public void Set(string key, string value)
+        {
+            _strings[key] = value;
         }
     }
 }

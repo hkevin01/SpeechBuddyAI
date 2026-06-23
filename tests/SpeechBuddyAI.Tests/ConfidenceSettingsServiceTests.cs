@@ -88,6 +88,41 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal("r-blends", service.GetDefaultProgressTargetFilter());
     }
 
+    [Fact]
+    public void AssignmentPrioritySettings_DefaultsToConfiguredWeights()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        var settings = service.GetAssignmentPrioritySettings();
+
+        Assert.Equal(AssignmentPrioritySettings.DefaultSeverityWeight, settings.SeverityWeight, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultInstabilityWeight, settings.InstabilityWeight, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultDeclineWeight, settings.DeclineWeight, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultFrequencyWeight, settings.FrequencyWeight, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultConfidencePenaltyStrength, settings.ConfidencePenaltyStrength, 3);
+    }
+
+    [Fact]
+    public void SaveAssignmentPrioritySettings_NormalizesWeights()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveAssignmentPrioritySettings(new AssignmentPrioritySettings
+        {
+            SeverityWeight = 1.0,
+            InstabilityWeight = 1.0,
+            DeclineWeight = 1.0,
+            FrequencyWeight = 1.0,
+            ConfidencePenaltyStrength = 0.8
+        });
+
+        var settings = service.GetAssignmentPrioritySettings();
+        var sum = settings.SeverityWeight + settings.InstabilityWeight + settings.DeclineWeight + settings.FrequencyWeight;
+
+        Assert.Equal(1.0, sum, 3);
+        Assert.Equal(0.8, settings.ConfidencePenaltyStrength, 3);
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);

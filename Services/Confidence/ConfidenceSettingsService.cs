@@ -9,12 +9,18 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string ProgressDateRangeStartKey = "progress.dateRangeStart";
     private const string ProgressDateRangeEndKey = "progress.dateRangeEnd";
     private const string ProgressTargetFilterKey = "progress.targetFilter";
+    private const string AssignmentSeverityWeightKey = "assignment.weight.severity";
+    private const string AssignmentInstabilityWeightKey = "assignment.weight.instability";
+    private const string AssignmentDeclineWeightKey = "assignment.weight.decline";
+    private const string AssignmentFrequencyWeightKey = "assignment.weight.frequency";
+    private const string AssignmentConfidencePenaltyStrengthKey = "assignment.weight.confidencePenaltyStrength";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
     public const SessionComparisonNormalizationMode DefaultNormalizationMode = SessionComparisonNormalizationMode.AttemptWeighted;
     public const SessionComparisonSmoothingStrength DefaultSmoothingStrength = SessionComparisonSmoothingStrength.Balanced;
     public const int DefaultProgressDateRangeDays = 30;
+    public static readonly AssignmentPrioritySettings DefaultAssignmentPrioritySettings = new AssignmentPrioritySettings();
 
     private readonly IKeyValueStore _store;
 
@@ -59,6 +65,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(ProgressDateRangeStartKey, double.NaN);
         _store.Set(ProgressDateRangeEndKey, double.NaN);
         _store.Set(ProgressTargetFilterKey, string.Empty);
+        SaveAssignmentPrioritySettings(DefaultAssignmentPrioritySettings);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -142,6 +149,33 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public void SaveDefaultProgressTargetFilter(string? targetFilter)
     {
         _store.Set(ProgressTargetFilterKey, (targetFilter ?? string.Empty).Trim());
+    }
+
+    public AssignmentPrioritySettings GetAssignmentPrioritySettings()
+    {
+        return new AssignmentPrioritySettings
+        {
+            SeverityWeight = Clamp(_store.Get(AssignmentSeverityWeightKey, AssignmentPrioritySettings.DefaultSeverityWeight)),
+            InstabilityWeight = Clamp(_store.Get(AssignmentInstabilityWeightKey, AssignmentPrioritySettings.DefaultInstabilityWeight)),
+            DeclineWeight = Clamp(_store.Get(AssignmentDeclineWeightKey, AssignmentPrioritySettings.DefaultDeclineWeight)),
+            FrequencyWeight = Clamp(_store.Get(AssignmentFrequencyWeightKey, AssignmentPrioritySettings.DefaultFrequencyWeight)),
+            ConfidencePenaltyStrength = Clamp(_store.Get(AssignmentConfidencePenaltyStrengthKey, AssignmentPrioritySettings.DefaultConfidencePenaltyStrength))
+        }.Normalize();
+    }
+
+    public void SaveAssignmentPrioritySettings(AssignmentPrioritySettings settings)
+    {
+        if (settings is null)
+        {
+            throw new ArgumentNullException(nameof(settings));
+        }
+
+        var normalized = settings.Normalize();
+        _store.Set(AssignmentSeverityWeightKey, normalized.SeverityWeight);
+        _store.Set(AssignmentInstabilityWeightKey, normalized.InstabilityWeight);
+        _store.Set(AssignmentDeclineWeightKey, normalized.DeclineWeight);
+        _store.Set(AssignmentFrequencyWeightKey, normalized.FrequencyWeight);
+        _store.Set(AssignmentConfidencePenaltyStrengthKey, normalized.ConfidencePenaltyStrength);
     }
 
     private static double Clamp(double value)

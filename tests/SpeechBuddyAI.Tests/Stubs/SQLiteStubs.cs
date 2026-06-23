@@ -49,7 +49,7 @@ public sealed class SQLiteAsyncConnection
 		return new AsyncTableQuery<T>();
 	}
 
-	public Task<List<T>> QueryAsync<T>(string query) where T : new()
+	public Task<List<T>> QueryAsync<T>(string query)
 	{
 		return Task.FromResult(new List<T>());
 	}
