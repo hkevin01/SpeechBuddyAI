@@ -19,6 +19,7 @@
     <Compile Include="../../Models/SessionNote.cs" Link="Shared/SessionNote.cs" />
     <Compile Include="../../Models/HomeAssignment.cs" Link="Shared/HomeAssignment.cs" />
     <Compile Include="../../Models/AssignmentPrioritySettings.cs" Link="Shared/AssignmentPrioritySettings.cs" />
+    <Compile Include="../../Models/AssignmentSuppressionBehavior.cs" Link="Shared/AssignmentSuppressionBehavior.cs" />
     <Compile Include="../../Models/AssignmentFocusTargetReason.cs" Link="Shared/AssignmentFocusTargetReason.cs" />
     <Compile Include="../../Models/AssignmentSnapshot.cs" Link="Shared/AssignmentSnapshot.cs" />
     <Compile Include="../../Database/DbConstants.cs" Link="Shared/DbConstants.cs" />

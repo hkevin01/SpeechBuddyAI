@@ -116,26 +116,32 @@ public sealed class NotesPageViewModelTests
 
         Assert.Single(state.SnapshotRows);
         Assert.Contains("Showing 1 snapshots", state.SummaryText);
+        Assert.Contains("r", state.TargetOptions, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("Severity trend:", state.SeverityTrendText);
         Assert.Contains("Confidence trend:", state.ConfidenceTrendText);
+        Assert.NotEmpty(state.SeverityPoints);
+        Assert.NotEmpty(state.ConfidencePoints);
     }
 
     [Fact]
-    public void BuildAssignmentAnalyticsStateForSnapshot_UsesSelectedSnapshotReasons()
+    public void BuildAssignmentAnalyticsState_RespectsSelectedTargetDrillDown()
     {
         var vm = new NotesPageViewModel();
-        var snapshot = new AssignmentSnapshot
+        var snapshots = new[]
         {
-            Id = 4,
-            SnapshotDate = new DateTimeOffset(2026, 6, 20, 10, 0, 0, TimeSpan.Zero),
-            FocusTargetsCsv = "r",
-            TargetReasonsJson = "[{\"TargetSound\":\"r\",\"SeverityScore\":0.55,\"InstabilityScore\":0.29,\"DeclineScore\":0.12,\"FrequencyScore\":0.36,\"ConfidenceFactor\":0.81}]"
+            new AssignmentSnapshot
+            {
+                Id = 4,
+                SnapshotDate = new DateTimeOffset(2026, 6, 20, 10, 0, 0, TimeSpan.Zero),
+                FocusTargetsCsv = "r,s",
+                TargetReasonsJson = "[{\"TargetSound\":\"r\",\"SeverityScore\":0.55,\"InstabilityScore\":0.29,\"DeclineScore\":0.12,\"FrequencyScore\":0.36,\"ConfidenceFactor\":0.81},{\"TargetSound\":\"s\",\"SeverityScore\":0.63,\"InstabilityScore\":0.35,\"DeclineScore\":0.20,\"FrequencyScore\":0.42,\"ConfidenceFactor\":0.74}]"
+            }
         };
 
-        var state = vm.BuildAssignmentAnalyticsStateForSnapshot(snapshot, new[] { snapshot });
+        var state = vm.BuildAssignmentAnalyticsState(snapshots, selectedTarget: "s", selectedSnapshotId: 4);
 
-        Assert.Contains("Selected snapshot", state.SummaryText);
-        Assert.Contains("0.55", state.SeverityTrendText);
-        Assert.Contains("0.81", state.ConfidenceTrendText);
+        Assert.Equal("s", state.SelectedTarget, ignoreCase: true);
+        Assert.Contains("0.63", state.SeverityTrendText);
+        Assert.Contains("0.74", state.ConfidenceTrendText);
     }
 }

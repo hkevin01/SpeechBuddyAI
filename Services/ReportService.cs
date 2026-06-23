@@ -21,7 +21,7 @@ public class ReportService
         _assignmentSnapshotService = assignmentSnapshotService ?? throw new ArgumentNullException(nameof(assignmentSnapshotService));
     }
 
-    public Task<SessionNote> GenerateReportsAsync(string rawNote, IReadOnlyList<ProgressEntry> recentEntries)
+    public async Task<SessionNote> GenerateReportsAsync(string rawNote, IReadOnlyList<ProgressEntry> recentEntries)
     {
         var safeRawNote = rawNote ?? string.Empty;
         var safeEntries = recentEntries ?? Array.Empty<ProgressEntry>();
@@ -50,7 +50,7 @@ public class ReportService
                     note.AssignmentSelectionDetails;
             }
 
-            return Task.FromResult(note);
+            return note;
         }
         catch (Exception ex)
         {

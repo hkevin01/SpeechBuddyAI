@@ -208,6 +208,7 @@ public sealed class AssignmentSnapshotService
 
             _database = new SQLiteAsyncConnection(DbConstants.DatabasePath, DbConstants.Flags);
             await _database.CreateTableAsync<AssignmentSnapshot>();
+            await EnsureSchemaColumnsAsync(_database);
             _isInitialized = true;
         }
         finally
@@ -218,4 +219,47 @@ public sealed class AssignmentSnapshotService
 
     private SQLiteAsyncConnection Database =>
         _database ?? throw new InvalidOperationException("Database is not initialized.");
+
+    private static async Task EnsureSchemaColumnsAsync(SQLiteAsyncConnection db)
+    {
+        var tableInfo = await db.QueryAsync<TableInfoRow>("PRAGMA table_info(AssignmentSnapshot);");
+        var existing = new HashSet<string>(tableInfo.Select(item => item.Name), StringComparer.OrdinalIgnoreCase);
+        var commands = new List<string>();
+
+        if (!existing.Contains("PreviousRationale"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN PreviousRationale TEXT NOT NULL DEFAULT '';");
+        if (!existing.Contains("RationaleDriftSummary"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN RationaleDriftSummary TEXT NOT NULL DEFAULT '';");
+        if (!existing.Contains("PreviousFocusTargetsCsv"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN PreviousFocusTargetsCsv TEXT NOT NULL DEFAULT '';");
+        if (!existing.Contains("FocusChangeCount"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN FocusChangeCount INTEGER NOT NULL DEFAULT 0;");
+        if (!existing.Contains("AssignmentChangeSuppressed"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN AssignmentChangeSuppressed INTEGER NOT NULL DEFAULT 0;");
+
+        foreach (var command in commands)
+        {
+            await TryExecuteMigrationCommandAsync(db, command);
+        }
+    }
+
+    private static async Task TryExecuteMigrationCommandAsync(SQLiteAsyncConnection db, string command)
+    {
+        try
+        {
+            await db.ExecuteAsync(command);
+        }
+        catch (SQLiteException ex) when (
+            ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+        {
+            // Existing databases may already include this column.
+        }
+    }
+
+    private sealed class TableInfoRow
+    {
+        [Column("name")]
+        public string Name { get; init; } = string.Empty;
+    }
 }

@@ -35,6 +35,7 @@ public partial class SettingsPage : ContentPage
             AssignmentFrequencySlider.Value = assignmentSettings.FrequencyWeight;
             AssignmentConfidencePenaltySlider.Value = assignmentSettings.ConfidencePenaltyStrength;
             AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
+            AssignmentSuppressionBehaviorPicker.SelectedIndex = (int)_settingsService.GetAssignmentSuppressionBehavior();
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
@@ -80,6 +81,7 @@ public partial class SettingsPage : ContentPage
             };
             _settingsService.SaveAssignmentPrioritySettings(assignmentSettings);
             _settingsService.SaveAssignmentConfidenceVarianceGate(AssignmentConfidenceVarianceGateSlider.Value);
+            _settingsService.SaveAssignmentSuppressionBehavior((AssignmentSuppressionBehavior)Math.Clamp(AssignmentSuppressionBehaviorPicker.SelectedIndex, 0, 2));
             StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
@@ -106,6 +108,7 @@ public partial class SettingsPage : ContentPage
             AssignmentFrequencySlider.Value = assignmentDefaults.FrequencyWeight;
             AssignmentConfidencePenaltySlider.Value = assignmentDefaults.ConfidencePenaltyStrength;
             AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
+            AssignmentSuppressionBehaviorPicker.SelectedIndex = (int)_settingsService.GetAssignmentSuppressionBehavior();
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";

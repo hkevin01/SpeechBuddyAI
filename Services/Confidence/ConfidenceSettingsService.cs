@@ -15,6 +15,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string AssignmentFrequencyWeightKey = "assignment.weight.frequency";
     private const string AssignmentConfidencePenaltyStrengthKey = "assignment.weight.confidencePenaltyStrength";
     private const string AssignmentConfidenceVarianceGateKey = "assignment.weight.confidenceVarianceGate";
+    private const string AssignmentSuppressionBehaviorKey = "assignment.weight.suppressionBehavior";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -23,6 +24,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const int DefaultProgressDateRangeDays = 30;
     public static readonly AssignmentPrioritySettings DefaultAssignmentPrioritySettings = new AssignmentPrioritySettings();
     public const double DefaultAssignmentConfidenceVarianceGate = 0.030;
+    public const AssignmentSuppressionBehavior DefaultAssignmentSuppressionBehavior = AssignmentSuppressionBehavior.HardFreeze;
 
     private readonly IKeyValueStore _store;
 
@@ -69,6 +71,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(ProgressTargetFilterKey, string.Empty);
         SaveAssignmentPrioritySettings(DefaultAssignmentPrioritySettings);
         SaveAssignmentConfidenceVarianceGate(DefaultAssignmentConfidenceVarianceGate);
+        SaveAssignmentSuppressionBehavior(DefaultAssignmentSuppressionBehavior);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -189,6 +192,26 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public void SaveAssignmentConfidenceVarianceGate(double varianceGate)
     {
         _store.Set(AssignmentConfidenceVarianceGateKey, Clamp(varianceGate));
+    }
+
+    public AssignmentSuppressionBehavior GetAssignmentSuppressionBehavior()
+    {
+        var stored = _store.Get(AssignmentSuppressionBehaviorKey, (double)DefaultAssignmentSuppressionBehavior);
+        var behavior = (AssignmentSuppressionBehavior)(int)stored;
+
+        return Enum.IsDefined(typeof(AssignmentSuppressionBehavior), behavior)
+            ? behavior
+            : DefaultAssignmentSuppressionBehavior;
+    }
+
+    public void SaveAssignmentSuppressionBehavior(AssignmentSuppressionBehavior behavior)
+    {
+        if (!Enum.IsDefined(typeof(AssignmentSuppressionBehavior), behavior))
+        {
+            throw new ArgumentOutOfRangeException(nameof(behavior));
+        }
+
+        _store.Set(AssignmentSuppressionBehaviorKey, (double)behavior);
     }
 
     private static double Clamp(double value)

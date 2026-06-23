@@ -10,6 +10,7 @@ public class AiTextService
     private const int MaxFocusTargets = 3;
     private const int RecentWindow = 5;
     private const int ConfidenceVarianceWindow = 12;
+    private const int MinimumPositionSamples = 3;
     private static readonly string[] PositionOrder = ["initial", "medial", "final"];
 
     private readonly PhonemeWordBankService _wordBank;
@@ -66,7 +67,9 @@ public class AiTextService
         {
             var settings = _settingsService.GetAssignmentPrioritySettings().Normalize();
             var confidenceVarianceGate = _settingsService.GetAssignmentConfidenceVarianceGate();
+            var suppressionBehavior = _settingsService.GetAssignmentSuppressionBehavior();
             var confidenceVariance = ComputeConfidenceVariance(sourceEntries);
+            var exceedsVarianceGate = confidenceVariance > Math.Max(0.0, confidenceVarianceGate);
             var candidates = BuildTargetCandidates(sourceEntries, settings)
                 .Select(candidate => candidate with
                 {
@@ -77,10 +80,24 @@ public class AiTextService
                 .ToArray();
 
             var latestSnapshot = await _assignmentSnapshotService.GetLatestSnapshotAsync();
-            var suppressChange = ShouldSuppressAssignmentChange(confidenceVariance, confidenceVarianceGate, latestSnapshot);
-            if (suppressChange)
+            var suppressChange = false;
+            if (exceedsVarianceGate)
             {
-                candidates = ApplySuppressedTargets(candidates, latestSnapshot, settings);
+                switch (suppressionBehavior)
+                {
+                    case AssignmentSuppressionBehavior.HardFreeze:
+                        suppressChange = true;
+                        candidates = ApplyHardFreezeTargets(candidates, latestSnapshot, settings);
+                        break;
+                    case AssignmentSuppressionBehavior.PartialUpdate:
+                        suppressChange = true;
+                        candidates = ApplyPartialUpdateTargets(candidates, latestSnapshot, settings);
+                        break;
+                    case AssignmentSuppressionBehavior.WarningOnly:
+                    default:
+                        suppressChange = false;
+                        break;
+                }
             }
 
             var targets = candidates
@@ -140,6 +157,7 @@ public class AiTextService
                     InitialAverageScore = candidate.PositionAverages.TryGetValue("initial", out var initialAvg) ? initialAvg : 0.0,
                     MedialAverageScore = candidate.PositionAverages.TryGetValue("medial", out var medialAvg) ? medialAvg : 0.0,
                     FinalAverageScore = candidate.PositionAverages.TryGetValue("final", out var finalAvg) ? finalAvg : 0.0,
+                    PositionSequenceSampleGateMet = candidate.PositionSequenceGateMet,
                     InitialAttemptScores = candidate.PositionSamples.TryGetValue("initial", out var initialScores) ? initialScores : Array.Empty<double>(),
                     MedialAttemptScores = candidate.PositionSamples.TryGetValue("medial", out var medialScores) ? medialScores : Array.Empty<double>(),
                     FinalAttemptScores = candidate.PositionSamples.TryGetValue("final", out var finalScores) ? finalScores : Array.Empty<double>(),
@@ -155,7 +173,7 @@ public class AiTextService
                 .Select(g => g.Key)
                 .FirstOrDefault() ?? "mixed_patterns";
 
-            var rationale = BuildRationale(candidates, commonPattern, settings, suppressChange, confidenceVariance, confidenceVarianceGate);
+            var rationale = BuildRationale(candidates, commonPattern, settings, suppressChange, confidenceVariance, confidenceVarianceGate, suppressionBehavior, exceedsVarianceGate);
 
             return new HomeAssignment
             {
@@ -212,11 +230,15 @@ public class AiTextService
             kvp => kvp.Key,
             kvp => kvp.Value.Length == 0 ? 0.0 : kvp.Value.Average(),
             StringComparer.OrdinalIgnoreCase);
-        var positionDeltas = BuildPositionDeltas(target, entries, positionSamples);
-        var positionSequence = PositionOrder
-            .OrderBy(position => positionDeltas.TryGetValue(position, out var delta) ? delta : 0.0)
-            .ThenBy(position => position)
-            .ToArray();
+        var positionSampleGateMet = PositionOrder.All(position =>
+            positionSamples.TryGetValue(position, out var values) && values.Length >= MinimumPositionSamples);
+        var positionDeltas = BuildPositionDeltas(target, entries, positionSamples, positionSampleGateMet);
+        var positionSequence = positionSampleGateMet
+            ? PositionOrder
+                .OrderBy(position => positionDeltas.TryGetValue(position, out var delta) ? delta : 0.0)
+                .ThenBy(position => position)
+                .ToArray()
+            : PositionOrder.ToArray();
 
         var basePriority = (0.45 * severity) + (0.20 * instability) + (0.20 * decline) + (0.15 * frequency);
         var priority = Clamp(basePriority * recency);
@@ -235,7 +257,8 @@ public class AiTextService
             positionSequence,
                 positionDeltas,
                 positionAverages,
-                positionSamples);
+                positionSamples,
+                positionSampleGateMet);
     }
 
     private static string BuildRationale(
@@ -244,7 +267,9 @@ public class AiTextService
         AssignmentPrioritySettings settings,
         bool suppressChange,
         double confidenceVariance,
-        double confidenceVarianceGate)
+        double confidenceVarianceGate,
+        AssignmentSuppressionBehavior suppressionBehavior,
+        bool exceedsVarianceGate)
     {
         if (candidates.Count == 0)
         {
@@ -253,15 +278,18 @@ public class AiTextService
 
         var top = candidates[0];
         var targetList = string.Join(", ", candidates.Select(c => c.Target));
-         var gatingText = suppressChange
-             ? $" Assignment updates were held because confidence variance {confidenceVariance:0.000} exceeded the gate {confidenceVarianceGate:0.000}."
-             : string.Empty;
+        var gatingText = exceedsVarianceGate
+            ? $" Confidence variance {confidenceVariance:0.000} exceeded gate {confidenceVarianceGate:0.000} under {suppressionBehavior.ToDisplayLabel().ToLowerInvariant()} behavior."
+            : string.Empty;
+        var suppressionText = suppressChange
+            ? " Assignment updates were suppressed for this cycle."
+            : string.Empty;
 
          return $"Focus on {targetList} based on weighted priority from recent severity, instability, trend decline, and repetition frequency. " +
                $"Weights are severity {settings.SeverityWeight:0.00}, instability {settings.InstabilityWeight:0.00}, decline {settings.DeclineWeight:0.00}, frequency {settings.FrequencyWeight:0.00}, with confidence penalty strength {settings.ConfidencePenaltyStrength:0.00}. " +
                $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}, confidence factor {top.ConfidenceFactor:0.00}). " +
              $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed." +
-             gatingText;
+               gatingText + suppressionText;
     }
 
     private static double ComputePriority(TargetAssignmentCandidate candidate, AssignmentPrioritySettings settings)
@@ -293,9 +321,20 @@ public class AiTextService
     private static Dictionary<string, double> BuildPositionDeltas(
         string target,
         IReadOnlyList<ProgressEntry> entries,
-        IReadOnlyDictionary<string, double[]> positionSamples)
+        IReadOnlyDictionary<string, double[]> positionSamples,
+        bool positionSampleGateMet)
     {
         var deltas = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        if (!positionSampleGateMet)
+        {
+            foreach (var position in PositionOrder)
+            {
+                deltas[position] = 0.0;
+            }
+
+            return deltas;
+        }
+
         foreach (var position in PositionOrder)
         {
             var scoped = positionSamples.TryGetValue(position, out var values)
@@ -394,16 +433,7 @@ public class AiTextService
         return ComputeVariance(sample);
     }
 
-    private static bool ShouldSuppressAssignmentChange(
-        double confidenceVariance,
-        double confidenceVarianceGate,
-        AssignmentSnapshot? latestSnapshot)
-    {
-        return latestSnapshot is not null &&
-               confidenceVariance > Math.Max(0.0, confidenceVarianceGate);
-    }
-
-    private static TargetAssignmentCandidate[] ApplySuppressedTargets(
+    private static TargetAssignmentCandidate[] ApplyHardFreezeTargets(
         IReadOnlyList<TargetAssignmentCandidate> candidates,
         AssignmentSnapshot? latestSnapshot,
         AssignmentPrioritySettings settings)
@@ -437,6 +467,47 @@ public class AiTextService
         }
 
         return selected
+            .Take(MaxFocusTargets)
+            .ToArray();
+    }
+
+    private static TargetAssignmentCandidate[] ApplyPartialUpdateTargets(
+        IReadOnlyList<TargetAssignmentCandidate> candidates,
+        AssignmentSnapshot? latestSnapshot,
+        AssignmentPrioritySettings settings)
+    {
+        if (latestSnapshot is null)
+        {
+            return candidates.ToArray();
+        }
+
+        var frozenTargets = ParseCsv(latestSnapshot.FocusTargetsCsv);
+        var candidateByTarget = candidates.ToDictionary(candidate => candidate.Target, StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<TargetAssignmentCandidate>();
+        foreach (var target in frozenTargets)
+        {
+            if (candidateByTarget.TryGetValue(target, out var candidate))
+            {
+                result.Add(candidate with { Priority = ComputePriority(candidate, settings) + 0.0001 });
+            }
+        }
+
+        foreach (var candidate in candidates)
+        {
+            if (result.Any(existing => string.Equals(existing.Target, candidate.Target, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            result.Add(candidate);
+            if (result.Count >= MaxFocusTargets)
+            {
+                break;
+            }
+        }
+
+        return result
             .Take(MaxFocusTargets)
             .ToArray();
     }
@@ -517,7 +588,8 @@ public class AiTextService
         IReadOnlyList<string> PositionSequence,
         IReadOnlyDictionary<string, double> PositionDeltas,
         IReadOnlyDictionary<string, double> PositionAverages,
-        IReadOnlyDictionary<string, double[]> PositionSamples)
+        IReadOnlyDictionary<string, double[]> PositionSamples,
+        bool PositionSequenceGateMet)
     {
         public double ConfidenceFactor => AverageConfidence;
     }

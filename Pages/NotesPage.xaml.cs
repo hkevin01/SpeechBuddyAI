@@ -18,6 +18,8 @@ public partial class NotesPage : ContentPage
     private readonly NotesPageViewModel _viewModel = new();
     private bool _hasInitializedDateRange;
     private IReadOnlyList<AssignmentSnapshot> _assignmentSnapshots = Array.Empty<AssignmentSnapshot>();
+    private int? _selectedSnapshotId;
+    private string? _selectedTarget;
 
     public NotesPage()
     {
@@ -200,14 +202,23 @@ public partial class NotesPage : ContentPage
         try
         {
             _assignmentSnapshots = await _assignmentSnapshotService.GetRecentSnapshotsAsync(20);
-            var state = _viewModel.BuildAssignmentAnalyticsState(_assignmentSnapshots);
+            var state = _viewModel.BuildAssignmentAnalyticsState(_assignmentSnapshots, _selectedTarget, _selectedSnapshotId);
             ApplyAssignmentAnalyticsState(state);
             AssignmentSnapshotCollection.ItemsSource = state.SnapshotRows;
+            AssignmentTargetPicker.ItemsSource = state.TargetOptions;
+            if (state.TargetOptions.Count > 0)
+            {
+                var selectedIndex = state.TargetOptions
+                    .Select((value, index) => new { value, index })
+                    .FirstOrDefault(item => string.Equals(item.value, state.SelectedTarget, StringComparison.OrdinalIgnoreCase))?.index ?? 0;
+                AssignmentTargetPicker.SelectedIndex = selectedIndex;
+            }
         }
         catch (Exception ex)
         {
             AssignmentAnalyticsSummaryLabel.Text = ex.Message;
             AssignmentSnapshotCollection.ItemsSource = Array.Empty<object>();
+            AssignmentTargetPicker.ItemsSource = Array.Empty<string>();
             SeverityTrendChartLabel.Text = "Severity trend: -";
             InstabilityTrendChartLabel.Text = "Instability trend: -";
             DeclineTrendChartLabel.Text = "Decline trend: -";
@@ -290,8 +301,20 @@ public partial class NotesPage : ContentPage
             return;
         }
 
-        var state = _viewModel.BuildAssignmentAnalyticsStateForSnapshot(snapshot, _assignmentSnapshots);
+        _selectedSnapshotId = snapshot.Id;
+        var state = _viewModel.BuildAssignmentAnalyticsState(_assignmentSnapshots, _selectedTarget, _selectedSnapshotId);
         ApplyAssignmentAnalyticsState(state);
+    }
+
+    private async void OnAssignmentTargetChanged(object? sender, EventArgs e)
+    {
+        if (AssignmentTargetPicker.SelectedItem is not string selected || string.IsNullOrWhiteSpace(selected))
+        {
+            return;
+        }
+
+        _selectedTarget = selected;
+        await RefreshAssignmentAnalyticsAsync();
     }
 
     private void ApplyAssignmentAnalyticsState(AssignmentAnalyticsState state)
@@ -302,6 +325,11 @@ public partial class NotesPage : ContentPage
         DeclineTrendChartLabel.Text = state.DeclineTrendText;
         FrequencyTrendChartLabel.Text = state.FrequencyTrendText;
         ConfidenceTrendChartLabel.Text = state.ConfidenceTrendText;
+        SeveritySparklineCollection.ItemsSource = state.SeverityPoints;
+        InstabilitySparklineCollection.ItemsSource = state.InstabilityPoints;
+        DeclineSparklineCollection.ItemsSource = state.DeclinePoints;
+        FrequencySparklineCollection.ItemsSource = state.FrequencyPoints;
+        ConfidenceSparklineCollection.ItemsSource = state.ConfidencePoints;
     }
 
     private static T ResolveService<T>() where T : notnull

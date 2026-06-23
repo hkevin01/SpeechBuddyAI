@@ -55,6 +55,28 @@ public sealed class AiTextServiceTests
         Assert.Contains("initial", assignment.FocusTargetReasons[0].PositionDeltaSummary, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_WhenPositionSamplesBelowGate_UsesDefaultSequence()
+    {
+        var now = DateTime.UtcNow;
+        var history = new[]
+        {
+            Entry("r:initial", 0.72, now.AddDays(-4), "none", 0.7),
+            Entry("r:medial", 0.66, now.AddDays(-3), "none", 0.7),
+            Entry("r:final", 0.60, now.AddDays(-2), "none", 0.7),
+            Entry("r:final", 0.58, now.AddDays(-1), "none", 0.7)
+        };
+
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), snapshotService);
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        Assert.NotEmpty(assignment.FocusTargetReasons);
+        var reason = assignment.FocusTargetReasons[0];
+        Assert.False(reason.PositionSequenceSampleGateMet);
+        Assert.Equal("initial -> medial -> final", reason.PositionSequence);
+    }
+
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
     {
         return new ProgressEntry

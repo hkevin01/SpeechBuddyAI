@@ -88,6 +88,15 @@
                                     Maximum="0.120"
                                     ValueChanged="OnSliderValueChanged" />
 
+                                <Label Text="Suppression behavior when variance exceeds gate" FontAttributes="Bold" />
+                                <Picker x:Name="AssignmentSuppressionBehaviorPicker">
+                                    <Picker.Items>
+                                        <x:String>Hard freeze</x:String>
+                                        <x:String>Partial update</x:String>
+                                        <x:String>Warning only</x:String>
+                                    </Picker.Items>
+                                </Picker>
+
                     <HorizontalStackLayout Spacing="10">
                         <Button Text="Save Clinician Settings"
                                 Clicked="OnSaveClicked"

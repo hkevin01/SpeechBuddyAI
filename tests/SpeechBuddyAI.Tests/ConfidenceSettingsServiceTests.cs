@@ -133,6 +133,16 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(0.055, service.GetAssignmentConfidenceVarianceGate(), 3);
     }
 
+    [Fact]
+    public void SaveAssignmentSuppressionBehavior_PersistsValue()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveAssignmentSuppressionBehavior(AssignmentSuppressionBehavior.WarningOnly);
+
+        Assert.Equal(AssignmentSuppressionBehavior.WarningOnly, service.GetAssignmentSuppressionBehavior());
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);

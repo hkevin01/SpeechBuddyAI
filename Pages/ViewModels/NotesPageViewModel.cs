@@ -39,7 +39,10 @@ public sealed class NotesPageViewModel
         return _comparisonPreviewViewModel.BuildComparisonViewState(snapshot, snapshot?.ComparisonNarrative ?? string.Empty);
     }
 
-    public AssignmentAnalyticsState BuildAssignmentAnalyticsState(IReadOnlyList<AssignmentSnapshot> snapshots)
+    public AssignmentAnalyticsState BuildAssignmentAnalyticsState(
+        IReadOnlyList<AssignmentSnapshot> snapshots,
+        string? selectedTarget = null,
+        int? selectedSnapshotId = null)
     {
         var source = snapshots ?? Array.Empty<AssignmentSnapshot>();
         if (source.Count == 0)
@@ -47,10 +50,17 @@ public sealed class NotesPageViewModel
             return new AssignmentAnalyticsState
             {
                 SummaryText = "No assignment snapshots yet.",
-                SnapshotRows = Array.Empty<AssignmentSnapshotRow>()
+                SnapshotRows = Array.Empty<AssignmentSnapshotRow>(),
+                TargetOptions = Array.Empty<string>(),
+                SeverityPoints = Array.Empty<SparklinePoint>(),
+                InstabilityPoints = Array.Empty<SparklinePoint>(),
+                DeclinePoints = Array.Empty<SparklinePoint>(),
+                FrequencyPoints = Array.Empty<SparklinePoint>(),
+                ConfidencePoints = Array.Empty<SparklinePoint>()
             };
         }
 
+        var orderedSnapshots = source.OrderBy(snapshot => snapshot.SnapshotDateTicks).ToArray();
         var rows = source
             .OrderByDescending(snapshot => snapshot.SnapshotDateTicks)
             .Select(snapshot => new AssignmentSnapshotRow
@@ -64,37 +74,44 @@ public sealed class NotesPageViewModel
             })
             .ToArray();
 
-        var latest = source.OrderByDescending(snapshot => snapshot.SnapshotDateTicks).First();
-        var latestReasons = AssignmentSnapshotService.ParseReasons(latest.TargetReasonsJson);
+        var allTargets = orderedSnapshots
+            .SelectMany(snapshot => AssignmentSnapshotService.ParseReasons(snapshot.TargetReasonsJson).Select(reason => reason.TargetSound))
+            .Where(target => !string.IsNullOrWhiteSpace(target))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(target => target, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var activeTarget = ResolveTargetSelection(selectedTarget, allTargets);
+        var selectedSnapshot = selectedSnapshotId.HasValue
+            ? source.FirstOrDefault(snapshot => snapshot.Id == selectedSnapshotId.Value)
+            : source.OrderByDescending(snapshot => snapshot.SnapshotDateTicks).FirstOrDefault();
+
+        var severity = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.SeverityScore);
+        var instability = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.InstabilityScore);
+        var decline = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.DeclineScore);
+        var frequency = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.FrequencyScore);
+        var confidence = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.ConfidenceFactor);
+
+        var summaryPrefix = selectedSnapshot is null
+            ? $"Showing {rows.Length} snapshots."
+            : $"Showing {rows.Length} snapshots. Selected snapshot {selectedSnapshot.SnapshotDate:yyyy-MM-dd HH:mm 'UTC'}.";
 
         return new AssignmentAnalyticsState
         {
-            SummaryText = $"Showing {rows.Length} snapshots. Latest focus: {string.Join(", ", ParseCsv(latest.FocusTargetsCsv))}.",
+            SummaryText = $"{summaryPrefix} Drill-down target: {activeTarget}.",
             SnapshotRows = rows,
-            SeverityTrendText = BuildSeriesLine("Severity", latestReasons.Select(reason => reason.SeverityScore)),
-            InstabilityTrendText = BuildSeriesLine("Instability", latestReasons.Select(reason => reason.InstabilityScore)),
-            DeclineTrendText = BuildSeriesLine("Decline", latestReasons.Select(reason => reason.DeclineScore)),
-            FrequencyTrendText = BuildSeriesLine("Frequency", latestReasons.Select(reason => reason.FrequencyScore)),
-            ConfidenceTrendText = BuildSeriesLine("Confidence", latestReasons.Select(reason => reason.ConfidenceFactor))
-        };
-    }
-
-    public AssignmentAnalyticsState BuildAssignmentAnalyticsStateForSnapshot(
-        AssignmentSnapshot selectedSnapshot,
-        IReadOnlyList<AssignmentSnapshot> allSnapshots)
-    {
-        var baseState = BuildAssignmentAnalyticsState(allSnapshots);
-        var reasons = AssignmentSnapshotService.ParseReasons(selectedSnapshot?.TargetReasonsJson);
-
-        return new AssignmentAnalyticsState
-        {
-            SummaryText = $"Selected snapshot from {selectedSnapshot?.SnapshotDate:yyyy-MM-dd HH:mm 'UTC'}.",
-            SnapshotRows = baseState.SnapshotRows,
-            SeverityTrendText = BuildSeriesLine("Severity", reasons.Select(reason => reason.SeverityScore)),
-            InstabilityTrendText = BuildSeriesLine("Instability", reasons.Select(reason => reason.InstabilityScore)),
-            DeclineTrendText = BuildSeriesLine("Decline", reasons.Select(reason => reason.DeclineScore)),
-            FrequencyTrendText = BuildSeriesLine("Frequency", reasons.Select(reason => reason.FrequencyScore)),
-            ConfidenceTrendText = BuildSeriesLine("Confidence", reasons.Select(reason => reason.ConfidenceFactor))
+            TargetOptions = allTargets,
+            SelectedTarget = activeTarget,
+            SeverityTrendText = BuildSeriesLine("Severity", severity),
+            InstabilityTrendText = BuildSeriesLine("Instability", instability),
+            DeclineTrendText = BuildSeriesLine("Decline", decline),
+            FrequencyTrendText = BuildSeriesLine("Frequency", frequency),
+            ConfidenceTrendText = BuildSeriesLine("Confidence", confidence),
+            SeverityPoints = BuildSparklinePoints(severity, "#2563EB"),
+            InstabilityPoints = BuildSparklinePoints(instability, "#F59E0B"),
+            DeclinePoints = BuildSparklinePoints(decline, "#DC2626"),
+            FrequencyPoints = BuildSparklinePoints(frequency, "#7C3AED"),
+            ConfidencePoints = BuildSparklinePoints(confidence, "#059669")
         };
     }
 
@@ -152,6 +169,57 @@ public sealed class NotesPageViewModel
         return $"{label} trend: {series}";
     }
 
+    private static IReadOnlyList<double> BuildComponentSeries(
+        IReadOnlyList<AssignmentSnapshot> snapshots,
+        string selectedTarget,
+        Func<AssignmentFocusTargetReason, double> selector)
+    {
+        if (string.IsNullOrWhiteSpace(selectedTarget))
+        {
+            return Array.Empty<double>();
+        }
+
+        return snapshots
+            .Select(snapshot => AssignmentSnapshotService.ParseReasons(snapshot.TargetReasonsJson)
+                .FirstOrDefault(reason => string.Equals(reason.TargetSound, selectedTarget, StringComparison.OrdinalIgnoreCase)))
+            .Where(reason => reason is not null)
+            .Select(reason => Math.Clamp(selector(reason!), 0.0, 1.0))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<SparklinePoint> BuildSparklinePoints(IReadOnlyList<double> values, string colorHex)
+    {
+        if (values is null || values.Count == 0)
+        {
+            return Array.Empty<SparklinePoint>();
+        }
+
+        return values
+            .Select(value => new SparklinePoint
+            {
+                Value = value,
+                Height = 6 + (Math.Clamp(value, 0.0, 1.0) * 22),
+                ColorHex = colorHex
+            })
+            .ToArray();
+    }
+
+    private static string ResolveTargetSelection(string? selectedTarget, IReadOnlyList<string> options)
+    {
+        if (options is null || options.Count == 0)
+        {
+            return "-";
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedTarget) &&
+            options.Contains(selectedTarget, StringComparer.OrdinalIgnoreCase))
+        {
+            return selectedTarget;
+        }
+
+        return options[0];
+    }
+
     private static IReadOnlyList<string> ParseCsv(string? csv)
     {
         if (string.IsNullOrWhiteSpace(csv))
@@ -177,6 +245,13 @@ public sealed class AssignmentAnalyticsState
     public string DeclineTrendText { get; init; } = "Decline trend: -";
     public string FrequencyTrendText { get; init; } = "Frequency trend: -";
     public string ConfidenceTrendText { get; init; } = "Confidence trend: -";
+    public IReadOnlyList<string> TargetOptions { get; init; } = Array.Empty<string>();
+    public string SelectedTarget { get; init; } = "-";
+    public IReadOnlyList<SparklinePoint> SeverityPoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<SparklinePoint> InstabilityPoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<SparklinePoint> DeclinePoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<SparklinePoint> FrequencyPoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<SparklinePoint> ConfidencePoints { get; init; } = Array.Empty<SparklinePoint>();
 }
 
 public sealed class AssignmentSnapshotRow
@@ -185,4 +260,11 @@ public sealed class AssignmentSnapshotRow
     public string SnapshotDateText { get; init; } = string.Empty;
     public string FocusTargetsText { get; init; } = string.Empty;
     public string DriftSummaryText { get; init; } = string.Empty;
+}
+
+public sealed class SparklinePoint
+{
+    public double Value { get; init; }
+    public double Height { get; init; }
+    public string ColorHex { get; init; } = "#2563EB";
 }

@@ -99,6 +99,13 @@
                     <Label Text="Assignment Analytics" FontAttributes="Bold" />
                     <Label x:Name="AssignmentAnalyticsSummaryLabel" Text="No assignment snapshots yet." />
 
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                        <Label Text="Target drill-down" VerticalOptions="Center" />
+                        <Picker x:Name="AssignmentTargetPicker"
+                                WidthRequest="180"
+                                SelectedIndexChanged="OnAssignmentTargetChanged" />
+                    </HorizontalStackLayout>
+
                     <CollectionView x:Name="AssignmentSnapshotCollection"
                                     SelectionMode="Single"
                                     SelectionChanged="OnAssignmentSnapshotSelectionChanged"
@@ -116,12 +123,105 @@
                         </CollectionView.ItemTemplate>
                     </CollectionView>
 
-                    <Label Text="Priority Component Trends (latest selected snapshot)" FontAttributes="Bold" FontSize="12" />
-                    <Label x:Name="SeverityTrendChartLabel" Text="Severity trend: -" FontSize="12" />
-                    <Label x:Name="InstabilityTrendChartLabel" Text="Instability trend: -" FontSize="12" />
-                    <Label x:Name="DeclineTrendChartLabel" Text="Decline trend: -" FontSize="12" />
-                    <Label x:Name="FrequencyTrendChartLabel" Text="Frequency trend: -" FontSize="12" />
-                    <Label x:Name="ConfidenceTrendChartLabel" Text="Confidence trend: -" FontSize="12" />
+                    <Label Text="Priority Component Trends (across snapshots)" FontAttributes="Bold" FontSize="12" />
+
+                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Severity" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="0" Grid.Column="1"
+                                        x:Name="SeveritySparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="30">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6"
+                                             HeightRequest="{Binding Height}"
+                                             VerticalOptions="End"
+                                             Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Instability" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="1" Grid.Column="1"
+                                        x:Name="InstabilitySparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="30">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6"
+                                             HeightRequest="{Binding Height}"
+                                             VerticalOptions="End"
+                                             Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="Decline" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="2" Grid.Column="1"
+                                        x:Name="DeclineSparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="30">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6"
+                                             HeightRequest="{Binding Height}"
+                                             VerticalOptions="End"
+                                             Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="Frequency" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="3" Grid.Column="1"
+                                        x:Name="FrequencySparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="30">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6"
+                                             HeightRequest="{Binding Height}"
+                                             VerticalOptions="End"
+                                             Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Grid.Row="4" Grid.Column="0" Text="Confidence" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="4" Grid.Column="1"
+                                        x:Name="ConfidenceSparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="30">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6"
+                                             HeightRequest="{Binding Height}"
+                                             VerticalOptions="End"
+                                             Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+
+                    <Label x:Name="SeverityTrendChartLabel" Text="Severity trend: -" FontSize="11" TextColor="#555555" />
+                    <Label x:Name="InstabilityTrendChartLabel" Text="Instability trend: -" FontSize="11" TextColor="#555555" />
+                    <Label x:Name="DeclineTrendChartLabel" Text="Decline trend: -" FontSize="11" TextColor="#555555" />
+                    <Label x:Name="FrequencyTrendChartLabel" Text="Frequency trend: -" FontSize="11" TextColor="#555555" />
+                    <Label x:Name="ConfidenceTrendChartLabel" Text="Confidence trend: -" FontSize="11" TextColor="#555555" />
                 </VerticalStackLayout>
             </Frame>
 

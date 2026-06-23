@@ -14,6 +14,7 @@ public sealed class AssignmentFocusTargetReason
     public double InitialAverageScore { get; init; }
     public double MedialAverageScore { get; init; }
     public double FinalAverageScore { get; init; }
+    public bool PositionSequenceSampleGateMet { get; init; }
     public IReadOnlyList<double> InitialAttemptScores { get; init; } = Array.Empty<double>();
     public IReadOnlyList<double> MedialAttemptScores { get; init; } = Array.Empty<double>();
     public IReadOnlyList<double> FinalAttemptScores { get; init; } = Array.Empty<double>();
