@@ -81,6 +81,13 @@
                                 Maximum="1.00"
                                 ValueChanged="OnSliderValueChanged" />
 
+                                <Label Text="Confidence variance gate" FontAttributes="Bold" />
+                                <Label x:Name="AssignmentConfidenceVarianceGateValueLabel" Text="3.0%" />
+                                <Slider x:Name="AssignmentConfidenceVarianceGateSlider"
+                                    Minimum="0.005"
+                                    Maximum="0.120"
+                                    ValueChanged="OnSliderValueChanged" />
+
                     <HorizontalStackLayout Spacing="10">
                         <Button Text="Save Clinician Settings"
                                 Clicked="OnSaveClicked"

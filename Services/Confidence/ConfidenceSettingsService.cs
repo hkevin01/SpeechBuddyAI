@@ -14,6 +14,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string AssignmentDeclineWeightKey = "assignment.weight.decline";
     private const string AssignmentFrequencyWeightKey = "assignment.weight.frequency";
     private const string AssignmentConfidencePenaltyStrengthKey = "assignment.weight.confidencePenaltyStrength";
+    private const string AssignmentConfidenceVarianceGateKey = "assignment.weight.confidenceVarianceGate";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -21,6 +22,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const SessionComparisonSmoothingStrength DefaultSmoothingStrength = SessionComparisonSmoothingStrength.Balanced;
     public const int DefaultProgressDateRangeDays = 30;
     public static readonly AssignmentPrioritySettings DefaultAssignmentPrioritySettings = new AssignmentPrioritySettings();
+    public const double DefaultAssignmentConfidenceVarianceGate = 0.030;
 
     private readonly IKeyValueStore _store;
 
@@ -66,6 +68,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(ProgressDateRangeEndKey, double.NaN);
         _store.Set(ProgressTargetFilterKey, string.Empty);
         SaveAssignmentPrioritySettings(DefaultAssignmentPrioritySettings);
+        SaveAssignmentConfidenceVarianceGate(DefaultAssignmentConfidenceVarianceGate);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -163,6 +166,11 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         }.Normalize();
     }
 
+    public double GetAssignmentConfidenceVarianceGate()
+    {
+        return Clamp(_store.Get(AssignmentConfidenceVarianceGateKey, DefaultAssignmentConfidenceVarianceGate));
+    }
+
     public void SaveAssignmentPrioritySettings(AssignmentPrioritySettings settings)
     {
         if (settings is null)
@@ -176,6 +184,11 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(AssignmentDeclineWeightKey, normalized.DeclineWeight);
         _store.Set(AssignmentFrequencyWeightKey, normalized.FrequencyWeight);
         _store.Set(AssignmentConfidencePenaltyStrengthKey, normalized.ConfidencePenaltyStrength);
+    }
+
+    public void SaveAssignmentConfidenceVarianceGate(double varianceGate)
+    {
+        _store.Set(AssignmentConfidenceVarianceGateKey, Clamp(varianceGate));
     }
 
     private static double Clamp(double value)

@@ -94,6 +94,37 @@
                 </VerticalStackLayout>
             </Frame>
 
+            <Frame BorderColor="#DDDDDD" Padding="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Assignment Analytics" FontAttributes="Bold" />
+                    <Label x:Name="AssignmentAnalyticsSummaryLabel" Text="No assignment snapshots yet." />
+
+                    <CollectionView x:Name="AssignmentSnapshotCollection"
+                                    SelectionMode="Single"
+                                    SelectionChanged="OnAssignmentSnapshotSelectionChanged"
+                                    HeightRequest="180">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="#E9ECEF" BackgroundColor="#FAFAFA" Padding="8,6" Margin="0,0,0,6">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding SnapshotDateText}" FontAttributes="Bold" FontSize="12" />
+                                        <Label Text="{Binding FocusTargetsText}" FontSize="12" />
+                                        <Label Text="{Binding DriftSummaryText}" FontSize="11" TextColor="#555555" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="Priority Component Trends (latest selected snapshot)" FontAttributes="Bold" FontSize="12" />
+                    <Label x:Name="SeverityTrendChartLabel" Text="Severity trend: -" FontSize="12" />
+                    <Label x:Name="InstabilityTrendChartLabel" Text="Instability trend: -" FontSize="12" />
+                    <Label x:Name="DeclineTrendChartLabel" Text="Decline trend: -" FontSize="12" />
+                    <Label x:Name="FrequencyTrendChartLabel" Text="Frequency trend: -" FontSize="12" />
+                    <Label x:Name="ConfidenceTrendChartLabel" Text="Confidence trend: -" FontSize="12" />
+                </VerticalStackLayout>
+            </Frame>
+
             <HorizontalStackLayout Spacing="10">
                 <Button Text="Export Latest Report"
                         Clicked="OnExportLatestClicked"

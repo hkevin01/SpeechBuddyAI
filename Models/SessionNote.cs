@@ -18,6 +18,7 @@ public class SessionNote
     public long AssignmentSnapshotDateTicks { get; set; }
     public string AssignmentSelectionSummary { get; set; } = string.Empty;
     public string AssignmentSelectionDetails { get; set; } = string.Empty;
+    public string AssignmentRationaleDriftSummary { get; set; } = string.Empty;
 
     [Ignore]
     public DateTimeOffset SessionDate

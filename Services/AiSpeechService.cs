@@ -52,6 +52,7 @@ public class AiSpeechService
     {
         var normalizedTarget = (targetSound ?? string.Empty).Trim();
         var normalizedTranscript = (transcript ?? string.Empty).Trim();
+        var (baseTarget, positionTag) = ParseTargetMetadata(normalizedTarget);
 
         if (string.IsNullOrWhiteSpace(normalizedTarget) || string.IsNullOrWhiteSpace(normalizedTranscript))
         {
@@ -60,9 +61,9 @@ public class AiSpeechService
 
         try
         {
-            var priorEntries = await _progressTrackingService.GetEntriesForSoundAsync(normalizedTarget);
+            var priorEntries = await _progressTrackingService.GetEntriesForSoundAsync(baseTarget);
             var consistency = ComputeConsistencyScore(priorEntries);
-            var adapterResult = await TryScoreWithFallbackAsync(normalizedTarget, normalizedTranscript, priorEntries);
+            var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
             var confidenceScore = _confidenceCalculator.ComputeScore(
                 scores,
@@ -75,7 +76,9 @@ public class AiSpeechService
             var entry = new ProgressEntry
             {
                 Timestamp = DateTime.UtcNow,
-                TargetSound = normalizedTarget,
+                TargetSound = baseTarget,
+                BaseTargetSound = baseTarget,
+                PositionTag = positionTag,
                 Transcript = normalizedTranscript,
                 AccuracyScore = scores.OverallScore,
                 PhonemeScore = scores.PhonemeScore,
@@ -209,5 +212,19 @@ public class AiSpeechService
     private static double Clamp(double value)
     {
         return Math.Max(0.0, Math.Min(1.0, value));
+    }
+
+    private static (string BaseTarget, string PositionTag) ParseTargetMetadata(string target)
+    {
+        var normalized = (target ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var parts = normalized.Split(':', 2);
+        var baseTarget = parts[0].Trim();
+        var position = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+        return (baseTarget, position);
     }
 }

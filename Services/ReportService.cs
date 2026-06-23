@@ -38,7 +38,8 @@ public class ReportService
                 ParentSummary = BuildParentSummary(safeEntries),
                 AssignmentSnapshotDate = latestAssignmentSnapshot?.SnapshotDate,
                 AssignmentSelectionSummary = latestAssignmentSnapshot?.Rationale ?? "No assignment snapshot available for this report window.",
-                AssignmentSelectionDetails = AssignmentSnapshotService.BuildSelectionDetails(targetReasons)
+                AssignmentSelectionDetails = AssignmentSnapshotService.BuildSelectionDetails(targetReasons),
+                AssignmentRationaleDriftSummary = latestAssignmentSnapshot?.RationaleDriftSummary ?? "No rationale drift comparison available yet."
             };
 
             return Task.FromResult(note);

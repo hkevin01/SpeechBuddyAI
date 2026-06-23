@@ -14,6 +14,11 @@ public sealed class AssignmentSnapshot
     public string FocusTargetsCsv { get; set; } = string.Empty;
     public string SuggestedWordsCsv { get; set; } = string.Empty;
     public string TargetReasonsJson { get; set; } = "[]";
+    public string PreviousRationale { get; set; } = string.Empty;
+    public string RationaleDriftSummary { get; set; } = string.Empty;
+    public string PreviousFocusTargetsCsv { get; set; } = string.Empty;
+    public int FocusChangeCount { get; set; }
+    public bool AssignmentChangeSuppressed { get; set; }
     public int SourceEntryCount { get; set; }
 
     [Ignore]

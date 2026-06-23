@@ -24,6 +24,16 @@ public sealed class AssignmentSnapshotService
             await _gate.WaitAsync();
             try
             {
+                var previousSnapshot = await Database.Table<AssignmentSnapshot>()
+                    .OrderByDescending(item => item.SnapshotDateTicks)
+                    .Take(1)
+                    .ToListAsync();
+                var previous = previousSnapshot.FirstOrDefault();
+                var previousFocusTargets = ParseCsv(previous?.FocusTargetsCsv);
+                var currentFocusTargets = (assignment.FocusTargets ?? Array.Empty<string>()).ToArray();
+                var focusChangeCount = CountFocusChanges(previousFocusTargets, currentFocusTargets);
+                var suppressed = assignment.FocusTargetReasons.Any(reason => reason.AssignmentChangeSuppressed);
+
                 var snapshot = new AssignmentSnapshot
                 {
                     SnapshotDate = DateTimeOffset.UtcNow,
@@ -31,6 +41,11 @@ public sealed class AssignmentSnapshotService
                     FocusTargetsCsv = string.Join(",", assignment.FocusTargets ?? Array.Empty<string>()),
                     SuggestedWordsCsv = string.Join(",", assignment.SuggestedWords ?? Array.Empty<string>()),
                     TargetReasonsJson = JsonSerializer.Serialize(assignment.FocusTargetReasons ?? Array.Empty<AssignmentFocusTargetReason>()),
+                    PreviousRationale = previous?.Rationale ?? string.Empty,
+                    RationaleDriftSummary = BuildRationaleDriftSummary(previous?.Rationale, assignment.Rationale, previousFocusTargets, currentFocusTargets, suppressed),
+                    PreviousFocusTargetsCsv = string.Join(",", previousFocusTargets),
+                    FocusChangeCount = focusChangeCount,
+                    AssignmentChangeSuppressed = suppressed,
                     SourceEntryCount = Math.Max(0, sourceEntryCount)
                 };
 
@@ -107,6 +122,73 @@ public sealed class AssignmentSnapshotService
             Environment.NewLine,
             reasons.Select(reason =>
                 $"- {reason.TargetSound}: priority {reason.PriorityScore:0.00} (severity {reason.SeverityScore:0.00}, instability {reason.InstabilityScore:0.00}, decline {reason.DeclineScore:0.00}, frequency {reason.FrequencyScore:0.00}, confidence factor {reason.ConfidenceFactor:0.00}); position order {reason.PositionSequence}; deltas {reason.PositionDeltaSummary}"));
+    }
+
+    public static string BuildRationaleDriftSummary(
+        string? previousRationale,
+        string? currentRationale,
+        IReadOnlyList<string> previousTargets,
+        IReadOnlyList<string> currentTargets,
+        bool changeSuppressed)
+    {
+        var previous = (previousRationale ?? string.Empty).Trim();
+        var current = (currentRationale ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(previous))
+        {
+            return "Initial assignment snapshot captured. No prior rationale for drift comparison.";
+        }
+
+        var overlap = ComputeTokenOverlap(previous, current);
+        var focusChangeCount = CountFocusChanges(previousTargets, currentTargets);
+        var suppressionText = changeSuppressed ? " Assignment updates were suppressed due to high confidence variance." : string.Empty;
+
+        return $"Rationale overlap {overlap:P0}; focus target changes: {focusChangeCount}." + suppressionText;
+    }
+
+    private static double ComputeTokenOverlap(string previous, string current)
+    {
+        var previousTokens = Tokenize(previous);
+        var currentTokens = Tokenize(current);
+        if (previousTokens.Count == 0)
+        {
+            return 0.0;
+        }
+
+        var intersection = previousTokens.Intersect(currentTokens, StringComparer.OrdinalIgnoreCase).Count();
+        return Math.Clamp((double)intersection / previousTokens.Count, 0.0, 1.0);
+    }
+
+    private static HashSet<string> Tokenize(string text)
+    {
+        var parts = text
+            .Split([' ', ',', '.', ';', ':', '\n', '\r', '\t', '|', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(token => token.Trim().ToLowerInvariant())
+            .Where(token => token.Length > 2);
+        return new HashSet<string>(parts, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static int CountFocusChanges(IReadOnlyList<string> previousTargets, IReadOnlyList<string> currentTargets)
+    {
+        var previous = new HashSet<string>(previousTargets ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        var current = new HashSet<string>(currentTargets ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        return previous.Except(current, StringComparer.OrdinalIgnoreCase).Count() +
+               current.Except(previous, StringComparer.OrdinalIgnoreCase).Count();
+    }
+
+    private static IReadOnlyList<string> ParseCsv(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Array.Empty<string>();
+        }
+
+        return value
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Trim())
+            .Where(item => item.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private async Task EnsureInitializedAsync()

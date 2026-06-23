@@ -34,6 +34,7 @@ public partial class SettingsPage : ContentPage
             AssignmentDeclineSlider.Value = assignmentSettings.DeclineWeight;
             AssignmentFrequencySlider.Value = assignmentSettings.FrequencyWeight;
             AssignmentConfidencePenaltySlider.Value = assignmentSettings.ConfidencePenaltyStrength;
+            AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
@@ -78,6 +79,7 @@ public partial class SettingsPage : ContentPage
                 ConfidencePenaltyStrength = AssignmentConfidencePenaltySlider.Value
             };
             _settingsService.SaveAssignmentPrioritySettings(assignmentSettings);
+            _settingsService.SaveAssignmentConfidenceVarianceGate(AssignmentConfidenceVarianceGateSlider.Value);
             StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
@@ -103,6 +105,7 @@ public partial class SettingsPage : ContentPage
             AssignmentDeclineSlider.Value = assignmentDefaults.DeclineWeight;
             AssignmentFrequencySlider.Value = assignmentDefaults.FrequencyWeight;
             AssignmentConfidencePenaltySlider.Value = assignmentDefaults.ConfidencePenaltyStrength;
+            AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";
@@ -138,6 +141,7 @@ public partial class SettingsPage : ContentPage
         AssignmentDeclineValueLabel.Text = $"{AssignmentDeclineSlider.Value:P0}";
         AssignmentFrequencyValueLabel.Text = $"{AssignmentFrequencySlider.Value:P0}";
         AssignmentConfidencePenaltyValueLabel.Text = $"{AssignmentConfidencePenaltySlider.Value:P0}";
+        AssignmentConfidenceVarianceGateValueLabel.Text = $"{AssignmentConfidenceVarianceGateSlider.Value:P1}";
     }
 
     private static T ResolveService<T>() where T : notnull

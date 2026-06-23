@@ -13,6 +13,11 @@ public class ProgressEntry
     [Indexed]
     public string TargetSound { get; set; } = string.Empty;
 
+    [Indexed]
+    public string BaseTargetSound { get; set; } = string.Empty;
+
+    public string PositionTag { get; set; } = string.Empty;
+
     public double AccuracyScore { get; set; }
     public double PhonemeScore { get; set; }
     public double FluencyScore { get; set; }

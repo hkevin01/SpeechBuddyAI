@@ -5,7 +5,9 @@ public static class ProgressSchemaMigration
     private static readonly (string Name, string Definition)[] RequiredColumns =
     {
         ("ConfidenceScore", "REAL NOT NULL DEFAULT 0.0"),
-        ("ConfidenceBand", "TEXT NOT NULL DEFAULT 'Low'")
+        ("ConfidenceBand", "TEXT NOT NULL DEFAULT 'Low'"),
+        ("BaseTargetSound", "TEXT NOT NULL DEFAULT ''"),
+        ("PositionTag", "TEXT NOT NULL DEFAULT ''")
     };
 
     public static IReadOnlyList<string> BuildMissingColumnCommands(IEnumerable<string> existingColumns)

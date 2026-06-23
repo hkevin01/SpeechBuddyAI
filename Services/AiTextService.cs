@@ -9,15 +9,21 @@ public class AiTextService
 {
     private const int MaxFocusTargets = 3;
     private const int RecentWindow = 5;
+    private const int ConfidenceVarianceWindow = 12;
     private static readonly string[] PositionOrder = ["initial", "medial", "final"];
 
     private readonly PhonemeWordBankService _wordBank;
     private readonly ConfidenceSettingsService _settingsService;
+    private readonly AssignmentSnapshotService _assignmentSnapshotService;
 
-    public AiTextService(PhonemeWordBankService wordBank, ConfidenceSettingsService settingsService)
+    public AiTextService(
+        PhonemeWordBankService wordBank,
+        ConfidenceSettingsService settingsService,
+        AssignmentSnapshotService assignmentSnapshotService)
     {
         _wordBank = wordBank ?? throw new ArgumentNullException(nameof(wordBank));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _assignmentSnapshotService = assignmentSnapshotService ?? throw new ArgumentNullException(nameof(assignmentSnapshotService));
     }
 
     // ID: SVC-TEXT-002
@@ -59,6 +65,8 @@ public class AiTextService
         try
         {
             var settings = _settingsService.GetAssignmentPrioritySettings().Normalize();
+            var confidenceVarianceGate = _settingsService.GetAssignmentConfidenceVarianceGate();
+            var confidenceVariance = ComputeConfidenceVariance(sourceEntries);
             var candidates = BuildTargetCandidates(sourceEntries, settings)
                 .Select(candidate => candidate with
                 {
@@ -67,6 +75,13 @@ public class AiTextService
                 .OrderByDescending(c => c.Priority)
                 .Take(MaxFocusTargets)
                 .ToArray();
+
+            var latestSnapshot = await _assignmentSnapshotService.GetLatestSnapshotAsync();
+            var suppressChange = ShouldSuppressAssignmentChange(confidenceVariance, confidenceVarianceGate, latestSnapshot);
+            if (suppressChange)
+            {
+                candidates = ApplySuppressedTargets(candidates, latestSnapshot, settings);
+            }
 
             var targets = candidates
                 .Select(c => c.Target)
@@ -120,6 +135,14 @@ public class AiTextService
                     DeclineScore = candidate.Decline,
                     FrequencyScore = candidate.Frequency,
                     ConfidenceFactor = candidate.ConfidenceFactor,
+                    ConfidenceVariance = confidenceVariance,
+                    AssignmentChangeSuppressed = suppressChange,
+                    InitialAverageScore = candidate.PositionAverages.TryGetValue("initial", out var initialAvg) ? initialAvg : 0.0,
+                    MedialAverageScore = candidate.PositionAverages.TryGetValue("medial", out var medialAvg) ? medialAvg : 0.0,
+                    FinalAverageScore = candidate.PositionAverages.TryGetValue("final", out var finalAvg) ? finalAvg : 0.0,
+                    InitialAttemptScores = candidate.PositionSamples.TryGetValue("initial", out var initialScores) ? initialScores : Array.Empty<double>(),
+                    MedialAttemptScores = candidate.PositionSamples.TryGetValue("medial", out var medialScores) ? medialScores : Array.Empty<double>(),
+                    FinalAttemptScores = candidate.PositionSamples.TryGetValue("final", out var finalScores) ? finalScores : Array.Empty<double>(),
                     PositionSequence = string.Join(" -> ", candidate.PositionSequence),
                     PositionDeltaSummary = BuildPositionDeltaSummary(candidate)
                 });
@@ -132,7 +155,7 @@ public class AiTextService
                 .Select(g => g.Key)
                 .FirstOrDefault() ?? "mixed_patterns";
 
-            var rationale = BuildRationale(candidates, commonPattern, settings);
+            var rationale = BuildRationale(candidates, commonPattern, settings, suppressChange, confidenceVariance, confidenceVarianceGate);
 
             return new HomeAssignment
             {
@@ -157,7 +180,7 @@ public class AiTextService
 
         return entries
             .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
-            .GroupBy(e => ParseBaseTarget(e.TargetSound).BaseTarget, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(ResolveBaseTarget, StringComparer.OrdinalIgnoreCase)
             .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings))
             .OrderByDescending(candidate => candidate.Priority)
             .ToArray();
@@ -184,7 +207,12 @@ public class AiTextService
         var daysSinceLast = Math.Max(0.0, (now - ordered[^1].Timestamp).TotalDays);
         var recency = Math.Exp(-daysSinceLast / 14.0);
         var averageConfidence = Clamp(ordered.Average(entry => NormalizeConfidence(entry.ConfidenceScore)));
-        var positionDeltas = BuildPositionDeltas(target, entries);
+        var positionSamples = BuildPositionSamples(target, entries);
+        var positionAverages = positionSamples.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value.Length == 0 ? 0.0 : kvp.Value.Average(),
+            StringComparer.OrdinalIgnoreCase);
+        var positionDeltas = BuildPositionDeltas(target, entries, positionSamples);
         var positionSequence = PositionOrder
             .OrderBy(position => positionDeltas.TryGetValue(position, out var delta) ? delta : 0.0)
             .ThenBy(position => position)
@@ -205,13 +233,18 @@ public class AiTextService
             entries.Count,
             ordered[^1].Timestamp,
             positionSequence,
-            positionDeltas);
+                positionDeltas,
+                positionAverages,
+                positionSamples);
     }
 
     private static string BuildRationale(
         IReadOnlyList<TargetAssignmentCandidate> candidates,
         string commonPattern,
-        AssignmentPrioritySettings settings)
+        AssignmentPrioritySettings settings,
+        bool suppressChange,
+        double confidenceVariance,
+        double confidenceVarianceGate)
     {
         if (candidates.Count == 0)
         {
@@ -220,10 +253,15 @@ public class AiTextService
 
         var top = candidates[0];
         var targetList = string.Join(", ", candidates.Select(c => c.Target));
-        return $"Focus on {targetList} based on weighted priority from recent severity, instability, trend decline, and repetition frequency. " +
+         var gatingText = suppressChange
+             ? $" Assignment updates were held because confidence variance {confidenceVariance:0.000} exceeded the gate {confidenceVarianceGate:0.000}."
+             : string.Empty;
+
+         return $"Focus on {targetList} based on weighted priority from recent severity, instability, trend decline, and repetition frequency. " +
                $"Weights are severity {settings.SeverityWeight:0.00}, instability {settings.InstabilityWeight:0.00}, decline {settings.DeclineWeight:0.00}, frequency {settings.FrequencyWeight:0.00}, with confidence penalty strength {settings.ConfidencePenaltyStrength:0.00}. " +
                $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}, confidence factor {top.ConfidenceFactor:0.00}). " +
-               $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed.";
+             $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed." +
+             gatingText;
     }
 
     private static double ComputePriority(TargetAssignmentCandidate candidate, AssignmentPrioritySettings settings)
@@ -237,15 +275,32 @@ public class AiTextService
         return Clamp(weighted * candidate.Recency * confidenceFactor);
     }
 
-    private static Dictionary<string, double> BuildPositionDeltas(string target, IReadOnlyList<ProgressEntry> entries)
+    private static Dictionary<string, double[]> BuildPositionSamples(string target, IReadOnlyList<ProgressEntry> entries)
+    {
+        var samples = new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase);
+        foreach (var position in PositionOrder)
+        {
+            samples[position] = entries
+                .Where(entry => IsPositionMatch(target, position, entry))
+                .OrderBy(entry => entry.Timestamp)
+                .Select(entry => Clamp(entry.OverallScore))
+                .ToArray();
+        }
+
+        return samples;
+    }
+
+    private static Dictionary<string, double> BuildPositionDeltas(
+        string target,
+        IReadOnlyList<ProgressEntry> entries,
+        IReadOnlyDictionary<string, double[]> positionSamples)
     {
         var deltas = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var position in PositionOrder)
         {
-            var scoped = entries
-                .Where(entry => IsPositionMatch(target, position, entry.TargetSound))
-                .OrderBy(entry => entry.Timestamp)
-                .ToArray();
+            var scoped = positionSamples.TryGetValue(position, out var values)
+                ? values
+                : Array.Empty<double>();
 
             if (scoped.Length < 2)
             {
@@ -254,19 +309,20 @@ public class AiTextService
             }
 
             var window = Math.Min(RecentWindow, scoped.Length);
-            var baseline = scoped.Take(window).Average(entry => Clamp(entry.OverallScore));
-            var recent = scoped.TakeLast(window).Average(entry => Clamp(entry.OverallScore));
+            var baseline = scoped.Take(window).Average();
+            var recent = scoped.TakeLast(window).Average();
             deltas[position] = recent - baseline;
         }
 
         return deltas;
     }
 
-    private static bool IsPositionMatch(string target, string position, string? targetSound)
+    private static bool IsPositionMatch(string target, string position, ProgressEntry entry)
     {
-        var parsed = ParseBaseTarget(targetSound);
-        return string.Equals(parsed.BaseTarget, target, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(parsed.Position, position, StringComparison.OrdinalIgnoreCase);
+        var baseTarget = ResolveBaseTarget(entry);
+        var positionTag = ResolvePositionTag(entry);
+        return string.Equals(baseTarget, target, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(positionTag, position, StringComparison.OrdinalIgnoreCase);
     }
 
     private static (string BaseTarget, string Position) ParseBaseTarget(string? targetSound)
@@ -322,6 +378,104 @@ public class AiTextService
         return Clamp(confidence);
     }
 
+    private static double ComputeConfidenceVariance(IReadOnlyList<ProgressEntry> entries)
+    {
+        var sample = entries
+            .OrderByDescending(entry => entry.Timestamp)
+            .Take(ConfidenceVarianceWindow)
+            .Select(entry => NormalizeConfidence(entry.ConfidenceScore))
+            .ToArray();
+
+        if (sample.Length < 2)
+        {
+            return 0.0;
+        }
+
+        return ComputeVariance(sample);
+    }
+
+    private static bool ShouldSuppressAssignmentChange(
+        double confidenceVariance,
+        double confidenceVarianceGate,
+        AssignmentSnapshot? latestSnapshot)
+    {
+        return latestSnapshot is not null &&
+               confidenceVariance > Math.Max(0.0, confidenceVarianceGate);
+    }
+
+    private static TargetAssignmentCandidate[] ApplySuppressedTargets(
+        IReadOnlyList<TargetAssignmentCandidate> candidates,
+        AssignmentSnapshot? latestSnapshot,
+        AssignmentPrioritySettings settings)
+    {
+        if (latestSnapshot is null)
+        {
+            return candidates.ToArray();
+        }
+
+        var targetOrder = ParseCsv(latestSnapshot.FocusTargetsCsv);
+        if (targetOrder.Count == 0)
+        {
+            return candidates.ToArray();
+        }
+
+        var candidateByTarget = candidates.ToDictionary(candidate => candidate.Target, StringComparer.OrdinalIgnoreCase);
+        var selected = new List<TargetAssignmentCandidate>();
+        foreach (var target in targetOrder)
+        {
+            if (!candidateByTarget.TryGetValue(target, out var candidate))
+            {
+                continue;
+            }
+
+            selected.Add(candidate with { Priority = ComputePriority(candidate, settings) + 0.0001 });
+        }
+
+        if (selected.Count == 0)
+        {
+            return candidates.ToArray();
+        }
+
+        return selected
+            .Take(MaxFocusTargets)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ParseCsv(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv))
+        {
+            return Array.Empty<string>();
+        }
+
+        return csv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Trim())
+            .Where(item => item.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string ResolveBaseTarget(ProgressEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.BaseTargetSound))
+        {
+            return entry.BaseTargetSound.Trim().ToLowerInvariant();
+        }
+
+        return ParseBaseTarget(entry.TargetSound).BaseTarget;
+    }
+
+    private static string ResolvePositionTag(ProgressEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.PositionTag))
+        {
+            return entry.PositionTag.Trim().ToLowerInvariant();
+        }
+
+        return ParseBaseTarget(entry.TargetSound).Position;
+    }
+
     private static string BuildPositionDeltaSummary(TargetAssignmentCandidate candidate)
     {
         return string.Join(
@@ -361,7 +515,9 @@ public class AiTextService
         int Attempts,
         DateTime LastAttemptAt,
         IReadOnlyList<string> PositionSequence,
-        IReadOnlyDictionary<string, double> PositionDeltas)
+        IReadOnlyDictionary<string, double> PositionDeltas,
+        IReadOnlyDictionary<string, double> PositionAverages,
+        IReadOnlyDictionary<string, double[]> PositionSamples)
     {
         public double ConfidenceFactor => AverageConfidence;
     }
