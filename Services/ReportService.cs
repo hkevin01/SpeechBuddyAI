@@ -42,6 +42,14 @@ public class ReportService
                 AssignmentRationaleDriftSummary = latestAssignmentSnapshot?.RationaleDriftSummary ?? "No rationale drift comparison available yet."
             };
 
+            if (latestAssignmentSnapshot is not null && !string.IsNullOrWhiteSpace(latestAssignmentSnapshot.PreviousRationale))
+            {
+                note.AssignmentSelectionDetails =
+                    "Previous rationale: " + latestAssignmentSnapshot.PreviousRationale + Environment.NewLine +
+                    "Current rationale: " + note.AssignmentSelectionSummary + Environment.NewLine +
+                    note.AssignmentSelectionDetails;
+            }
+
             return Task.FromResult(note);
         }
         catch (Exception ex)

@@ -121,7 +121,7 @@ public sealed class AssignmentSnapshotService
         return string.Join(
             Environment.NewLine,
             reasons.Select(reason =>
-                $"- {reason.TargetSound}: priority {reason.PriorityScore:0.00} (severity {reason.SeverityScore:0.00}, instability {reason.InstabilityScore:0.00}, decline {reason.DeclineScore:0.00}, frequency {reason.FrequencyScore:0.00}, confidence factor {reason.ConfidenceFactor:0.00}); position order {reason.PositionSequence}; deltas {reason.PositionDeltaSummary}"));
+                $"- {reason.TargetSound}: priority {reason.PriorityScore:0.00} (severity {reason.SeverityScore:0.00}, instability {reason.InstabilityScore:0.00}, decline {reason.DeclineScore:0.00}, frequency {reason.FrequencyScore:0.00}, confidence factor {reason.ConfidenceFactor:0.00}, variance {reason.ConfidenceVariance:0.000}); position order {reason.PositionSequence}; deltas {reason.PositionDeltaSummary}{(reason.AssignmentChangeSuppressed ? " [suppressed]" : string.Empty)}"));
     }
 
     public static string BuildRationaleDriftSummary(

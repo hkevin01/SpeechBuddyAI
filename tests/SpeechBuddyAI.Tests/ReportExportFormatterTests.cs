@@ -25,6 +25,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("Rolling Session History", content);
         Assert.Contains("Per-Target Comparison", content);
         Assert.Contains("Assignment Selection Rationale", content);
+        Assert.Contains("Assignment Rationale Drift", content);
         Assert.Contains("variability", content);
         Assert.Contains("drift", content);
         Assert.Contains("offline-heuristic: 2", content);
@@ -48,6 +49,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("## Rolling Session History", content);
         Assert.Contains("## Per-Target Comparison", content);
         Assert.Contains("## Assignment Selection Rationale", content);
+        Assert.Contains("## Assignment Rationale Drift", content);
         Assert.Contains("| Target | Delta | Confidence Move | Current Avg | Previous Avg | Variability | Drift |", content);
         Assert.Contains("## Clinician SOAP Summary", content);
     }
@@ -88,6 +90,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("TargetComparisonTable", content);
         Assert.Contains("AssignmentSelectionSummary", content);
         Assert.Contains("AssignmentSelectionDetails", content);
+        Assert.Contains("AssignmentRationaleDriftSummary", content);
         Assert.Contains("var", content);
         Assert.Contains("drift", content);
     }
@@ -150,7 +153,8 @@ public sealed class ReportExportFormatterTests
             SoapSummary = "S: reports home practice. O: accuracy improved. A: gains are emerging. P: continue drills.",
             ParentSummary = "Great effort today. Keep daily short practice sessions.",
             AssignmentSelectionSummary = "Focus on r and s based on weighted priority.",
-            AssignmentSelectionDetails = "- r: priority 0.72\n- s: priority 0.61"
+            AssignmentSelectionDetails = "- r: priority 0.72\n- s: priority 0.61",
+            AssignmentRationaleDriftSummary = "Rationale overlap 82%; focus target changes: 1."
         };
     }
 

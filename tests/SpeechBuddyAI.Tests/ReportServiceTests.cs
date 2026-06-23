@@ -82,6 +82,64 @@ public sealed class ReportServiceTests
         Assert.Contains("steady repetition", report.ParentSummary);
     }
 
+    [Fact]
+    public async Task GenerateReportsAsync_IncludesRationaleDriftAndPreviousCurrentContrast()
+    {
+        var (service, snapshots) = CreateService();
+        await snapshots.SaveSnapshotAsync(new HomeAssignment
+        {
+            Title = "Home Practice Plan",
+            Rationale = "Focus on r blends with slower pacing and steady repetition.",
+            FocusTargets = ["r"],
+            SuggestedWords = ["rabbit"],
+            FocusTargetReasons =
+            [
+                new AssignmentFocusTargetReason
+                {
+                    TargetSound = "r",
+                    PriorityScore = 0.71,
+                    SeverityScore = 0.60,
+                    InstabilityScore = 0.32,
+                    DeclineScore = 0.18,
+                    FrequencyScore = 0.44,
+                    ConfidenceFactor = 0.78,
+                    ConfidenceVariance = 0.012,
+                    PositionSequence = "final -> medial -> initial",
+                    PositionDeltaSummary = "initial +0.01 | medial -0.02 | final -0.07"
+                }
+            ]
+        }, 8);
+        await snapshots.SaveSnapshotAsync(new HomeAssignment
+        {
+            Title = "Home Practice Plan",
+            Rationale = "Focus on r and s carryover with mixed phrase drills.",
+            FocusTargets = ["r", "s"],
+            SuggestedWords = ["rabbit", "sun"],
+            FocusTargetReasons =
+            [
+                new AssignmentFocusTargetReason
+                {
+                    TargetSound = "r",
+                    PriorityScore = 0.68,
+                    SeverityScore = 0.57,
+                    InstabilityScore = 0.30,
+                    DeclineScore = 0.16,
+                    FrequencyScore = 0.42,
+                    ConfidenceFactor = 0.80,
+                    ConfidenceVariance = 0.016,
+                    PositionSequence = "medial -> final -> initial",
+                    PositionDeltaSummary = "initial +0.02 | medial -0.04 | final -0.03"
+                }
+            ]
+        }, 12);
+
+        var report = await service.GenerateReportsAsync("Drift validation", MakeEntries());
+
+        Assert.Contains("Rationale overlap", report.AssignmentRationaleDriftSummary);
+        Assert.Contains("Previous rationale:", report.AssignmentSelectionDetails);
+        Assert.Contains("Current rationale:", report.AssignmentSelectionDetails);
+    }
+
     private static (ReportService Service, AssignmentSnapshotService Snapshots) CreateService()
     {
         var settings = new ConfidenceSettingsService(new InMemoryStore());

@@ -95,4 +95,47 @@ public sealed class NotesPageViewModelTests
         Assert.Equal(4, state.SummaryBadges.Count);
         Assert.Single(state.TimelineRows);
     }
+
+    [Fact]
+    public void BuildAssignmentAnalyticsState_ProducesSnapshotRowsAndTrendSeries()
+    {
+        var vm = new NotesPageViewModel();
+        var snapshots = new[]
+        {
+            new AssignmentSnapshot
+            {
+                Id = 11,
+                SnapshotDate = new DateTimeOffset(2026, 6, 22, 12, 0, 0, TimeSpan.Zero),
+                FocusTargetsCsv = "r,s",
+                TargetReasonsJson = "[{\"TargetSound\":\"r\",\"SeverityScore\":0.62,\"InstabilityScore\":0.34,\"DeclineScore\":0.18,\"FrequencyScore\":0.44,\"ConfidenceFactor\":0.79}]",
+                RationaleDriftSummary = "Rationale overlap 78%; focus target changes: 1."
+            }
+        };
+
+        var state = vm.BuildAssignmentAnalyticsState(snapshots);
+
+        Assert.Single(state.SnapshotRows);
+        Assert.Contains("Showing 1 snapshots", state.SummaryText);
+        Assert.Contains("Severity trend:", state.SeverityTrendText);
+        Assert.Contains("Confidence trend:", state.ConfidenceTrendText);
+    }
+
+    [Fact]
+    public void BuildAssignmentAnalyticsStateForSnapshot_UsesSelectedSnapshotReasons()
+    {
+        var vm = new NotesPageViewModel();
+        var snapshot = new AssignmentSnapshot
+        {
+            Id = 4,
+            SnapshotDate = new DateTimeOffset(2026, 6, 20, 10, 0, 0, TimeSpan.Zero),
+            FocusTargetsCsv = "r",
+            TargetReasonsJson = "[{\"TargetSound\":\"r\",\"SeverityScore\":0.55,\"InstabilityScore\":0.29,\"DeclineScore\":0.12,\"FrequencyScore\":0.36,\"ConfidenceFactor\":0.81}]"
+        };
+
+        var state = vm.BuildAssignmentAnalyticsStateForSnapshot(snapshot, new[] { snapshot });
+
+        Assert.Contains("Selected snapshot", state.SummaryText);
+        Assert.Contains("0.55", state.SeverityTrendText);
+        Assert.Contains("0.81", state.ConfidenceTrendText);
+    }
 }

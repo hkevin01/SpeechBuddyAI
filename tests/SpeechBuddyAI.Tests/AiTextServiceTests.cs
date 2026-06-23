@@ -8,7 +8,8 @@ public sealed class AiTextServiceTests
     [Fact]
     public async Task GenerateHomeAssignmentAsync_NoHistory_ReturnsDefaultPlan()
     {
-        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()));
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), snapshotService);
 
         var assignment = await service.GenerateHomeAssignmentAsync(Array.Empty<ProgressEntry>());
 
@@ -42,7 +43,8 @@ public sealed class AiTextServiceTests
             Entry("s:final", 0.64, now.AddDays(-1), "none", 0.40)
         };
 
-        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()));
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), snapshotService);
         var assignment = await service.GenerateHomeAssignmentAsync(history);
 
         Assert.NotEmpty(assignment.FocusTargets);
@@ -58,6 +60,8 @@ public sealed class AiTextServiceTests
         return new ProgressEntry
         {
             TargetSound = target,
+            BaseTargetSound = target.Split(':')[0],
+            PositionTag = target.Contains(':') ? target.Split(':')[1] : string.Empty,
             OverallScore = overall,
             Timestamp = timestamp,
             ErrorPattern = pattern,

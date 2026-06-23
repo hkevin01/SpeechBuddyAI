@@ -14,8 +14,10 @@ public partial class NotesPage : ContentPage
     private readonly ReportExportSettingsService _reportExportSettingsService;
     private readonly ConfidenceSettingsService _confidenceSettingsService;
     private readonly ComparisonSnapshotCacheService _comparisonSnapshotCacheService;
+    private readonly AssignmentSnapshotService _assignmentSnapshotService;
     private readonly NotesPageViewModel _viewModel = new();
     private bool _hasInitializedDateRange;
+    private IReadOnlyList<AssignmentSnapshot> _assignmentSnapshots = Array.Empty<AssignmentSnapshot>();
 
     public NotesPage()
     {
@@ -26,6 +28,7 @@ public partial class NotesPage : ContentPage
         _reportExportSettingsService = ResolveService<ReportExportSettingsService>();
         _confidenceSettingsService = ResolveService<ConfidenceSettingsService>();
         _comparisonSnapshotCacheService = ResolveService<ComparisonSnapshotCacheService>();
+        _assignmentSnapshotService = ResolveService<AssignmentSnapshotService>();
     }
 
     protected override async void OnAppearing()
@@ -35,6 +38,7 @@ public partial class NotesPage : ContentPage
         InitializeDateRangeIfNeeded();
         await RefreshHistoryAsync();
         await RefreshComparisonPreviewAsync();
+        await RefreshAssignmentAnalyticsAsync();
     }
 
     private async void OnGenerateSummariesClicked(object? sender, EventArgs e)
@@ -191,6 +195,27 @@ public partial class NotesPage : ContentPage
         }
     }
 
+    private async Task RefreshAssignmentAnalyticsAsync()
+    {
+        try
+        {
+            _assignmentSnapshots = await _assignmentSnapshotService.GetRecentSnapshotsAsync(20);
+            var state = _viewModel.BuildAssignmentAnalyticsState(_assignmentSnapshots);
+            ApplyAssignmentAnalyticsState(state);
+            AssignmentSnapshotCollection.ItemsSource = state.SnapshotRows;
+        }
+        catch (Exception ex)
+        {
+            AssignmentAnalyticsSummaryLabel.Text = ex.Message;
+            AssignmentSnapshotCollection.ItemsSource = Array.Empty<object>();
+            SeverityTrendChartLabel.Text = "Severity trend: -";
+            InstabilityTrendChartLabel.Text = "Instability trend: -";
+            DeclineTrendChartLabel.Text = "Decline trend: -";
+            FrequencyTrendChartLabel.Text = "Frequency trend: -";
+            ConfidenceTrendChartLabel.Text = "Confidence trend: -";
+        }
+    }
+
     private async Task<SessionNote?> ResolveLatestExportCandidateAsync()
     {
         var recent = await _noteStorageService.GetRecentNotesAsync(1);
@@ -249,6 +274,34 @@ public partial class NotesPage : ContentPage
             ComparisonPreviewBadgesCollection.ItemsSource = Array.Empty<object>();
             ComparisonPreviewTimelineCollection.ItemsSource = Array.Empty<object>();
         }
+    }
+
+    private void OnAssignmentSnapshotSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var selected = e.CurrentSelection?.FirstOrDefault() as AssignmentSnapshotRow;
+        if (selected is null)
+        {
+            return;
+        }
+
+        var snapshot = _assignmentSnapshots.FirstOrDefault(item => item.Id == selected.SnapshotId);
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        var state = _viewModel.BuildAssignmentAnalyticsStateForSnapshot(snapshot, _assignmentSnapshots);
+        ApplyAssignmentAnalyticsState(state);
+    }
+
+    private void ApplyAssignmentAnalyticsState(AssignmentAnalyticsState state)
+    {
+        AssignmentAnalyticsSummaryLabel.Text = state.SummaryText;
+        SeverityTrendChartLabel.Text = state.SeverityTrendText;
+        InstabilityTrendChartLabel.Text = state.InstabilityTrendText;
+        DeclineTrendChartLabel.Text = state.DeclineTrendText;
+        FrequencyTrendChartLabel.Text = state.FrequencyTrendText;
+        ConfidenceTrendChartLabel.Text = state.ConfidenceTrendText;
     }
 
     private static T ResolveService<T>() where T : notnull

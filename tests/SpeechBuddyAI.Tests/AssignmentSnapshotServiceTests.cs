@@ -28,6 +28,8 @@ public sealed class AssignmentSnapshotServiceTests
                 DeclineScore = 0.19,
                 FrequencyScore = 0.44,
                 ConfidenceFactor = 0.81,
+                ConfidenceVariance = 0.019,
+                AssignmentChangeSuppressed = true,
                 PositionSequence = "final -> medial -> initial",
                 PositionDeltaSummary = "initial +0.01 | medial -0.04 | final -0.08"
             }
@@ -37,6 +39,7 @@ public sealed class AssignmentSnapshotServiceTests
 
         Assert.Contains("priority 0.72", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("position order final -> medial -> initial", details, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[suppressed]", details, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -53,6 +56,7 @@ public sealed class AssignmentSnapshotServiceTests
                 DeclineScore = 0.14,
                 FrequencyScore = 0.39,
                 ConfidenceFactor = 0.74,
+                ConfidenceVariance = 0.011,
                 PositionSequence = "initial -> final -> medial",
                 PositionDeltaSummary = "initial -0.06 | medial +0.01 | final -0.03"
             }
@@ -63,5 +67,19 @@ public sealed class AssignmentSnapshotServiceTests
 
         Assert.Single(parsed);
         Assert.Equal("s", parsed[0].TargetSound);
+    }
+
+    [Fact]
+    public void BuildRationaleDriftSummary_ReportsOverlapAndFocusChangeCount()
+    {
+        var summary = AssignmentSnapshotService.BuildRationaleDriftSummary(
+            "Focus on r blends with slow repetitions.",
+            "Focus on r and s carryover with phrase-level repetitions.",
+            new[] { "r" },
+            new[] { "r", "s" },
+            changeSuppressed: false);
+
+        Assert.Contains("Rationale overlap", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("focus target changes", summary, StringComparison.OrdinalIgnoreCase);
     }
 }
