@@ -7,6 +7,12 @@ namespace SpeechBuddyAI.Services;
 
 public sealed class AssignmentSnapshotService
 {
+    private const int MinHistoryDepthForWeightShift = 4;
+    private const int MinMatchedTargetsNext1ForWeightShift = 3;
+    private const int MinMatchedTargetsNext3ForWeightShift = 5;
+    private const double MaxWeightDeltaPerUpdate = 0.05;
+    private const double MaxPenaltyDeltaPerUpdate = 0.08;
+
     private readonly SemaphoreSlim _gate = new(1, 1);
     private SQLiteAsyncConnection? _database;
     private bool _isInitialized;
@@ -42,7 +48,7 @@ public sealed class AssignmentSnapshotService
                     ? AiTextService.ScoringFormulaVersion
                     : assignment.ScoringFormulaVersion;
                 var calibration = BuildCalibrationMetrics(historicalSnapshots, currentReasons);
-                var advisorySuggestion = BuildAdvisoryWeightSuggestion(calibration);
+                var advisorySuggestion = BuildAdvisoryWeightSuggestion(calibration, historicalSnapshots);
 
                 var snapshot = new AssignmentSnapshot
                 {
@@ -455,13 +461,50 @@ public sealed class AssignmentSnapshotService
     }
 
     private static AssignmentWeightSuggestion BuildAdvisoryWeightSuggestion(
-        AssignmentCalibrationMetrics calibration)
+        AssignmentCalibrationMetrics calibration,
+        IReadOnlyList<AssignmentSnapshot> historicalSnapshots)
     {
-        var severity = AssignmentPrioritySettings.DefaultSeverityWeight;
-        var instability = AssignmentPrioritySettings.DefaultInstabilityWeight;
-        var decline = AssignmentPrioritySettings.DefaultDeclineWeight;
-        var frequency = AssignmentPrioritySettings.DefaultFrequencyWeight;
-        var confidencePenalty = AssignmentPrioritySettings.DefaultConfidencePenaltyStrength;
+        var historyDepth = Math.Max(0, historicalSnapshots?.Count ?? 0);
+        var previousSuggestion = historicalSnapshots?
+            .OrderByDescending(snapshot => snapshot.SnapshotDateTicks)
+            .Select(snapshot => ParseAdvisoryWeightSuggestion(snapshot.AdvisoryWeightSuggestionJson))
+            .FirstOrDefault();
+
+        return BuildAdvisoryWeightSuggestionPreview(calibration, historyDepth, previousSuggestion);
+    }
+
+    public static AssignmentWeightSuggestion BuildAdvisoryWeightSuggestionPreview(
+        AssignmentCalibrationMetrics calibration,
+        int historyDepth,
+        AssignmentWeightSuggestion? previousSuggestion = null)
+    {
+        var anchor = ResolveAnchorSuggestion(previousSuggestion);
+
+        if (calibration is null)
+        {
+            return anchor with
+            {
+                Summary = "advisory only - no calibration snapshot available, retaining prior weights.",
+                AdvisoryOnly = true
+            };
+        }
+
+        if (historyDepth < MinHistoryDepthForWeightShift ||
+            calibration.MatchedTargetCountNext1 < MinMatchedTargetsNext1ForWeightShift ||
+            calibration.MatchedTargetCountNext3 < MinMatchedTargetsNext3ForWeightShift)
+        {
+            return anchor with
+            {
+                Summary = $"advisory only - insufficient history for safe weight shift (history {historyDepth}, next-1 matched {calibration.MatchedTargetCountNext1}, next-3 matched {calibration.MatchedTargetCountNext3}); retaining prior weights.",
+                AdvisoryOnly = true
+            };
+        }
+
+        var severity = anchor.SuggestedSeverityWeight;
+        var instability = anchor.SuggestedInstabilityWeight;
+        var decline = anchor.SuggestedDeclineWeight;
+        var frequency = anchor.SuggestedFrequencyWeight;
+        var confidencePenalty = anchor.SuggestedConfidencePenaltyStrength;
 
         if (calibration.MeanAbsoluteErrorNext3 > 0.18)
         {
@@ -486,11 +529,18 @@ public sealed class AssignmentSnapshotService
             confidencePenalty = Math.Clamp(confidencePenalty + 0.10, 0.0, 1.0);
         }
 
-        var sum = Math.Max(1e-6, severity + instability + decline + frequency);
-        severity = Math.Clamp(severity / sum, 0.0, 1.0);
-        instability = Math.Clamp(instability / sum, 0.0, 1.0);
-        decline = Math.Clamp(decline / sum, 0.0, 1.0);
-        frequency = Math.Clamp(frequency / sum, 0.0, 1.0);
+        if (calibration.MeanAbsoluteErrorNext1 < 0.08 && calibration.RankAgreementNext1 > 0.75)
+        {
+            confidencePenalty = Math.Clamp(confidencePenalty - 0.05, 0.0, 1.0);
+        }
+
+        (severity, instability, decline, frequency) = NormalizeWeights(severity, instability, decline, frequency);
+        severity = ClampByDelta(anchor.SuggestedSeverityWeight, severity, MaxWeightDeltaPerUpdate);
+        instability = ClampByDelta(anchor.SuggestedInstabilityWeight, instability, MaxWeightDeltaPerUpdate);
+        decline = ClampByDelta(anchor.SuggestedDeclineWeight, decline, MaxWeightDeltaPerUpdate);
+        frequency = ClampByDelta(anchor.SuggestedFrequencyWeight, frequency, MaxWeightDeltaPerUpdate);
+        (severity, instability, decline, frequency) = NormalizeWeights(severity, instability, decline, frequency);
+        confidencePenalty = ClampByDelta(anchor.SuggestedConfidencePenaltyStrength, confidencePenalty, MaxPenaltyDeltaPerUpdate);
 
         return new AssignmentWeightSuggestion
         {
@@ -499,9 +549,64 @@ public sealed class AssignmentSnapshotService
             SuggestedDeclineWeight = decline,
             SuggestedFrequencyWeight = frequency,
             SuggestedConfidencePenaltyStrength = confidencePenalty,
-            Summary = $"advisory only - suggested weights: severity {severity:0.00}, instability {instability:0.00}, decline {decline:0.00}, frequency {frequency:0.00}, confidence penalty {confidencePenalty:0.00}; based on next-1 MAE {calibration.MeanAbsoluteErrorNext1:0.000} and next-3 MAE {calibration.MeanAbsoluteErrorNext3:0.000}.",
+            Summary = $"advisory only - suggested weights: severity {severity:0.00}, instability {instability:0.00}, decline {decline:0.00}, frequency {frequency:0.00}, confidence penalty {confidencePenalty:0.00}; guarded by history depth {historyDepth}, max per-update weight delta {MaxWeightDeltaPerUpdate:0.00}, max penalty delta {MaxPenaltyDeltaPerUpdate:0.00}; based on next-1 MAE {calibration.MeanAbsoluteErrorNext1:0.000} and next-3 MAE {calibration.MeanAbsoluteErrorNext3:0.000}.",
             AdvisoryOnly = true
         };
+    }
+
+    private static AssignmentWeightSuggestion ResolveAnchorSuggestion(AssignmentWeightSuggestion? previousSuggestion)
+    {
+        if (previousSuggestion is null)
+        {
+            return new AssignmentWeightSuggestion
+            {
+                SuggestedSeverityWeight = AssignmentPrioritySettings.DefaultSeverityWeight,
+                SuggestedInstabilityWeight = AssignmentPrioritySettings.DefaultInstabilityWeight,
+                SuggestedDeclineWeight = AssignmentPrioritySettings.DefaultDeclineWeight,
+                SuggestedFrequencyWeight = AssignmentPrioritySettings.DefaultFrequencyWeight,
+                SuggestedConfidencePenaltyStrength = AssignmentPrioritySettings.DefaultConfidencePenaltyStrength,
+                Summary = "advisory only - using default weight anchor.",
+                AdvisoryOnly = true
+            };
+        }
+
+        (var severity, var instability, var decline, var frequency) = NormalizeWeights(
+            previousSuggestion.SuggestedSeverityWeight,
+            previousSuggestion.SuggestedInstabilityWeight,
+            previousSuggestion.SuggestedDeclineWeight,
+            previousSuggestion.SuggestedFrequencyWeight);
+
+        return new AssignmentWeightSuggestion
+        {
+            SuggestedSeverityWeight = severity,
+            SuggestedInstabilityWeight = instability,
+            SuggestedDeclineWeight = decline,
+            SuggestedFrequencyWeight = frequency,
+            SuggestedConfidencePenaltyStrength = Math.Clamp(previousSuggestion.SuggestedConfidencePenaltyStrength, 0.0, 1.0),
+            Summary = previousSuggestion.Summary,
+            AdvisoryOnly = true
+        };
+    }
+
+    private static (double Severity, double Instability, double Decline, double Frequency) NormalizeWeights(
+        double severity,
+        double instability,
+        double decline,
+        double frequency)
+    {
+        var s = Math.Clamp(severity, 0.0, 1.0);
+        var i = Math.Clamp(instability, 0.0, 1.0);
+        var d = Math.Clamp(decline, 0.0, 1.0);
+        var f = Math.Clamp(frequency, 0.0, 1.0);
+        var sum = Math.Max(1e-6, s + i + d + f);
+        return (s / sum, i / sum, d / sum, f / sum);
+    }
+
+    private static double ClampByDelta(double anchor, double proposal, double maxDelta)
+    {
+        var delta = proposal - anchor;
+        var clampedDelta = Math.Clamp(delta, -Math.Abs(maxDelta), Math.Abs(maxDelta));
+        return Math.Clamp(anchor + clampedDelta, 0.0, 1.0);
     }
 
     private static AssignmentCalibrationMetrics BuildHorizonCalibration(
