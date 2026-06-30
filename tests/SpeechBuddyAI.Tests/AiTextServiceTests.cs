@@ -77,6 +77,128 @@ public sealed class AiTextServiceTests
         Assert.Equal("initial -> medial -> final", reason.PositionSequence);
     }
 
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_EvidenceWeighting_PreventsSingleAttemptOutlierFromDominating()
+    {
+        var now = DateTime.UtcNow;
+        var history = new[]
+        {
+            Entry("r:initial", 0.62, now.AddDays(-8), "phoneme_mismatch", 0.8),
+            Entry("r:medial", 0.60, now.AddDays(-7), "phoneme_mismatch", 0.8),
+            Entry("r:final", 0.58, now.AddDays(-6), "phoneme_mismatch", 0.8),
+            Entry("r:initial", 0.55, now.AddDays(-5), "phoneme_mismatch", 0.8),
+            Entry("r:medial", 0.53, now.AddDays(-4), "phoneme_mismatch", 0.8),
+            Entry("r:final", 0.50, now.AddDays(-3), "phoneme_mismatch", 0.8),
+
+            // One severe but sparse outlier that should be tempered by evidence weighting.
+            Entry("s:initial", 0.10, now.AddDays(-1), "inconsistent_attempts", 0.9)
+        };
+
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), snapshotService);
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        Assert.NotEmpty(assignment.FocusTargets);
+        Assert.Equal("r", assignment.FocusTargets[0]);
+    }
+
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_HardFreeze_HoldsPreviousTargetsDuringHighVariance()
+    {
+        var now = DateTime.UtcNow;
+        var store = new InMemoryStore();
+        var settings = new ConfidenceSettingsService(store);
+        settings.SaveAssignmentSuppressionBehavior(AssignmentSuppressionBehavior.HardFreeze);
+        settings.SaveAssignmentConfidenceVarianceGate(0.001);
+
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), settings, snapshotService);
+
+        var baselineHistory = new[]
+        {
+            Entry("s:initial", 0.40, now.AddDays(-10), "pattern_s", 0.65),
+            Entry("s:medial", 0.38, now.AddDays(-9), "pattern_s", 0.62),
+            Entry("s:final", 0.35, now.AddDays(-8), "pattern_s", 0.68),
+            Entry("r:initial", 0.78, now.AddDays(-7), "pattern_r", 0.72),
+            Entry("r:medial", 0.80, now.AddDays(-6), "pattern_r", 0.74)
+        };
+        var baselineAssignment = await service.GenerateHomeAssignmentAsync(baselineHistory);
+        await snapshotService.SaveSnapshotAsync(baselineAssignment, baselineHistory.Length);
+
+        var conflictingHistory = new[]
+        {
+            Entry("r:initial", 0.34, now.AddDays(-5), "pattern_r", 0.95),
+            Entry("r:medial", 0.31, now.AddDays(-4), "pattern_r", 0.15),
+            Entry("r:final", 0.29, now.AddDays(-3), "pattern_r", 0.92),
+            Entry("r:initial", 0.33, now.AddDays(-2), "pattern_r", 0.18),
+            Entry("s:initial", 0.22, now.AddDays(-1), "pattern_s", 0.90)
+        };
+
+        var assignment = await service.GenerateHomeAssignmentAsync(conflictingHistory);
+
+        Assert.NotEmpty(assignment.FocusTargets);
+        Assert.Equal("s", assignment.FocusTargets[0]);
+        Assert.True(assignment.FocusTargetReasons.Any(reason => reason.AssignmentChangeSuppressed));
+    }
+
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_WarningOnly_AllowsReprioritizationDuringHighVariance()
+    {
+        var now = DateTime.UtcNow;
+        var store = new InMemoryStore();
+        var settings = new ConfidenceSettingsService(store);
+        settings.SaveAssignmentSuppressionBehavior(AssignmentSuppressionBehavior.WarningOnly);
+        settings.SaveAssignmentConfidenceVarianceGate(0.001);
+
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), settings, snapshotService);
+
+        var baselineHistory = new[]
+        {
+            Entry("s:initial", 0.40, now.AddDays(-10), "pattern_s", 0.65),
+            Entry("s:medial", 0.38, now.AddDays(-9), "pattern_s", 0.62),
+            Entry("s:final", 0.35, now.AddDays(-8), "pattern_s", 0.68),
+            Entry("r:initial", 0.78, now.AddDays(-7), "pattern_r", 0.72),
+            Entry("r:medial", 0.80, now.AddDays(-6), "pattern_r", 0.74)
+        };
+        var baselineAssignment = await service.GenerateHomeAssignmentAsync(baselineHistory);
+        await snapshotService.SaveSnapshotAsync(baselineAssignment, baselineHistory.Length);
+
+        var conflictingHistory = new[]
+        {
+            Entry("r:initial", 0.34, now.AddDays(-5), "pattern_r", 0.95),
+            Entry("r:medial", 0.31, now.AddDays(-4), "pattern_r", 0.15),
+            Entry("r:final", 0.29, now.AddDays(-3), "pattern_r", 0.92),
+            Entry("r:initial", 0.33, now.AddDays(-2), "pattern_r", 0.18),
+            Entry("s:initial", 0.22, now.AddDays(-1), "pattern_s", 0.90)
+        };
+
+        var assignment = await service.GenerateHomeAssignmentAsync(conflictingHistory);
+
+        Assert.NotEmpty(assignment.FocusTargets);
+        Assert.Equal("r", assignment.FocusTargets[0]);
+        Assert.DoesNotContain(assignment.FocusTargetReasons, reason => reason.AssignmentChangeSuppressed);
+    }
+
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_ProvidesConfidenceIntervalsAndAdaptiveWindows()
+    {
+        var now = DateTime.UtcNow;
+        var history = Enumerable.Range(0, 11)
+            .Select(index => Entry("r:initial", 0.72 - (index * 0.02), now.AddDays(-11 + index), "pattern_r", 0.65 + ((index % 2 == 0) ? 0.20 : -0.20)))
+            .ToArray();
+
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), snapshotService);
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        var reason = Assert.Single(assignment.FocusTargetReasons);
+        Assert.True(reason.InstabilityWindowSize >= 3);
+        Assert.True(reason.DeclineWindowSize >= reason.InstabilityWindowSize);
+        Assert.True(reason.OverallScoreCiLower <= reason.OverallScoreMean);
+        Assert.True(reason.OverallScoreCiUpper >= reason.OverallScoreMean);
+    }
+
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
     {
         return new ProgressEntry

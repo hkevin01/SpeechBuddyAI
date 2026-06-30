@@ -88,6 +88,13 @@
                                     Maximum="0.120"
                                     ValueChanged="OnSliderValueChanged" />
 
+                                <Label Text="Minimum samples for CI display" FontAttributes="Bold" />
+                                <Label x:Name="AssignmentCiMinSamplesValueLabel" Text="5" />
+                                <Slider x:Name="AssignmentCiMinSamplesSlider"
+                                    Minimum="2"
+                                    Maximum="20"
+                                    ValueChanged="OnSliderValueChanged" />
+
                                 <Label Text="Suppression behavior when variance exceeds gate" FontAttributes="Bold" />
                                 <Picker x:Name="AssignmentSuppressionBehaviorPicker">
                                     <Picker.Items>

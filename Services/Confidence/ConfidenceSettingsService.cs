@@ -16,6 +16,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string AssignmentConfidencePenaltyStrengthKey = "assignment.weight.confidencePenaltyStrength";
     private const string AssignmentConfidenceVarianceGateKey = "assignment.weight.confidenceVarianceGate";
     private const string AssignmentSuppressionBehaviorKey = "assignment.weight.suppressionBehavior";
+    private const string AssignmentConfidenceIntervalMinSamplesKey = "assignment.weight.ciMinSamples";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -25,6 +26,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public static readonly AssignmentPrioritySettings DefaultAssignmentPrioritySettings = new AssignmentPrioritySettings();
     public const double DefaultAssignmentConfidenceVarianceGate = 0.030;
     public const AssignmentSuppressionBehavior DefaultAssignmentSuppressionBehavior = AssignmentSuppressionBehavior.HardFreeze;
+    public const int DefaultAssignmentConfidenceIntervalMinSamples = 5;
 
     private readonly IKeyValueStore _store;
 
@@ -72,6 +74,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         SaveAssignmentPrioritySettings(DefaultAssignmentPrioritySettings);
         SaveAssignmentConfidenceVarianceGate(DefaultAssignmentConfidenceVarianceGate);
         SaveAssignmentSuppressionBehavior(DefaultAssignmentSuppressionBehavior);
+        SaveAssignmentConfidenceIntervalMinSamples(DefaultAssignmentConfidenceIntervalMinSamples);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -192,6 +195,18 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public void SaveAssignmentConfidenceVarianceGate(double varianceGate)
     {
         _store.Set(AssignmentConfidenceVarianceGateKey, Clamp(varianceGate));
+    }
+
+    public int GetAssignmentConfidenceIntervalMinSamples()
+    {
+        var stored = _store.Get(AssignmentConfidenceIntervalMinSamplesKey, (double)DefaultAssignmentConfidenceIntervalMinSamples);
+        return Math.Clamp((int)Math.Round(stored), 2, 20);
+    }
+
+    public void SaveAssignmentConfidenceIntervalMinSamples(int sampleCount)
+    {
+        var clamped = Math.Clamp(sampleCount, 2, 20);
+        _store.Set(AssignmentConfidenceIntervalMinSamplesKey, clamped);
     }
 
     public AssignmentSuppressionBehavior GetAssignmentSuppressionBehavior()

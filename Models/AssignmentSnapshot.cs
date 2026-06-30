@@ -20,6 +20,11 @@ public sealed class AssignmentSnapshot
     public int FocusChangeCount { get; set; }
     public bool AssignmentChangeSuppressed { get; set; }
     public int SourceEntryCount { get; set; }
+    public string ComponentTracesJson { get; set; } = "[]";
+    public string CalibrationMetricsJson { get; set; } = "{}";
+    public string CalibrationSummary { get; set; } = string.Empty;
+    public string ScoringFormulaVersion { get; set; } = string.Empty;
+    public string AdvisoryWeightSuggestionJson { get; set; } = "{}";
 
     [Ignore]
     public DateTimeOffset SnapshotDate

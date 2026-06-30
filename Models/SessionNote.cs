@@ -19,6 +19,7 @@ public class SessionNote
     public string AssignmentSelectionSummary { get; set; } = string.Empty;
     public string AssignmentSelectionDetails { get; set; } = string.Empty;
     public string AssignmentRationaleDriftSummary { get; set; } = string.Empty;
+    public string AssignmentModelAuditSummary { get; set; } = string.Empty;
 
     [Ignore]
     public DateTimeOffset SessionDate

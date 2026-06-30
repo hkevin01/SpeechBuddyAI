@@ -85,6 +85,10 @@ public static class ReportExportFormatter
             "--------------------------" + Environment.NewLine +
             SafeValue(note.AssignmentRationaleDriftSummary) + Environment.NewLine +
             Environment.NewLine +
+            "Assignment Model Audit" + Environment.NewLine +
+            "----------------------" + Environment.NewLine +
+            SafeValue(note.AssignmentModelAuditSummary) + Environment.NewLine +
+            Environment.NewLine +
             "Raw Note" + Environment.NewLine +
             "--------" + Environment.NewLine +
             (string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()) + Environment.NewLine +
@@ -136,6 +140,10 @@ public static class ReportExportFormatter
             Environment.NewLine +
             SafeValue(note.AssignmentRationaleDriftSummary) + Environment.NewLine +
             Environment.NewLine +
+            "## Assignment Model Audit" + Environment.NewLine +
+            Environment.NewLine +
+            SafeValue(note.AssignmentModelAuditSummary) + Environment.NewLine +
+            Environment.NewLine +
             "## Raw Note" + Environment.NewLine +
             Environment.NewLine +
             (string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()) + Environment.NewLine +
@@ -172,6 +180,7 @@ public static class ReportExportFormatter
             CsvLine("AssignmentSelectionSummary", SafeValue(note.AssignmentSelectionSummary)),
             CsvLine("AssignmentSelectionDetails", SafeValue(note.AssignmentSelectionDetails)),
             CsvLine("AssignmentRationaleDriftSummary", SafeValue(note.AssignmentRationaleDriftSummary)),
+            CsvLine("AssignmentModelAuditSummary", SafeValue(note.AssignmentModelAuditSummary)),
             CsvLine("RawNote", string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()),
             CsvLine("SoapSummary", SafeValue(note.SoapSummary)),
             CsvLine("ParentSummary", SafeValue(note.ParentSummary))

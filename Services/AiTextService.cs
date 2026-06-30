@@ -7,10 +7,17 @@ namespace SpeechBuddyAI.Services;
 // Purpose: Generates practice word lists and home assignment plans.
 public class AiTextService
 {
+    public const string ScoringFormulaVersion = "assign-v3.0-adaptive-calibrated";
+
     private const int MaxFocusTargets = 3;
     private const int RecentWindow = 5;
     private const int ConfidenceVarianceWindow = 12;
     private const int MinimumPositionSamples = 3;
+    private const double EvidenceHalfLifeAttempts = 6.0;
+    private const double EvidenceFloor = 0.35;
+    private const double DeclineWindowDays = 7.0;
+    private const int MinimumAdaptiveWindow = 3;
+    private const int MaximumAdaptiveWindow = 12;
     private static readonly string[] PositionOrder = ["initial", "medial", "final"];
 
     private readonly PhonemeWordBankService _wordBank;
@@ -57,7 +64,8 @@ public class AiTextService
     // Formula: priority = recency * (
     //   ws*severity + wi*instability + wd*decline + wf*frequency) * confidenceFactor
     // where severity = 1 - recent mean overall, instability = sqrt(recent variance),
-    // decline = max(0, baseline mean - recent mean), and frequency favors repeated challenges.
+    // decline = max(0, negative confidence-weighted trend slope over recent days),
+    // frequency favors repeated challenges, and evidence weighting tempers sparse samples.
     // confidenceFactor down-weights low-confidence sessions according to clinician penalty settings.
     public async Task<HomeAssignment> GenerateHomeAssignmentAsync(IReadOnlyList<ProgressEntry> history)
     {
@@ -68,9 +76,10 @@ public class AiTextService
             var settings = _settingsService.GetAssignmentPrioritySettings().Normalize();
             var confidenceVarianceGate = _settingsService.GetAssignmentConfidenceVarianceGate();
             var suppressionBehavior = _settingsService.GetAssignmentSuppressionBehavior();
+            var ciMinSamples = _settingsService.GetAssignmentConfidenceIntervalMinSamples();
             var confidenceVariance = ComputeConfidenceVariance(sourceEntries);
             var exceedsVarianceGate = confidenceVariance > Math.Max(0.0, confidenceVarianceGate);
-            var candidates = BuildTargetCandidates(sourceEntries, settings)
+            var candidates = BuildTargetCandidates(sourceEntries, settings, ciMinSamples)
                 .Select(candidate => candidate with
                 {
                     Priority = ComputePriority(candidate, settings)
@@ -110,6 +119,7 @@ public class AiTextService
                 {
                     Title = "Home Practice Plan",
                     Rationale = "No weak patterns found yet. Continue with mixed articulation drills for consistency.",
+                    ScoringFormulaVersion = ScoringFormulaVersion,
                     FocusTargets = Array.Empty<string>(),
                     SuggestedWords = ["rabbit", "lamp", "sun"],
                     FocusTargetReasons = Array.Empty<AssignmentFocusTargetReason>()
@@ -152,8 +162,17 @@ public class AiTextService
                     DeclineScore = candidate.Decline,
                     FrequencyScore = candidate.Frequency,
                     ConfidenceFactor = candidate.ConfidenceFactor,
+                    EvidenceStrength = candidate.EvidenceStrength,
                     ConfidenceVariance = confidenceVariance,
                     AssignmentChangeSuppressed = suppressChange,
+                    OverallScoreMean = candidate.OverallScoreMean,
+                    OverallScoreCiLower = candidate.CiSuppressed ? 0.0 : candidate.OverallScoreCiLower,
+                    OverallScoreCiUpper = candidate.CiSuppressed ? 0.0 : candidate.OverallScoreCiUpper,
+                    ConfidenceIntervalSuppressed = candidate.CiSuppressed,
+                    ConfidenceIntervalMinSamples = ciMinSamples,
+                    InstabilityWindowSize = candidate.InstabilityWindowSize,
+                    DeclineWindowSize = candidate.DeclineWindowSize,
+                    ScoringFormulaVersion = ScoringFormulaVersion,
                     InitialAverageScore = candidate.PositionAverages.TryGetValue("initial", out var initialAvg) ? initialAvg : 0.0,
                     MedialAverageScore = candidate.PositionAverages.TryGetValue("medial", out var medialAvg) ? medialAvg : 0.0,
                     FinalAverageScore = candidate.PositionAverages.TryGetValue("final", out var finalAvg) ? finalAvg : 0.0,
@@ -179,6 +198,7 @@ public class AiTextService
             {
                 Title = "Home Practice Plan",
                 Rationale = rationale,
+                ScoringFormulaVersion = ScoringFormulaVersion,
                 FocusTargets = targets,
                 SuggestedWords = suggestedWords.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
                 FocusTargetReasons = reasons
@@ -192,14 +212,15 @@ public class AiTextService
 
     private static IReadOnlyList<TargetAssignmentCandidate> BuildTargetCandidates(
         IReadOnlyList<ProgressEntry> entries,
-        AssignmentPrioritySettings settings)
+        AssignmentPrioritySettings settings,
+        int ciMinSamples)
     {
         var now = DateTime.UtcNow;
 
         return entries
             .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
             .GroupBy(ResolveBaseTarget, StringComparer.OrdinalIgnoreCase)
-            .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings))
+                    .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings, ciMinSamples))
             .OrderByDescending(candidate => candidate.Priority)
             .ToArray();
     }
@@ -208,23 +229,26 @@ public class AiTextService
         string target,
         IReadOnlyList<ProgressEntry> entries,
         DateTime now,
-        AssignmentPrioritySettings settings)
+        AssignmentPrioritySettings settings,
+        int ciMinSamples)
     {
         var ordered = entries.OrderBy(e => e.Timestamp).ToArray();
-        var recent = ordered.TakeLast(Math.Min(RecentWindow, ordered.Length)).ToArray();
-        var baseline = ordered.Take(Math.Min(RecentWindow, ordered.Length)).ToArray();
+        var instabilityWindow = ResolveAdaptiveWindow(ordered.Length);
+        var declineWindow = ResolveAdaptiveWindow(ordered.Length + 2);
+        var recent = ordered.TakeLast(Math.Min(instabilityWindow, ordered.Length)).ToArray();
+        var declineScoped = ordered.TakeLast(Math.Min(declineWindow, ordered.Length)).ToArray();
 
         var recentMean = ComputeConfidenceWeightedAverage(recent, settings.ConfidencePenaltyStrength);
-        var baselineMean = baseline.Length > 0
-            ? ComputeConfidenceWeightedAverage(baseline, settings.ConfidencePenaltyStrength)
-            : recentMean;
         var severity = Clamp(1.0 - recentMean);
         var instability = Math.Sqrt(ComputeVariance(recent.Select(e => Clamp(e.OverallScore)).ToArray()));
-        var decline = Clamp(Math.Max(0.0, baselineMean - recentMean));
+        var decline = Clamp(Math.Max(0.0, -ComputeConfidenceWeightedTrendSlope(declineScoped, settings.ConfidencePenaltyStrength) * DeclineWindowDays));
         var frequency = Clamp(Math.Log(entries.Count + 1, 2) / 4.0);
         var daysSinceLast = Math.Max(0.0, (now - ordered[^1].Timestamp).TotalDays);
         var recency = Math.Exp(-daysSinceLast / 14.0);
         var averageConfidence = Clamp(ordered.Average(entry => NormalizeConfidence(entry.ConfidenceScore)));
+        var evidence = ComputeEvidenceStrength(entries.Count);
+        var (ciLower, ciUpper) = ComputeScoreConfidenceInterval(recent.Select(item => Clamp(item.OverallScore)).ToArray());
+        var ciSuppressed = recent.Length < Math.Max(2, ciMinSamples);
         var positionSamples = BuildPositionSamples(target, entries);
         var positionAverages = positionSamples.ToDictionary(
             kvp => kvp.Key,
@@ -240,8 +264,11 @@ public class AiTextService
                 .ToArray()
             : PositionOrder.ToArray();
 
-        var basePriority = (0.45 * severity) + (0.20 * instability) + (0.20 * decline) + (0.15 * frequency);
-        var priority = Clamp(basePriority * recency);
+        var weighted = (settings.SeverityWeight * severity) +
+                       (settings.InstabilityWeight * instability) +
+                       (settings.DeclineWeight * decline) +
+                       (settings.FrequencyWeight * frequency);
+        var priority = Clamp(weighted * recency * evidence);
 
         return new TargetAssignmentCandidate(
             target,
@@ -252,6 +279,13 @@ public class AiTextService
             frequency,
             averageConfidence,
             recency,
+            evidence,
+            recentMean,
+            ciLower,
+            ciUpper,
+            ciSuppressed,
+            instabilityWindow,
+            declineWindow,
             entries.Count,
             ordered[^1].Timestamp,
             positionSequence,
@@ -300,7 +334,7 @@ public class AiTextService
                        (settings.InstabilityWeight * candidate.Instability) +
                        (settings.DeclineWeight * candidate.Decline) +
                        (settings.FrequencyWeight * candidate.Frequency);
-        return Clamp(weighted * candidate.Recency * confidenceFactor);
+        return Clamp(weighted * candidate.Recency * confidenceFactor * candidate.EvidenceStrength);
     }
 
     private static Dictionary<string, double[]> BuildPositionSamples(string target, IReadOnlyList<ProgressEntry> entries)
@@ -569,6 +603,85 @@ public class AiTextService
         return values.Average(value => Math.Pow(value - mean, 2));
     }
 
+    private static double ComputeConfidenceWeightedTrendSlope(IReadOnlyList<ProgressEntry> entries, double penaltyStrength)
+    {
+        if (entries.Count < 2)
+        {
+            return 0.0;
+        }
+
+        var ordered = entries
+            .OrderBy(item => item.Timestamp)
+            .ToArray();
+        var t0 = ordered[0].Timestamp;
+
+        var weighted = ordered
+            .Select(entry =>
+            {
+                var x = Math.Max(0.0, (entry.Timestamp - t0).TotalDays);
+                var y = Clamp(entry.OverallScore);
+                var confidence = NormalizeConfidence(entry.ConfidenceScore);
+                var w = Math.Max(0.05, (1.0 - penaltyStrength) + (penaltyStrength * confidence));
+                return (x, y, w);
+            })
+            .ToArray();
+
+        var weightSum = weighted.Sum(item => item.w);
+        if (weightSum <= 0.0)
+        {
+            return 0.0;
+        }
+
+        var meanX = weighted.Sum(item => item.x * item.w) / weightSum;
+        var meanY = weighted.Sum(item => item.y * item.w) / weightSum;
+        var covariance = weighted.Sum(item => item.w * (item.x - meanX) * (item.y - meanY));
+        var varianceX = weighted.Sum(item => item.w * Math.Pow(item.x - meanX, 2));
+
+        if (varianceX <= 1e-9)
+        {
+            return 0.0;
+        }
+
+        return covariance / varianceX;
+    }
+
+    private static double ComputeEvidenceStrength(int attempts)
+    {
+        var count = Math.Max(0, attempts);
+        var scaled = 1.0 - Math.Exp(-count / EvidenceHalfLifeAttempts);
+        return Clamp(EvidenceFloor + ((1.0 - EvidenceFloor) * scaled));
+    }
+
+    private static int ResolveAdaptiveWindow(int attemptCount)
+    {
+        if (attemptCount <= 0)
+        {
+            return MinimumAdaptiveWindow;
+        }
+
+        var normalized = Math.Log(attemptCount + 1, 2);
+        var window = (int)Math.Round(MinimumAdaptiveWindow + (normalized * 1.6));
+        return Math.Clamp(window, MinimumAdaptiveWindow, MaximumAdaptiveWindow);
+    }
+
+    private static (double Lower, double Upper) ComputeScoreConfidenceInterval(IReadOnlyList<double> sample)
+    {
+        if (sample is null || sample.Count == 0)
+        {
+            return (0.0, 0.0);
+        }
+
+        var mean = sample.Average();
+        if (sample.Count < 2)
+        {
+            return (Clamp(mean), Clamp(mean));
+        }
+
+        var stdDev = Math.Sqrt(ComputeVariance(sample));
+        var margin = 1.96 * (stdDev / Math.Sqrt(sample.Count));
+        return (Clamp(mean - margin), Clamp(mean + margin));
+    }
+
     private static double Clamp(double value)
     {
         return Math.Max(0.0, Math.Min(1.0, value));
@@ -583,6 +696,13 @@ public class AiTextService
         double Frequency,
         double AverageConfidence,
         double Recency,
+        double EvidenceStrength,
+        double OverallScoreMean,
+        double OverallScoreCiLower,
+        double OverallScoreCiUpper,
+        bool CiSuppressed,
+        int InstabilityWindowSize,
+        int DeclineWindowSize,
         int Attempts,
         DateTime LastAttemptAt,
         IReadOnlyList<string> PositionSequence,

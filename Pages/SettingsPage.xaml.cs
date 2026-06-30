@@ -35,6 +35,7 @@ public partial class SettingsPage : ContentPage
             AssignmentFrequencySlider.Value = assignmentSettings.FrequencyWeight;
             AssignmentConfidencePenaltySlider.Value = assignmentSettings.ConfidencePenaltyStrength;
             AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
+            AssignmentCiMinSamplesSlider.Value = _settingsService.GetAssignmentConfidenceIntervalMinSamples();
             AssignmentSuppressionBehaviorPicker.SelectedIndex = (int)_settingsService.GetAssignmentSuppressionBehavior();
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
@@ -81,6 +82,7 @@ public partial class SettingsPage : ContentPage
             };
             _settingsService.SaveAssignmentPrioritySettings(assignmentSettings);
             _settingsService.SaveAssignmentConfidenceVarianceGate(AssignmentConfidenceVarianceGateSlider.Value);
+            _settingsService.SaveAssignmentConfidenceIntervalMinSamples((int)Math.Round(AssignmentCiMinSamplesSlider.Value));
             _settingsService.SaveAssignmentSuppressionBehavior((AssignmentSuppressionBehavior)Math.Clamp(AssignmentSuppressionBehaviorPicker.SelectedIndex, 0, 2));
             StatusLabel.Text = "Clinician settings saved.";
         }
@@ -108,6 +110,7 @@ public partial class SettingsPage : ContentPage
             AssignmentFrequencySlider.Value = assignmentDefaults.FrequencyWeight;
             AssignmentConfidencePenaltySlider.Value = assignmentDefaults.ConfidencePenaltyStrength;
             AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
+            AssignmentCiMinSamplesSlider.Value = _settingsService.GetAssignmentConfidenceIntervalMinSamples();
             AssignmentSuppressionBehaviorPicker.SelectedIndex = (int)_settingsService.GetAssignmentSuppressionBehavior();
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
@@ -145,6 +148,7 @@ public partial class SettingsPage : ContentPage
         AssignmentFrequencyValueLabel.Text = $"{AssignmentFrequencySlider.Value:P0}";
         AssignmentConfidencePenaltyValueLabel.Text = $"{AssignmentConfidencePenaltySlider.Value:P0}";
         AssignmentConfidenceVarianceGateValueLabel.Text = $"{AssignmentConfidenceVarianceGateSlider.Value:P1}";
+        AssignmentCiMinSamplesValueLabel.Text = $"{Math.Round(AssignmentCiMinSamplesSlider.Value)}";
     }
 
     private static T ResolveService<T>() where T : notnull

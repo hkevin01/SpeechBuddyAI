@@ -29,6 +29,7 @@ public class ReportService
         try
         {
             var latestAssignmentSnapshot = await _assignmentSnapshotService.GetLatestSnapshotAsync();
+            var recentAssignmentSnapshots = await _assignmentSnapshotService.GetRecentSnapshotsAsync(8);
             var targetReasons = AssignmentSnapshotService.ParseReasons(latestAssignmentSnapshot?.TargetReasonsJson);
             var note = new SessionNote
             {
@@ -39,7 +40,8 @@ public class ReportService
                 AssignmentSnapshotDate = latestAssignmentSnapshot?.SnapshotDate,
                 AssignmentSelectionSummary = latestAssignmentSnapshot?.Rationale ?? "No assignment snapshot available for this report window.",
                 AssignmentSelectionDetails = AssignmentSnapshotService.BuildSelectionDetails(targetReasons),
-                AssignmentRationaleDriftSummary = latestAssignmentSnapshot?.RationaleDriftSummary ?? "No rationale drift comparison available yet."
+                AssignmentRationaleDriftSummary = latestAssignmentSnapshot?.RationaleDriftSummary ?? "No rationale drift comparison available yet.",
+                AssignmentModelAuditSummary = AssignmentSnapshotService.BuildModelAuditSummary(recentAssignmentSnapshots)
             };
 
             if (latestAssignmentSnapshot is not null && !string.IsNullOrWhiteSpace(latestAssignmentSnapshot.PreviousRationale))

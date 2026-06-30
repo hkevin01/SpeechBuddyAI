@@ -28,7 +28,13 @@ public sealed class AssignmentSnapshotServiceTests
                 DeclineScore = 0.19,
                 FrequencyScore = 0.44,
                 ConfidenceFactor = 0.81,
+                EvidenceStrength = 0.77,
                 ConfidenceVariance = 0.019,
+                OverallScoreMean = 0.58,
+                OverallScoreCiLower = 0.52,
+                OverallScoreCiUpper = 0.64,
+                InstabilityWindowSize = 6,
+                DeclineWindowSize = 8,
                 AssignmentChangeSuppressed = true,
                 PositionSequence = "final -> medial -> initial",
                 PositionDeltaSummary = "initial +0.01 | medial -0.04 | final -0.08"
@@ -38,6 +44,8 @@ public sealed class AssignmentSnapshotServiceTests
         var details = AssignmentSnapshotService.BuildSelectionDetails(reasons);
 
         Assert.Contains("priority 0.72", details, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CI95", details, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("evidence", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("position order final -> medial -> initial", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[suppressed]", details, StringComparison.OrdinalIgnoreCase);
     }
@@ -81,5 +89,55 @@ public sealed class AssignmentSnapshotServiceTests
 
         Assert.Contains("Rationale overlap", summary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("focus target changes", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseCalibrationMetrics_InvalidJson_ReturnsFallbackSummary()
+    {
+        var calibration = AssignmentSnapshotService.ParseCalibrationMetrics("not-json");
+
+        Assert.Contains("Calibration", calibration.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BuildModelAuditSummary_IncludesCalibrationAndComponentTraceDetails()
+    {
+        var tracesJson = JsonSerializer.Serialize(new[]
+        {
+            new AssignmentComponentTracePoint
+            {
+                TargetSound = "r",
+                PriorityScore = 0.72,
+                SeverityScore = 0.61,
+                InstabilityScore = 0.33,
+                DeclineScore = 0.22,
+                OverallScoreCiLower = 0.52,
+                OverallScoreCiUpper = 0.64
+            }
+        });
+        var calibrationJson = JsonSerializer.Serialize(new AssignmentCalibrationMetrics
+        {
+            MatchedTargetCount = 2,
+            MeanAbsoluteError = 0.12,
+            MeanSquaredError = 0.03,
+            RankAgreement = 1.0,
+            TopTargetHitRate = 1.0,
+            Summary = "matched targets 2, MAE 0.120, MSE 0.030, rank agreement 100%, top-target hit 100%."
+        });
+        var snapshots = new[]
+        {
+            new AssignmentSnapshot
+            {
+                SnapshotDate = new DateTimeOffset(2026, 6, 30, 10, 0, 0, TimeSpan.Zero),
+                ComponentTracesJson = tracesJson,
+                CalibrationMetricsJson = calibrationJson
+            }
+        };
+
+        var summary = AssignmentSnapshotService.BuildModelAuditSummary(snapshots);
+
+        Assert.Contains("calibration", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("component trace", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ci95", summary, StringComparison.OrdinalIgnoreCase);
     }
 }
