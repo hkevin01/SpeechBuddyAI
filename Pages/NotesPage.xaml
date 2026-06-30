@@ -13,15 +13,18 @@
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
         <Button Grid.Column="0"
             Text="Generate Summaries"
+                SemanticProperties.Description="Generate clinician and parent summaries from current note and recent progress"
             Clicked="OnGenerateSummariesClicked" />
         <Button Grid.Column="1"
             Text="Save Note"
+                SemanticProperties.Description="Save generated note and summaries to note history"
             Clicked="OnSaveNoteClicked" />
         </Grid>
 
-            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+            <HorizontalStackLayout x:Name="ExportFormatRow" Spacing="10" VerticalOptions="Center">
                 <Label Text="Export format" VerticalOptions="Center" />
                 <Picker x:Name="ExportFormatPicker"
+                SemanticProperties.Description="Select export format for reports"
                         SelectedIndex="0"
                         SelectedIndexChanged="OnExportFormatChanged">
                     <Picker.Items>
@@ -40,11 +43,13 @@
                         <VerticalStackLayout>
                             <Label Text="Start" FontSize="12" />
                             <DatePicker x:Name="ExportStartDatePicker"
+                                        SemanticProperties.Description="Start date for export metadata window"
                                         DateSelected="OnExportPreviewWindowChanged" />
                         </VerticalStackLayout>
                         <VerticalStackLayout>
                             <Label Text="End" FontSize="12" />
                             <DatePicker x:Name="ExportEndDatePicker"
+                                        SemanticProperties.Description="End date for export metadata window"
                                         DateSelected="OnExportPreviewWindowChanged" />
                         </VerticalStackLayout>
                     </HorizontalStackLayout>
@@ -100,9 +105,10 @@
                     <Label Text="Assignment Analytics" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Label x:Name="AssignmentAnalyticsSummaryLabel" Text="No assignment snapshots yet." />
 
-                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                    <HorizontalStackLayout x:Name="AssignmentTargetRow" Spacing="8" VerticalOptions="Center">
                         <Label Text="Target drill-down" VerticalOptions="Center" />
                         <Picker x:Name="AssignmentTargetPicker"
+                                SemanticProperties.Description="Select target sound for assignment analytics drill-down"
                                 SelectedIndexChanged="OnAssignmentTargetChanged" />
                     </HorizontalStackLayout>
 
@@ -300,9 +306,11 @@
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Button Grid.Column="0"
                     Text="Export Latest Report"
+                        SemanticProperties.Description="Export latest report using selected format and metadata window"
                     Clicked="OnExportLatestClicked" />
                 <Button Grid.Column="1"
                     Text="Share Latest Report"
+                        SemanticProperties.Description="Share latest report or export only based on settings"
                     Clicked="OnShareLatestClicked" />
                 </Grid>
 

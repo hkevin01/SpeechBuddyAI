@@ -15,7 +15,9 @@
                        Placeholder="Filter by target sound..."
                        HorizontalOptions="FillAndExpand"
                        TextChanged="OnFilterTextChanged" />
-                <Button Text="Clear" Clicked="OnFilterClearClicked" />
+                <Button Text="Clear"
+                        SemanticProperties.Description="Clear target-sound filter"
+                        Clicked="OnFilterClearClicked" />
             </HorizontalStackLayout>
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="8">
@@ -23,11 +25,15 @@
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <VerticalStackLayout Spacing="3">
                             <Label Text="Start" FontSize="12" />
-                            <DatePicker x:Name="ProgressStartDatePicker" DateSelected="OnDateRangeChanged" />
+                            <DatePicker x:Name="ProgressStartDatePicker"
+                                        SemanticProperties.Description="Start date for comparison range"
+                                        DateSelected="OnDateRangeChanged" />
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="3">
                             <Label Text="End" FontSize="12" />
-                            <DatePicker x:Name="ProgressEndDatePicker" DateSelected="OnDateRangeChanged" />
+                            <DatePicker x:Name="ProgressEndDatePicker"
+                                        SemanticProperties.Description="End date for comparison range"
+                                        DateSelected="OnDateRangeChanged" />
                         </VerticalStackLayout>
                     </Grid>
                     <Label x:Name="DateRangeSummaryLabel" Text="Date range: -" FontSize="12" />
@@ -37,8 +43,8 @@
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Session Comparison" Style="{StaticResource SectionTitleLabelStyle}" />
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                        <Frame Grid.Column="0" BorderColor="#DDE7F7" BackgroundColor="#F7FAFF" Padding="8">
+                    <Grid x:Name="SessionComparisonGrid" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="8">
+                        <Frame x:Name="CurrentSessionCard" Grid.Column="0" BorderColor="#DDE7F7" BackgroundColor="#F7FAFF" Padding="8">
                             <VerticalStackLayout Spacing="3">
                                 <Label Text="Current Session" FontAttributes="Bold" />
                                 <Label x:Name="CurrentSessionDateLabel" Text="Date: -" />
@@ -47,7 +53,7 @@
                                 <Label x:Name="CurrentSessionConfidenceLabel" Text="Confidence Avg: -" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Column="1" BorderColor="#EADCF8" BackgroundColor="#FCF8FF" Padding="8">
+                        <Frame x:Name="PreviousSessionCard" Grid.Column="1" BorderColor="#EADCF8" BackgroundColor="#FCF8FF" Padding="8">
                             <VerticalStackLayout Spacing="3">
                                 <Label Text="Previous Session" FontAttributes="Bold" />
                                 <Label x:Name="PreviousSessionDateLabel" Text="Date: -" />
