@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui">
     <Color x:Key="Primary">#006C67</Color>
+    <Color x:Key="PrimaryContainer">#CCEFE9</Color>
+    <Color x:Key="OnPrimary">#FFFFFF</Color>
     <Color x:Key="Secondary">#F28F3B</Color>
+    <Color x:Key="OnSecondary">#1F2933</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceVariant">#EEF2F5</Color>
+    <Color x:Key="Outline">#C8D1D8</Color>
     <Color x:Key="Background">#F6F8F9</Color>
+    <Color x:Key="OnBackground">#182026</Color>
     <Color x:Key="Text">#182026</Color>
+    <Color x:Key="MutedText">#46525B</Color>
+    <Color x:Key="Success">#2F9E44</Color>
+    <Color x:Key="Warning">#D17A00</Color>
 </ResourceDictionary>

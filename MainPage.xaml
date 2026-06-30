@@ -4,8 +4,8 @@
              x:Class="SpeechBuddyAI.MainPage"
              Title="SpeechBuddy AI">
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="14">
-            <Label Text="SpeechBuddy AI" FontSize="32" FontAttributes="Bold" />
+        <VerticalStackLayout Style="{StaticResource PageRootLayoutStyle}">
+            <Label Text="SpeechBuddy AI" Style="{StaticResource PageTitleLabelStyle}" />
             <Label Text="A therapist companion app for articulation, practice planning, progress tracking, and session notes." />
             <Button Text="Open Practice" Clicked="OnPracticeClicked" />
         </VerticalStackLayout>
