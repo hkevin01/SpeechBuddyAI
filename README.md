@@ -4,8 +4,12 @@
 ![Language](https://img.shields.io/badge/language-C%23-1f6feb)
 ![UI](https://img.shields.io/badge/ui-XAML-7f5af0)
 ![Persistence](https://img.shields.io/badge/persistence-SQLite%20local%20store-2b8a3e)
-![Roadmap](https://img.shields.io/badge/roadmap-M1--M5%20baseline%20implemented-1e7f3f)
+![Roadmap](https://img.shields.io/badge/roadmap-M1--M7%20implemented-1e7f3f)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-active%20development-0a9396)
+![Docs](https://img.shields.io/badge/docs-expanded%20technical%20guide-005f73)
+![Scoring](https://img.shields.io/badge/scoring-transparent%20weighted%20components-6d597a)
+![Audit](https://img.shields.io/badge/model%20audit-longitudinal%20enabled-3a5a40)
 
 SpeechBuddyAI is a speech therapy companion focused on practical articulation workflows, transparent score components, and session-to-session progress tracking that can be reviewed by clinicians and families. The project is intentionally designed to avoid black-box behavior in early milestones, because trust and interpretability are central in speech practice tools.
 
@@ -25,7 +29,8 @@ This README is both a product guide and a technical implementation reference. It
 7. Collapsible API Reference
 8. GitHub Workflow and Tracking
 9. Research Citations
-10. Build, Run, and Practical Notes
+10. Operations and Reliability Playbook
+11. Build, Run, and Practical Notes
 
 ## What This Project Does
 
@@ -35,6 +40,29 @@ The app currently demonstrates a complete vertical slice for M1. A user can ente
 
 > [!NOTE]
 > Persistence now uses app-local SQLite. Baseline roadmap features through M5 are implemented, including trend analysis, assignment generation, fallback scoring adapters, and report generation.
+
+## Reader-Level Guide (6 out of 10)
+
+This README is written at a medium technical level. That means you do not need to be a speech-AI researcher to follow it, but you should expect practical engineering terms such as calibration, confidence intervals, schema migrations, and weighted scoring contracts. The goal is to explain the system in a way that helps clinicians, product contributors, and developers make good decisions together.
+
+At this level, we focus on three questions in each section: what the subsystem does, why it is needed in the therapy workflow, and what tradeoff was accepted to keep the implementation stable. This is important because speech-therapy software fails when either side is missing: if it is only technical, clinicians cannot trust it, and if it is only plain-language, developers cannot maintain it safely.
+
+| <sub>#</sub> | <sub>Read This If You Are...</sub> | <sub>What You Will Learn</sub> | <sub>Skip If</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Clinician with technical curiosity</sub> | <sub>How confidence, calibration, and score components map to therapy decisions</sub> | <sub>You only need day-to-day usage instructions</sub> |
+| <sub>2</sub> | <sub>Engineer onboarding to project</sub> | <sub>Architecture contracts, data flow, and why current formulas were chosen</sub> | <sub>You already worked on M1 through M7 internals</sub> |
+| <sub>3</sub> | <sub>Reviewer or collaborator</sub> | <sub>How roadmap features tie to auditability and reproducibility</sub> | <sub>You are only reviewing UI styling changes</sub> |
+
+```mermaid
+flowchart LR
+  A[Plain-language therapy intent] --> B[Transparent technical contract]
+  B --> C[Persisted evidence and trend signals]
+  C --> D[Clinician review and action]
+  D --> E[Safer next assignment]
+```
+
+> [!TIP]
+> If you are new to the codebase, read sections in this order: What This Project Does, Fast Comparison Tables, Tech Stack and Architecture, then Algorithms and Formulas.
 
 ![Practice Flow Demo](./assets/practice-flow-demo.png)
 
@@ -47,6 +75,33 @@ The transparent component breakdown helps learners and clinicians understand exa
 ## Fast Comparison Tables (Use/Do Not Use)
 
 These tables are intentionally near the top so new contributors can quickly pick the right technical direction before coding.
+
+### Top-Level Build and Runtime Decisions
+
+| <sub>#</sub> | <sub>Decision Area</sub> | <sub>Option A</sub> | <sub>Option B</sub> | <sub>When A Wins</sub> | <sub>When B Wins</sub> |
+| --- | --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>UI architecture</sub> | <sub>Page code-behind plus service calls</sub> | <sub>Strict MVVM with heavy abstraction</sub> | <sub>Fast milestone delivery with explicit logic tracing</sub> | <sub>Large team with strict view-model discipline</sub> |
+| <sub>2</sub> | <sub>Storage model</sub> | <sub>Local SQLite single-user</sub> | <sub>Remote synchronized datastore</sub> | <sub>Offline-first therapy sessions and lower operational complexity</sub> | <sub>Cross-device collaboration is mandatory</sub> |
+| <sub>3</sub> | <sub>Scoring style</sub> | <sub>Transparent weighted components</sub> | <sub>End-to-end opaque model output</sub> | <sub>Interpretability and safe tuning are required</sub> | <sub>High-volume labeled data and explainability budget exist</sub> |
+| <sub>4</sub> | <sub>Assignment adaptation</sub> | <sub>Heuristic with guardrails</sub> | <sub>Fully automated policy update</sub> | <sub>Clinical oversight is required for every adjustment</sub> | <sub>Regulated automation and robust governance already in place</sub> |
+
+| <sub>#</sub> | <sub>Runtime Stage</sub> | <sub>What Happens</sub> | <sub>Why It Is Needed</sub> | <sub>Failure Risk if Missing</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Input normalization</sub> | <sub>Target and transcript are cleaned and standardized</sub> | <sub>Prevents false variance from trivial formatting differences</sub> | <sub>Inconsistent scores for semantically identical attempts</sub> |
+| <sub>2</sub> | <sub>Historical lookup</sub> | <sub>Recent attempts are loaded per target</sub> | <sub>Supports trend-aware consistency and confidence logic</sub> | <sub>Scores lose temporal context and become noisy</sub> |
+| <sub>3</sub> | <sub>Scoring calculation</sub> | <sub>Phoneme, fluency, consistency, and overall are computed</sub> | <sub>Produces interpretable dimensions, not just one scalar</sub> | <sub>Clinicians cannot diagnose what changed</sub> |
+| <sub>4</sub> | <sub>Persistence and audit tagging</sub> | <sub>Result is saved with versioning and metadata</sub> | <sub>Enables historical comparability across model updates</sub> | <sub>Cannot explain differences between older and newer outputs</sub> |
+
+```mermaid
+flowchart TD
+  A[Choose runtime mode] --> B{Connectivity and policy}
+  B -->|strict local| C[Offline-first path]
+  B -->|reliable network| D[Hybrid or cloud-assisted path]
+  C --> E[Local score and persist]
+  D --> F[Fallback-aware score and persist]
+  E --> G[Progress and notes analytics]
+  F --> G
+```
 
 ### Deployment and Inference Modes
 
@@ -95,6 +150,21 @@ These tables are intentionally near the top so new contributors can quickly pick
 
 > [!IMPORTANT]
 > Keep README claims aligned with code reality. Runtime persistence is SQLite-based, including schema-safe column migration at service initialization.
+
+### Step-by-Step Flow Comparison
+
+| <sub>#</sub> | <sub>Flow</sub> | <sub>Step 1</sub> | <sub>Step 2</sub> | <sub>Step 3</sub> | <sub>Step 4</sub> |
+| --- | --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Practice scoring flow</sub> | <sub>Collect target and transcript</sub> | <sub>Compute component scores</sub> | <sub>Apply confidence and guardrail logic</sub> | <sub>Persist and display immediately</sub> |
+| <sub>2</sub> | <sub>Assignment generation flow</sub> | <sub>Aggregate weak-pattern history</sub> | <sub>Rank focus targets with evidence weighting</sub> | <sub>Attach rationale, confidence, and suppression flags</sub> | <sub>Persist snapshot with formula version</sub> |
+| <sub>3</sub> | <sub>Model audit flow</sub> | <sub>Load snapshot history</sub> | <sub>Compute calibration and drift summaries</sub> | <sub>Render longitudinal trend strips in Notes</sub> | <sub>Support clinician review before adjustments</sub> |
+
+| <sub>#</sub> | <sub>Guardrail</sub> | <sub>Purpose</sub> | <sub>Trigger</sub> | <sub>Effect</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Minimum sample threshold for CI</sub> | <sub>Avoid overstating confidence with sparse evidence</sub> | <sub>Too few observations for target</sub> | <sub>Suppress confidence interval display</sub> |
+| <sub>2</sub> | <sub>Minimum history depth for suggestions</sub> | <sub>Prevent unstable policy recommendations</sub> | <sub>Insufficient snapshot history</sub> | <sub>No weight-shift recommendation issued</sub> |
+| <sub>3</sub> | <sub>Per-update delta cap</sub> | <sub>Limit abrupt strategy changes</sub> | <sub>Proposed shift exceeds bounded delta</sub> | <sub>Clamp to safe maximum adjustment</sub> |
+| <sub>4</sub> | <sub>Clinician approval requirement</sub> | <sub>Keep human control over adaptation</sub> | <sub>Any advisory suggestion produced</sub> | <sub>No automatic write-back of weights</sub> |
 
 ## Current Milestone Status
 
@@ -159,6 +229,10 @@ sequenceDiagram
 
 SpeechBuddyAI uses .NET MAUI and C# to keep mobile and desktop targets in one codebase. This keeps early milestones fast to iterate, while still allowing clear separation between pages, services, and models.
 
+The stack was chosen to optimize delivery risk, not just novelty. .NET MAUI gives one codebase for Android, iOS, Windows, and MacCatalyst, while SQLite provides an embedded store that works even during unreliable connectivity. For this project, that combination matters because therapy sessions should not fail when internet quality changes.
+
+At a practical level, architecture clarity is treated as a safety feature. Every score the user sees should be traceable to formulas, input context, and data history. That is why service boundaries and snapshot versioning are first-class concerns in this codebase.
+
 ### Current vs Planned Stack
 
 | <sub>#</sub> | <sub>Layer</sub> | <sub>Current Implemented</sub> | <sub>Planned Direction</sub> | <sub>Why This Matters</sub> |
@@ -184,6 +258,18 @@ flowchart LR
     G --> E
 ```
 
+```mermaid
+flowchart TD
+    A[User interaction on page] --> B[Page handler or view model]
+    B --> C[Service contract call]
+    C --> D{Data needed?}
+    D -->|yes| E[SQLite query and shaping]
+    D -->|no| F[Direct compute path]
+    E --> G[Scoring and metadata packaging]
+    F --> G
+    G --> H[Persist plus UI update]
+```
+
 ![Architecture Diagram](./assets/architecture-diagram.png)
 
 ### Service Layer and Data Flow
@@ -204,6 +290,25 @@ flowchart TD
     F --> G[Load for dashboard]
     G --> H[Display user-facing history]
 ```
+
+```mermaid
+flowchart LR
+    A[Snapshot N] --> B[Formula version tag]
+    B --> C[Confidence metadata]
+    C --> D[Calibration horizon metrics]
+    D --> E[Advisory suggestion artifact]
+    E --> F[Notes audit rendering]
+```
+
+### Architecture Responsibility Matrix
+
+| <sub>#</sub> | <sub>Layer</sub> | <sub>Primary Responsibility</sub> | <sub>What It Must Not Do</sub> | <sub>Why This Boundary Exists</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Pages</sub> | <sub>Capture user intent and render state</sub> | <sub>Embed SQL or scoring math directly</sub> | <sub>Keeps UI testable and stable during logic changes</sub> |
+| <sub>2</sub> | <sub>AiSpeechService</sub> | <sub>Compute score components and confidence outputs</sub> | <sub>Hard-code page-specific presentation concerns</sub> | <sub>Supports scorer evolution without UI rewrites</sub> |
+| <sub>3</sub> | <sub>AiTextService</sub> | <sub>Generate practice words and assignments with rationale</sub> | <sub>Mutate historical attempt records</sub> | <sub>Preserves clean separation between planning and evidence</sub> |
+| <sub>4</sub> | <sub>ProgressTrackingService</sub> | <sub>Persist and query longitudinal data</sub> | <sub>Change scoring behavior based on UI state</sub> | <sub>Ensures historical consistency and reproducibility</sub> |
+| <sub>5</sub> | <sub>ReportService</sub> | <sub>Assemble session and parent-facing exports</sub> | <sub>Recompute core scoring independently</sub> | <sub>Avoids drift between report and live dashboard values</sub> |
 
 ### Why This Architecture Was Chosen
 
@@ -236,6 +341,26 @@ Where each component is clamped to $[0,1]$ before aggregation.
 Consistency is estimated from recent score variance for the same target sound. Lower variance maps to higher consistency, which helps separate stable improvement from random fluctuation.
 
 This gives the dashboard a more clinically useful behavior. Two attempts with the same current phoneme score can be interpreted differently if one learner is stable and another is oscillating.
+
+### Algorithm Selection Matrix: Why Chosen vs Alternatives
+
+| <sub>#</sub> | <sub>Candidate</sub> | <sub>Why We Chose or Deferred It</sub> | <sub>What It Does Better</sub> | <sub>What It Does Worse</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Weighted component heuristic</sub> | <sub>Chosen for early milestones due interpretability and low operational burden</sub> | <sub>Fast iteration, direct clinician explainability</sub> | <sub>Lower phonetic granularity than aligned GOP systems</sub> |
+| <sub>2</sub> | <sub>Classic GOP pipeline</sub> | <sub>Deferred until stronger alignment and lexicon integration are fully validated</sub> | <sub>Better phone-level diagnostic precision</sub> | <sub>Higher alignment complexity and pipeline fragility</sub> |
+| <sub>3</sub> | <sub>Segmentation-free GOP</sub> | <sub>Planned candidate for reducing forced-alignment sensitivity</sub> | <sub>Potentially improved robustness across speaking rates</sub> | <sub>Requires careful benchmarking and calibration effort</sub> |
+| <sub>4</sub> | <sub>End-to-end neural scorer</sub> | <sub>Deferred because auditability and clinician trust are mandatory now</sub> | <sub>Potentially captures richer latent speech cues</sub> | <sub>Harder to explain, tune, and validate clinically</sub> |
+
+```mermaid
+flowchart TD
+  A[Candidate algorithm] --> B{Interpretability sufficient?}
+  B -->|no| C[Defer or sandbox]
+  B -->|yes| D{Data and ops readiness?}
+  D -->|no| C
+  D -->|yes| E[Controlled implementation]
+  E --> F[Calibration and drift monitoring]
+  F --> G[Roadmap promotion]
+```
 
 ### Future GOP-Compatible Formula (Planned)
 
@@ -301,6 +426,8 @@ The second key point is that CAPT/MDD quality is often bottlenecked by alignment
 
 The project roadmap intentionally prioritizes free and public resources so the system remains reproducible for open development.
 
+This strategy reduces lock-in risk while the scoring system is still evolving. During early and mid milestones, reproducibility and debuggability are more valuable than provider-specific optimization. Public tools also make issue triage easier because contributors can replicate behavior without private enterprise contracts.
+
 ### Integration Candidates
 
 | <sub>#</sub> | <sub>Tool</sub> | <sub>Type</sub> | <sub>License or Terms</sub> | <sub>Why Consider It</sub> |
@@ -323,6 +450,15 @@ The project roadmap intentionally prioritizes free and public resources so the s
 
 > [!NOTE]
 > These are architecture inspirations and workflow ideas, not source-code reuse.
+
+### Library Selection: Why These and Not Others Yet
+
+| <sub>#</sub> | <sub>Library or API</sub> | <sub>Selected Because</sub> | <sub>Why Not the Common Alternative Yet</sub> | <sub>Adoption Gate</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Vosk</sub> | <sub>Offline and privacy-friendly deployment model</sub> | <sub>Cloud-first APIs can raise policy and latency constraints</sub> | <sub>Target-device benchmark passes</sub> |
+| <sub>2</sub> | <sub>whisper.cpp</sub> | <sub>Strong local inference ecosystem with broad hardware paths</sub> | <sub>Hosted-only options reduce offline resilience</sub> | <sub>Real-time performance validated on baseline devices</sub> |
+| <sub>3</sub> | <sub>CMUdict</sub> | <sub>Open lexicon for deterministic phoneme mappings</sub> | <sub>Proprietary lexicons limit reproducibility</sub> | <sub>Coverage verified for target therapy set</sub> |
+| <sub>4</sub> | <sub>Datamuse API</sub> | <sub>Useful for constrained word expansion</sub> | <sub>Custom corpus service would add unnecessary ops overhead</sub> | <sub>Caching and fallback behavior implemented</sub> |
 
 ## Collapsible API Reference
 
@@ -353,6 +489,30 @@ The project roadmap intentionally prioritizes free and public resources so the s
 | --- | --- | --- | --- | --- |
 | <sub>1</sub> | <sub>summarizeSessionNotes</sub> | <sub>free text notes</sub> | <sub>structured summary</sub> | <sub>Implemented in M5 baseline</sub> |
 | <sub>2</sub> | <sub>exportReport</sub> | <sub>session id and format</sub> | <sub>shareable artifact</sub> | <sub>Implemented in M5 baseline</sub> |
+
+</details>
+
+<details>
+<summary>Assignment and Audit Contracts (Expanded)</summary>
+
+### 4) Assignment Snapshot Contracts
+
+| <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Failure Mode</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>generateHomeAssignment</sub> | <sub>target history, weak patterns, settings</sub> | <sub>assignment targets with rationale and confidence metadata</sub> | <sub>Returns conservative output when evidence is sparse</sub> |
+| <sub>2</sub> | <sub>saveSnapshot</sub> | <sub>assignment payload plus traces and version info</sub> | <sub>persisted snapshot id and timestamp</sub> | <sub>Falls back to minimal snapshot if optional fields are unavailable</sub> |
+| <sub>3</sub> | <sub>loadSnapshots</sub> | <sub>date range or target filters</sub> | <sub>ordered snapshot history</sub> | <sub>Returns empty set for unsupported or empty windows</sub> |
+
+### 5) Advisory and Calibration Contracts
+
+| <sub>#</sub> | <sub>Contract</sub> | <sub>Input</sub> | <sub>Output</sub> | <sub>Guardrail Behavior</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>buildWeightSuggestion</sub> | <sub>snapshot trend traces and calibration summary</sub> | <sub>advisory weight suggestion artifact</sub> | <sub>No suggestion if minimum history depth is unmet</sub> |
+| <sub>2</sub> | <sub>buildCalibrationMetrics</sub> | <sub>snapshot history and realized outcomes</sub> | <sub>next-1 and next-3 reliability summaries</sub> | <sub>Marks low-confidence windows when sample support is thin</sub> |
+| <sub>3</sub> | <sub>buildModelAuditSummary</sub> | <sub>longitudinal traces and versioned outputs</sub> | <sub>human-readable drift and reliability summary</sub> | <sub>Highlights caution states instead of forcing recommendations</sub> |
+
+> [!IMPORTANT]
+> Advisory contracts are intentionally non-authoritative. They provide evidence-backed suggestions, but final policy changes remain clinician-approved.
 
 </details>
 
@@ -450,6 +610,15 @@ This table translates research into implementation value. Instead of listing pap
 
 The linked format also helps team execution. When a milestone task claims to implement "GOP-like scoring" or "domain-aware confusion modeling," contributors can open the exact source quickly and keep terminology consistent across issues, pull requests, and README updates. That consistency improves review quality and keeps AI-related roadmap changes auditable.
 
+### Additional Reading for Calibration and Reliability
+
+| <sub>#</sub> | <sub>Topic</sub> | <sub>Why It Matters Here</sub> | <sub>Reference</sub> |
+| --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Model calibration</sub> | <sub>Helps interpret whether confidence signals align with observed outcomes</sub> | <sub><a href="https://arxiv.org/abs/1706.04599">Guo et al. 2017, On Calibration of Modern Neural Networks</a></sub> |
+| <sub>2</sub> | <sub>Uncertainty quality</sub> | <sub>Supports safe use of confidence intervals in decision support contexts</sub> | <sub><a href="https://arxiv.org/abs/1807.00263">Ovadia et al. 2019, Can You Trust Your Model's Uncertainty?</a></sub> |
+| <sub>3</sub> | <sub>Selective prediction and abstention</sub> | <sub>Motivates suppression behavior when evidence is insufficient</sub> | <sub><a href="https://arxiv.org/abs/2401.06495">Recent survey on uncertainty and abstention</a></sub> |
+| <sub>4</sub> | <sub>Speech assessment benchmarking</sub> | <sub>Connects algorithm choices to realistic CAPT evaluation constraints</sub> | <sub><a href="https://arxiv.org/abs/2104.01378">speechocean762 benchmark paper</a></sub> |
+
 ### AI and UI Improvement Matrix (Project-Focused)
 
 | <sub>#</sub> | <sub>Improvement Theme</sub> | <sub>AI or UI Direction</sub> | <sub>Near-Term Action</sub> | <sub>Expected User Impact</sub> |
@@ -496,6 +665,41 @@ The dashboard supports both recent-attempt summaries ("last 5 practice sessions"
 The Notes page is where clinicians compose session summaries, reference the comparison with the previous session, and export finalized reports for parents and other professionals. SOAP structure (Subjective, Objective, Assessment, Plan) guides note writing while auto-populating with longitudinal metrics. The comparison builder highlights wins (e.g., +15% overall from last week) and flags regression risks (consistency drift on /s/) so the Plan section can be precise and evidence-based.
 
 Parent summaries are auto-generated in plain language, avoiding clinical jargon while preserving honesty. Instead of "Low consistency score," the parent reads: "Practice is coming along. The most recent session showed steady attempts on /r/, which is great progress toward independent carryover." Reports can be exported in plain text, Markdown, or CSV formats, making them shareable with other professionals or suitable for EHR integration. Clinicians can also manually edit and save custom notes, which are persisted alongside the auto-generated ones for future reference.
+
+## Operations and Reliability Playbook
+
+This section explains how to run the app with fewer surprises in real workflows. The point is not just to make features work once, but to keep behavior stable across devices, sessions, and scoring updates.
+
+| <sub>#</sub> | <sub>Operational Goal</sub> | <sub>How to Check It</sub> | <sub>Expected Signal</sub> | <sub>Escalation Path</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Stable scoring outputs</sub> | <sub>Repeat same input across test runs</sub> | <sub>Similar component outputs within expected variance</sub> | <sub>Inspect scoring formula version and trace metadata</sub> |
+| <sub>2</sub> | <sub>Reliable persistence</sub> | <sub>Create attempts then reload Progress view</sub> | <sub>Entries remain available with correct ordering</sub> | <sub>Review SQLite initialization and migration logs</sub> |
+| <sub>3</sub> | <sub>Safe adaptation recommendations</sub> | <sub>Review advisory cards in Notes over multiple snapshots</sub> | <sub>No recommendation when history depth is insufficient</sub> | <sub>Adjust guardrail settings and re-evaluate</sub> |
+| <sub>4</sub> | <sub>Trustworthy confidence reporting</sub> | <sub>Compare CI visibility across sparse vs dense targets</sub> | <sub>CIs suppressed for low-sample cases</sub> | <sub>Revisit minimum sample threshold in Settings</sub> |
+
+| <sub>#</sub> | <sub>Common Symptom</sub> | <sub>Likely Cause</sub> | <sub>First Fix</sub> | <sub>Long-Term Fix</sub> |
+| --- | --- | --- | --- | --- |
+| <sub>1</sub> | <sub>Score feels inconsistent day to day</sub> | <sub>Low history depth for target or variable transcript quality</sub> | <sub>Increase repetitions for same target and verify input format</sub> | <sub>Add stronger input quality checks and coaching hints</sub> |
+| <sub>2</sub> | <sub>No advisory suggestion appears</sub> | <sub>Guardrails intentionally blocked recommendation</sub> | <sub>Confirm snapshot history depth and calibration support</sub> | <sub>Tune thresholds only with clinician review evidence</sub> |
+| <sub>3</sub> | <sub>Report values differ from expectation</sub> | <sub>Formula version or snapshot window mismatch</sub> | <sub>Compare report period and stored version tags</sub> | <sub>Add version-annotated report headers and tests</sub> |
+| <sub>4</sub> | <sub>Trend looks flat despite progress</sub> | <sub>Smoothing or mixed-target aggregation effect</sub> | <sub>Filter by target sound and inspect component-level lines</sub> | <sub>Add per-target trajectory cards by default</sub> |
+
+```mermaid
+flowchart TD
+  A[Operational check scheduled] --> B[Run scoring and persistence smoke test]
+  B --> C[Review confidence and calibration outputs]
+  C --> D{Guardrails triggered?}
+  D -->|yes| E[Document rationale and hold policy change]
+  D -->|no| F[Proceed with clinician-reviewed adjustments]
+  E --> G[Track in notes audit timeline]
+  F --> G
+```
+
+> [!NOTE]
+> In a clinical context, conservative behavior is usually a feature, not a bug. A blocked recommendation can indicate healthy governance.
+
+> [!TIP]
+> Keep at least one stable benchmark target in every session. It provides a practical reference point for spotting drift versus true learner change.
 
 ## Build, Run, and Practical Notes
 
