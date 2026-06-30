@@ -108,6 +108,9 @@ public sealed class NotesPageViewModelTests
                 SnapshotDate = new DateTimeOffset(2026, 6, 22, 12, 0, 0, TimeSpan.Zero),
                 FocusTargetsCsv = "r,s",
                 TargetReasonsJson = "[{\"TargetSound\":\"r\",\"SeverityScore\":0.62,\"InstabilityScore\":0.34,\"DeclineScore\":0.18,\"FrequencyScore\":0.44,\"ConfidenceFactor\":0.79}]",
+                CalibrationMetricsJson = "{\"MeanAbsoluteErrorNext1\":0.12,\"MeanAbsoluteErrorNext3\":0.18}",
+                AdvisoryWeightSuggestionJson = "{\"Summary\":\"advisory only - suggested weights ...\"}",
+                ScoringFormulaVersion = "assign-v3.0-adaptive-calibrated",
                 RationaleDriftSummary = "Rationale overlap 78%; focus target changes: 1."
             }
         };
@@ -121,6 +124,9 @@ public sealed class NotesPageViewModelTests
         Assert.Contains("Confidence trend:", state.ConfidenceTrendText);
         Assert.NotEmpty(state.SeverityPoints);
         Assert.NotEmpty(state.ConfidencePoints);
+        Assert.NotEmpty(state.ModelAuditRows);
+        Assert.Contains("Formula versions:", state.FormulaVersionSummaryText);
+        Assert.Contains("advisory", state.AdvisoryWeightSuggestionText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

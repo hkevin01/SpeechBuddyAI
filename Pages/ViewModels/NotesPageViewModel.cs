@@ -91,6 +91,15 @@ public sealed class NotesPageViewModel
         var decline = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.DeclineScore);
         var frequency = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.FrequencyScore);
         var confidence = BuildComponentSeries(orderedSnapshots, activeTarget, reason => reason.ConfidenceFactor);
+        var calibrationNext1 = BuildCalibrationSeries(orderedSnapshots, metric => metric.MeanAbsoluteErrorNext1);
+        var calibrationNext3 = BuildCalibrationSeries(orderedSnapshots, metric => metric.MeanAbsoluteErrorNext3);
+        var traceDrift = BuildTargetTraceDriftSeries(orderedSnapshots, activeTarget);
+        var modelAuditRows = BuildModelAuditRows(source, activeTarget);
+        var formulaVersionSummary = BuildFormulaVersionSummary(orderedSnapshots);
+        var latestSuggestion = orderedSnapshots
+            .OrderByDescending(snapshot => snapshot.SnapshotDateTicks)
+            .Select(snapshot => AssignmentSnapshotService.ParseAdvisoryWeightSuggestion(snapshot.AdvisoryWeightSuggestionJson).Summary)
+            .FirstOrDefault() ?? "No advisory weight suggestion available yet.";
 
         var summaryPrefix = selectedSnapshot is null
             ? $"Showing {rows.Length} snapshots."
@@ -111,7 +120,14 @@ public sealed class NotesPageViewModel
             InstabilityPoints = BuildSparklinePoints(instability, "#F59E0B"),
             DeclinePoints = BuildSparklinePoints(decline, "#DC2626"),
             FrequencyPoints = BuildSparklinePoints(frequency, "#7C3AED"),
-            ConfidencePoints = BuildSparklinePoints(confidence, "#059669")
+            ConfidencePoints = BuildSparklinePoints(confidence, "#059669"),
+            ModelAuditSummaryText = AssignmentSnapshotService.BuildModelAuditSummary(orderedSnapshots),
+            FormulaVersionSummaryText = formulaVersionSummary,
+            AdvisoryWeightSuggestionText = latestSuggestion,
+            Next1CalibrationPoints = BuildSparklinePoints(calibrationNext1.Select(value => 1.0 - value).ToArray(), "#0EA5E9"),
+            Next3CalibrationPoints = BuildSparklinePoints(calibrationNext3.Select(value => 1.0 - value).ToArray(), "#EC4899"),
+            TraceDriftPoints = BuildSparklinePoints(traceDrift, "#334155"),
+            ModelAuditRows = modelAuditRows
         };
     }
 
@@ -187,6 +203,85 @@ public sealed class NotesPageViewModel
             .ToArray();
     }
 
+    private static IReadOnlyList<double> BuildCalibrationSeries(
+        IReadOnlyList<AssignmentSnapshot> snapshots,
+        Func<AssignmentCalibrationMetrics, double> selector)
+    {
+        return snapshots
+            .Select(snapshot => AssignmentSnapshotService.ParseCalibrationMetrics(snapshot.CalibrationMetricsJson))
+            .Select(metric => Math.Clamp(selector(metric), 0.0, 1.0))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<double> BuildTargetTraceDriftSeries(
+        IReadOnlyList<AssignmentSnapshot> snapshots,
+        string selectedTarget)
+    {
+        if (string.IsNullOrWhiteSpace(selectedTarget) || selectedTarget == "-")
+        {
+            return Array.Empty<double>();
+        }
+
+        var priorities = snapshots
+            .Select(snapshot => AssignmentSnapshotService.ParseComponentTraces(snapshot.ComponentTracesJson)
+                .FirstOrDefault(trace => string.Equals(trace.TargetSound, selectedTarget, StringComparison.OrdinalIgnoreCase))?.PriorityScore)
+            .Where(value => value.HasValue)
+            .Select(value => Math.Clamp(value!.Value, 0.0, 1.0))
+            .ToArray();
+
+        if (priorities.Length == 0)
+        {
+            return Array.Empty<double>();
+        }
+
+        var drift = new List<double> { 0.0 };
+        for (var i = 1; i < priorities.Length; i++)
+        {
+            drift.Add(Math.Clamp(Math.Abs(priorities[i] - priorities[i - 1]), 0.0, 1.0));
+        }
+
+        return drift;
+    }
+
+    private static IReadOnlyList<ModelAuditRow> BuildModelAuditRows(
+        IReadOnlyList<AssignmentSnapshot> snapshots,
+        string selectedTarget)
+    {
+        return snapshots
+            .OrderByDescending(snapshot => snapshot.SnapshotDateTicks)
+            .Select(snapshot =>
+            {
+                var calibration = AssignmentSnapshotService.ParseCalibrationMetrics(snapshot.CalibrationMetricsJson);
+                var traces = AssignmentSnapshotService.ParseComponentTraces(snapshot.ComponentTracesJson);
+                var trace = traces.FirstOrDefault(item => string.Equals(item.TargetSound, selectedTarget, StringComparison.OrdinalIgnoreCase));
+                var traceDriftText = trace is null
+                    ? "Target trace: n/a"
+                    : $"Target trace: priority {trace.PriorityScore:0.00}, sev {trace.SeverityScore:0.00}";
+
+                return new ModelAuditRow
+                {
+                    SnapshotDateText = snapshot.SnapshotDate.ToString("yyyy-MM-dd HH:mm 'UTC'"),
+                    FormulaVersionText = string.IsNullOrWhiteSpace(snapshot.ScoringFormulaVersion) ? "unknown" : snapshot.ScoringFormulaVersion,
+                    Next1MaeText = $"Next-1 MAE {calibration.MeanAbsoluteErrorNext1:0.000}",
+                    Next3MaeText = $"Next-3 MAE {calibration.MeanAbsoluteErrorNext3:0.000}",
+                    TraceDriftText = traceDriftText
+                };
+            })
+            .ToArray();
+    }
+
+    private static string BuildFormulaVersionSummary(IReadOnlyList<AssignmentSnapshot> snapshots)
+    {
+        var versions = snapshots
+            .Select(snapshot => string.IsNullOrWhiteSpace(snapshot.ScoringFormulaVersion) ? "unknown" : snapshot.ScoringFormulaVersion)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return versions.Length == 0
+            ? "Formula versions: n/a"
+            : "Formula versions: " + string.Join(", ", versions);
+    }
+
     private static IReadOnlyList<SparklinePoint> BuildSparklinePoints(IReadOnlyList<double> values, string colorHex)
     {
         if (values is null || values.Count == 0)
@@ -252,6 +347,13 @@ public sealed class AssignmentAnalyticsState
     public IReadOnlyList<SparklinePoint> DeclinePoints { get; init; } = Array.Empty<SparklinePoint>();
     public IReadOnlyList<SparklinePoint> FrequencyPoints { get; init; } = Array.Empty<SparklinePoint>();
     public IReadOnlyList<SparklinePoint> ConfidencePoints { get; init; } = Array.Empty<SparklinePoint>();
+    public string ModelAuditSummaryText { get; init; } = "No assignment model-audit snapshots available.";
+    public string FormulaVersionSummaryText { get; init; } = "Formula versions: n/a";
+    public string AdvisoryWeightSuggestionText { get; init; } = "No advisory weight suggestion available yet.";
+    public IReadOnlyList<SparklinePoint> Next1CalibrationPoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<SparklinePoint> Next3CalibrationPoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<SparklinePoint> TraceDriftPoints { get; init; } = Array.Empty<SparklinePoint>();
+    public IReadOnlyList<ModelAuditRow> ModelAuditRows { get; init; } = Array.Empty<ModelAuditRow>();
 }
 
 public sealed class AssignmentSnapshotRow
@@ -267,4 +369,13 @@ public sealed class SparklinePoint
     public double Value { get; init; }
     public double Height { get; init; }
     public string ColorHex { get; init; } = "#2563EB";
+}
+
+public sealed class ModelAuditRow
+{
+    public string SnapshotDateText { get; init; } = string.Empty;
+    public string FormulaVersionText { get; init; } = string.Empty;
+    public string Next1MaeText { get; init; } = string.Empty;
+    public string Next3MaeText { get; init; } = string.Empty;
+    public string TraceDriftText { get; init; } = string.Empty;
 }

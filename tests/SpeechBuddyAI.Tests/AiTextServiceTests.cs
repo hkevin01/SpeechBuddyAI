@@ -199,6 +199,32 @@ public sealed class AiTextServiceTests
         Assert.True(reason.OverallScoreCiUpper >= reason.OverallScoreMean);
     }
 
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_SuppressesConfidenceInterval_WhenSamplesBelowClinicianThreshold()
+    {
+        var now = DateTime.UtcNow;
+        var history = new[]
+        {
+            Entry("r:initial", 0.61, now.AddDays(-3), "pattern_r", 0.75),
+            Entry("r:medial", 0.58, now.AddDays(-2), "pattern_r", 0.72),
+            Entry("r:final", 0.55, now.AddDays(-1), "pattern_r", 0.70)
+        };
+
+        var store = new InMemoryStore();
+        var settings = new ConfidenceSettingsService(store);
+        settings.SaveAssignmentConfidenceIntervalMinSamples(6);
+
+        var snapshotService = new AssignmentSnapshotService();
+        var service = new AiTextService(new PhonemeWordBankService(), settings, snapshotService);
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        var reason = Assert.Single(assignment.FocusTargetReasons);
+        Assert.True(reason.ConfidenceIntervalSuppressed);
+        Assert.Equal(6, reason.ConfidenceIntervalMinSamples);
+        Assert.Equal(0.0, reason.OverallScoreCiLower, 3);
+        Assert.Equal(0.0, reason.OverallScoreCiUpper, 3);
+    }
+
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
     {
         return new ProgressEntry

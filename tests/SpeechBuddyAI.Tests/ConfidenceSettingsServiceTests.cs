@@ -143,6 +143,27 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(AssignmentSuppressionBehavior.WarningOnly, service.GetAssignmentSuppressionBehavior());
     }
 
+    [Fact]
+    public void SaveAssignmentConfidenceIntervalMinSamples_PersistsValue()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveAssignmentConfidenceIntervalMinSamples(9);
+
+        Assert.Equal(9, service.GetAssignmentConfidenceIntervalMinSamples());
+    }
+
+    [Fact]
+    public void ResetDefaults_RestoresConfidenceIntervalSampleMinimum()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+        service.SaveAssignmentConfidenceIntervalMinSamples(12);
+
+        service.ResetDefaults();
+
+        Assert.Equal(ConfidenceSettingsService.DefaultAssignmentConfidenceIntervalMinSamples, service.GetAssignmentConfidenceIntervalMinSamples());
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);

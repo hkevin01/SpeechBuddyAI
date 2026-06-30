@@ -80,6 +80,7 @@ public static class ReportExportFormatter
             "Assignment Selection Rationale" + Environment.NewLine +
             "------------------------------" + Environment.NewLine +
             BuildPlainTextAssignmentSelection(note) + Environment.NewLine +
+            $"Scoring Formula Version: {SafeValue(note.AssignmentScoringFormulaVersion)}" + Environment.NewLine +
             Environment.NewLine +
             "Assignment Rationale Drift" + Environment.NewLine +
             "--------------------------" + Environment.NewLine +
@@ -136,6 +137,8 @@ public static class ReportExportFormatter
             Environment.NewLine +
             BuildMarkdownAssignmentSelection(note) + Environment.NewLine +
             Environment.NewLine +
+            $"- Scoring Formula Version: {SafeValue(note.AssignmentScoringFormulaVersion)}" + Environment.NewLine +
+            Environment.NewLine +
             "## Assignment Rationale Drift" + Environment.NewLine +
             Environment.NewLine +
             SafeValue(note.AssignmentRationaleDriftSummary) + Environment.NewLine +
@@ -179,6 +182,7 @@ public static class ReportExportFormatter
             CsvLine("TargetComparisonTable", BuildCsvTargetComparison(snapshot.TargetComparisons)),
             CsvLine("AssignmentSelectionSummary", SafeValue(note.AssignmentSelectionSummary)),
             CsvLine("AssignmentSelectionDetails", SafeValue(note.AssignmentSelectionDetails)),
+            CsvLine("AssignmentScoringFormulaVersion", SafeValue(note.AssignmentScoringFormulaVersion)),
             CsvLine("AssignmentRationaleDriftSummary", SafeValue(note.AssignmentRationaleDriftSummary)),
             CsvLine("AssignmentModelAuditSummary", SafeValue(note.AssignmentModelAuditSummary)),
             CsvLine("RawNote", string.IsNullOrWhiteSpace(note.RawNote) ? "(empty)" : note.RawNote.Trim()),

@@ -41,7 +41,8 @@ public class ReportService
                 AssignmentSelectionSummary = latestAssignmentSnapshot?.Rationale ?? "No assignment snapshot available for this report window.",
                 AssignmentSelectionDetails = AssignmentSnapshotService.BuildSelectionDetails(targetReasons),
                 AssignmentRationaleDriftSummary = latestAssignmentSnapshot?.RationaleDriftSummary ?? "No rationale drift comparison available yet.",
-                AssignmentModelAuditSummary = AssignmentSnapshotService.BuildModelAuditSummary(recentAssignmentSnapshots)
+                AssignmentModelAuditSummary = AssignmentSnapshotService.BuildModelAuditSummary(recentAssignmentSnapshots),
+                AssignmentScoringFormulaVersion = latestAssignmentSnapshot?.ScoringFormulaVersion ?? string.Empty
             };
 
             if (latestAssignmentSnapshot is not null && !string.IsNullOrWhiteSpace(latestAssignmentSnapshot.PreviousRationale))

@@ -224,6 +224,13 @@ public partial class NotesPage : ContentPage
             DeclineTrendChartLabel.Text = "Decline trend: -";
             FrequencyTrendChartLabel.Text = "Frequency trend: -";
             ConfidenceTrendChartLabel.Text = "Confidence trend: -";
+            AssignmentModelAuditSummaryLabel.Text = "No assignment model-audit snapshots available.";
+            AssignmentFormulaVersionSummaryLabel.Text = "Formula versions: n/a";
+            AssignmentAdvisoryWeightLabel.Text = "No advisory weight suggestion available yet.";
+            CalibrationNext1SparklineCollection.ItemsSource = Array.Empty<object>();
+            CalibrationNext3SparklineCollection.ItemsSource = Array.Empty<object>();
+            TraceDriftSparklineCollection.ItemsSource = Array.Empty<object>();
+            AssignmentModelAuditCollection.ItemsSource = Array.Empty<object>();
         }
     }
 
@@ -330,6 +337,13 @@ public partial class NotesPage : ContentPage
         DeclineSparklineCollection.ItemsSource = state.DeclinePoints;
         FrequencySparklineCollection.ItemsSource = state.FrequencyPoints;
         ConfidenceSparklineCollection.ItemsSource = state.ConfidencePoints;
+        AssignmentModelAuditSummaryLabel.Text = state.ModelAuditSummaryText;
+        AssignmentFormulaVersionSummaryLabel.Text = state.FormulaVersionSummaryText;
+        AssignmentAdvisoryWeightLabel.Text = state.AdvisoryWeightSuggestionText;
+        CalibrationNext1SparklineCollection.ItemsSource = state.Next1CalibrationPoints;
+        CalibrationNext3SparklineCollection.ItemsSource = state.Next3CalibrationPoints;
+        TraceDriftSparklineCollection.ItemsSource = state.TraceDriftPoints;
+        AssignmentModelAuditCollection.ItemsSource = state.ModelAuditRows;
     }
 
     private static T ResolveService<T>() where T : notnull

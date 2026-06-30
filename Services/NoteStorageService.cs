@@ -137,6 +137,8 @@ public sealed class NoteStorageService
             commands.Add("ALTER TABLE SessionNote ADD COLUMN AssignmentSelectionDetails TEXT NOT NULL DEFAULT '';");
         if (!existingColumns.Contains("AssignmentModelAuditSummary"))
             commands.Add("ALTER TABLE SessionNote ADD COLUMN AssignmentModelAuditSummary TEXT NOT NULL DEFAULT '';");
+        if (!existingColumns.Contains("AssignmentScoringFormulaVersion"))
+            commands.Add("ALTER TABLE SessionNote ADD COLUMN AssignmentScoringFormulaVersion TEXT NOT NULL DEFAULT '';");
 
         foreach (var command in commands)
         {

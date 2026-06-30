@@ -36,14 +36,13 @@ public sealed class AssignmentSnapshotService
                 var currentFocusTargets = (assignment.FocusTargets ?? Array.Empty<string>()).ToArray();
                 var focusChangeCount = CountFocusChanges(previousFocusTargets, currentFocusTargets);
                 var suppressed = assignment.FocusTargetReasons.Any(reason => reason.AssignmentChangeSuppressed);
-                var previousReasons = ParseReasons(previous?.TargetReasonsJson);
                 var currentReasons = assignment.FocusTargetReasons ?? Array.Empty<AssignmentFocusTargetReason>();
                 var componentTraces = BuildComponentTraces(currentReasons);
                 var scoringFormulaVersion = string.IsNullOrWhiteSpace(assignment.ScoringFormulaVersion)
                     ? AiTextService.ScoringFormulaVersion
                     : assignment.ScoringFormulaVersion;
                 var calibration = BuildCalibrationMetrics(historicalSnapshots, currentReasons);
-                var advisorySuggestion = BuildAdvisoryWeightSuggestion(historicalSnapshots, calibration);
+                var advisorySuggestion = BuildAdvisoryWeightSuggestion(calibration);
 
                 var snapshot = new AssignmentSnapshot
                 {
@@ -398,36 +397,35 @@ public sealed class AssignmentSnapshotService
                 OverallScoreMean = reason.OverallScoreMean,
                 OverallScoreCiLower = reason.OverallScoreCiLower,
                 OverallScoreCiUpper = reason.OverallScoreCiUpper,
+                ConfidenceIntervalSuppressed = reason.ConfidenceIntervalSuppressed,
+                ConfidenceIntervalMinSamples = reason.ConfidenceIntervalMinSamples,
                 InstabilityWindowSize = reason.InstabilityWindowSize,
                 DeclineWindowSize = reason.DeclineWindowSize,
-                AttemptCount = reason.InitialAttemptScores.Count + reason.MedialAttemptScores.Count + reason.FinalAttemptScores.Count
+                AttemptCount = reason.InitialAttemptScores.Count + reason.MedialAttemptScores.Count + reason.FinalAttemptScores.Count,
+                ScoringFormulaVersion = reason.ScoringFormulaVersion
             })
             .ToArray();
     }
 
     private static AssignmentCalibrationMetrics BuildCalibrationMetrics(
-        IReadOnlyList<AssignmentFocusTargetReason> previousReasons,
+        IReadOnlyList<AssignmentSnapshot> historicalSnapshots,
         IReadOnlyList<AssignmentFocusTargetReason> currentReasons)
     {
-        if (previousReasons is null || currentReasons is null)
+        if (historicalSnapshots is null || currentReasons is null)
         {
             return new AssignmentCalibrationMetrics { Summary = "Calibration unavailable for this snapshot." };
         }
 
-        var currentByTarget = currentReasons
-            .Where(reason => !string.IsNullOrWhiteSpace(reason.TargetSound))
-            .ToDictionary(reason => reason.TargetSound, StringComparer.OrdinalIgnoreCase);
-        var matched = previousReasons
-            .Where(reason => !string.IsNullOrWhiteSpace(reason.TargetSound) && currentByTarget.ContainsKey(reason.TargetSound))
-            .Select(reason => new
-            {
-                Target = reason.TargetSound,
-                PredictedRisk = Math.Clamp(reason.PriorityScore, 0.0, 1.0),
-                ObservedRisk = Math.Clamp(currentByTarget[reason.TargetSound].SeverityScore, 0.0, 1.0)
-            })
-            .ToArray();
+        var allReasonSets = new List<IReadOnlyList<AssignmentFocusTargetReason>>();
+        allReasonSets.AddRange(historicalSnapshots
+            .OrderBy(snapshot => snapshot.SnapshotDateTicks)
+            .Select(snapshot => ParseReasons(snapshot.TargetReasonsJson)));
+        allReasonSets.Add(currentReasons);
 
-        if (matched.Length == 0)
+        var next1 = BuildHorizonCalibration(allReasonSets, horizonLength: 1);
+        var next3 = BuildHorizonCalibration(allReasonSets, horizonLength: 3);
+
+        if (next1.MatchedTargetCount == 0 && next3.MatchedTargetCount == 0)
         {
             return new AssignmentCalibrationMetrics
             {
@@ -435,22 +433,143 @@ public sealed class AssignmentSnapshotService
             };
         }
 
-        var mae = matched.Average(item => Math.Abs(item.PredictedRisk - item.ObservedRisk));
-        var mse = matched.Average(item => Math.Pow(item.PredictedRisk - item.ObservedRisk, 2));
-        var rankAgreement = ComputeRankAgreement(matched.Select(item => item.PredictedRisk).ToArray(), matched.Select(item => item.ObservedRisk).ToArray());
+        return new AssignmentCalibrationMetrics
+        {
+            MatchedTargetCountNext1 = next1.MatchedTargetCount,
+            MeanAbsoluteErrorNext1 = next1.MeanAbsoluteError,
+            MeanSquaredErrorNext1 = next1.MeanSquaredError,
+            RankAgreementNext1 = next1.RankAgreement,
+            TopTargetHitRateNext1 = next1.TopTargetHitRate,
+            MatchedTargetCountNext3 = next3.MatchedTargetCount,
+            MeanAbsoluteErrorNext3 = next3.MeanAbsoluteError,
+            MeanSquaredErrorNext3 = next3.MeanSquaredError,
+            RankAgreementNext3 = next3.RankAgreement,
+            TopTargetHitRateNext3 = next3.TopTargetHitRate,
+            MatchedTargetCount = next1.MatchedTargetCount,
+            MeanAbsoluteError = next1.MeanAbsoluteError,
+            MeanSquaredError = next1.MeanSquaredError,
+            RankAgreement = next1.RankAgreement,
+            TopTargetHitRate = next1.TopTargetHitRate,
+            Summary = $"next-1 matched {next1.MatchedTargetCount}, MAE {next1.MeanAbsoluteError:0.000}, rank {next1.RankAgreement:P0}; next-3 matched {next3.MatchedTargetCount}, MAE {next3.MeanAbsoluteError:0.000}, rank {next3.RankAgreement:P0}."
+        };
+    }
 
-        var topPredicted = matched.OrderByDescending(item => item.PredictedRisk).First();
-        var topObserved = matched.OrderByDescending(item => item.ObservedRisk).First();
+    private static AssignmentWeightSuggestion BuildAdvisoryWeightSuggestion(
+        AssignmentCalibrationMetrics calibration)
+    {
+        var severity = AssignmentPrioritySettings.DefaultSeverityWeight;
+        var instability = AssignmentPrioritySettings.DefaultInstabilityWeight;
+        var decline = AssignmentPrioritySettings.DefaultDeclineWeight;
+        var frequency = AssignmentPrioritySettings.DefaultFrequencyWeight;
+        var confidencePenalty = AssignmentPrioritySettings.DefaultConfidencePenaltyStrength;
+
+        if (calibration.MeanAbsoluteErrorNext3 > 0.18)
+        {
+            instability += 0.05;
+            decline += 0.05;
+            frequency -= 0.05;
+        }
+
+        if (calibration.RankAgreementNext1 < 0.55)
+        {
+            severity += 0.04;
+            frequency -= 0.02;
+        }
+
+        if (calibration.TopTargetHitRateNext1 < 0.50)
+        {
+            decline += 0.03;
+        }
+
+        if (calibration.MeanAbsoluteErrorNext1 > 0.20)
+        {
+            confidencePenalty = Math.Clamp(confidencePenalty + 0.10, 0.0, 1.0);
+        }
+
+        var sum = Math.Max(1e-6, severity + instability + decline + frequency);
+        severity = Math.Clamp(severity / sum, 0.0, 1.0);
+        instability = Math.Clamp(instability / sum, 0.0, 1.0);
+        decline = Math.Clamp(decline / sum, 0.0, 1.0);
+        frequency = Math.Clamp(frequency / sum, 0.0, 1.0);
+
+        return new AssignmentWeightSuggestion
+        {
+            SuggestedSeverityWeight = severity,
+            SuggestedInstabilityWeight = instability,
+            SuggestedDeclineWeight = decline,
+            SuggestedFrequencyWeight = frequency,
+            SuggestedConfidencePenaltyStrength = confidencePenalty,
+            Summary = $"advisory only - suggested weights: severity {severity:0.00}, instability {instability:0.00}, decline {decline:0.00}, frequency {frequency:0.00}, confidence penalty {confidencePenalty:0.00}; based on next-1 MAE {calibration.MeanAbsoluteErrorNext1:0.000} and next-3 MAE {calibration.MeanAbsoluteErrorNext3:0.000}.",
+            AdvisoryOnly = true
+        };
+    }
+
+    private static AssignmentCalibrationMetrics BuildHorizonCalibration(
+        IReadOnlyList<IReadOnlyList<AssignmentFocusTargetReason>> reasonSets,
+        int horizonLength)
+    {
+        var comparisons = new List<(string Target, double PredictedRisk, double ObservedRisk)>();
+        for (var i = 0; i < reasonSets.Count - 1; i++)
+        {
+            var predictionSet = reasonSets[i]
+                .Where(reason => !string.IsNullOrWhiteSpace(reason.TargetSound))
+                .ToArray();
+            if (predictionSet.Length == 0)
+            {
+                continue;
+            }
+
+            var observedWindow = reasonSets
+                .Skip(i + 1)
+                .Take(Math.Min(horizonLength, reasonSets.Count - (i + 1)))
+                .ToArray();
+            if (observedWindow.Length == 0)
+            {
+                continue;
+            }
+
+            var observedByTarget = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var target in predictionSet.Select(item => item.TargetSound).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var observed = observedWindow
+                    .Select(window => window.FirstOrDefault(reason => string.Equals(reason.TargetSound, target, StringComparison.OrdinalIgnoreCase)))
+                    .Where(reason => reason is not null)
+                    .Select(reason => Math.Clamp(reason!.SeverityScore, 0.0, 1.0))
+                    .ToArray();
+
+                if (observed.Length > 0)
+                {
+                    observedByTarget[target] = observed.Average();
+                }
+            }
+
+            comparisons.AddRange(predictionSet
+                .Where(reason => observedByTarget.ContainsKey(reason.TargetSound))
+                .Select(reason =>
+                    (reason.TargetSound,
+                     PredictedRisk: Math.Clamp(reason.PriorityScore, 0.0, 1.0),
+                     ObservedRisk: observedByTarget[reason.TargetSound])));
+        }
+
+        if (comparisons.Count == 0)
+        {
+            return new AssignmentCalibrationMetrics();
+        }
+
+        var mae = comparisons.Average(item => Math.Abs(item.PredictedRisk - item.ObservedRisk));
+        var mse = comparisons.Average(item => Math.Pow(item.PredictedRisk - item.ObservedRisk, 2));
+        var rankAgreement = ComputeRankAgreement(comparisons.Select(item => item.PredictedRisk).ToArray(), comparisons.Select(item => item.ObservedRisk).ToArray());
+        var topPredicted = comparisons.OrderByDescending(item => item.PredictedRisk).First();
+        var topObserved = comparisons.OrderByDescending(item => item.ObservedRisk).First();
         var topHitRate = string.Equals(topPredicted.Target, topObserved.Target, StringComparison.OrdinalIgnoreCase) ? 1.0 : 0.0;
 
         return new AssignmentCalibrationMetrics
         {
-            MatchedTargetCount = matched.Length,
+            MatchedTargetCount = comparisons.Count,
             MeanAbsoluteError = mae,
             MeanSquaredError = mse,
             RankAgreement = rankAgreement,
-            TopTargetHitRate = topHitRate,
-            Summary = $"matched targets {matched.Length}, MAE {mae:0.000}, MSE {mse:0.000}, rank agreement {rankAgreement:P0}, top-target hit {topHitRate:P0}."
+            TopTargetHitRate = topHitRate
         };
     }
 

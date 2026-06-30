@@ -117,12 +117,27 @@ public sealed class AssignmentSnapshotServiceTests
         });
         var calibrationJson = JsonSerializer.Serialize(new AssignmentCalibrationMetrics
         {
-            MatchedTargetCount = 2,
-            MeanAbsoluteError = 0.12,
-            MeanSquaredError = 0.03,
-            RankAgreement = 1.0,
-            TopTargetHitRate = 1.0,
+            MatchedTargetCountNext1 = 2,
+            MeanAbsoluteErrorNext1 = 0.12,
+            MeanSquaredErrorNext1 = 0.03,
+            RankAgreementNext1 = 1.0,
+            TopTargetHitRateNext1 = 1.0,
+            MatchedTargetCountNext3 = 4,
+            MeanAbsoluteErrorNext3 = 0.18,
+            MeanSquaredErrorNext3 = 0.05,
+            RankAgreementNext3 = 0.75,
+            TopTargetHitRateNext3 = 0.50,
             Summary = "matched targets 2, MAE 0.120, MSE 0.030, rank agreement 100%, top-target hit 100%."
+        });
+        var suggestionJson = JsonSerializer.Serialize(new AssignmentWeightSuggestion
+        {
+            SuggestedSeverityWeight = 0.49,
+            SuggestedInstabilityWeight = 0.22,
+            SuggestedDeclineWeight = 0.20,
+            SuggestedFrequencyWeight = 0.09,
+            SuggestedConfidencePenaltyStrength = 0.70,
+            Summary = "advisory only - suggested weights ...",
+            AdvisoryOnly = true
         });
         var snapshots = new[]
         {
@@ -130,13 +145,19 @@ public sealed class AssignmentSnapshotServiceTests
             {
                 SnapshotDate = new DateTimeOffset(2026, 6, 30, 10, 0, 0, TimeSpan.Zero),
                 ComponentTracesJson = tracesJson,
-                CalibrationMetricsJson = calibrationJson
+                CalibrationMetricsJson = calibrationJson,
+                AdvisoryWeightSuggestionJson = suggestionJson,
+                ScoringFormulaVersion = "assign-v3.0-adaptive-calibrated"
             }
         };
 
         var summary = AssignmentSnapshotService.BuildModelAuditSummary(snapshots);
 
         Assert.Contains("calibration", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("next-1", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("next-3", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("formula versions", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("advisory", summary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("component trace", summary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ci95", summary, StringComparison.OrdinalIgnoreCase);
     }

@@ -25,6 +25,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("Rolling Session History", content);
         Assert.Contains("Per-Target Comparison", content);
         Assert.Contains("Assignment Selection Rationale", content);
+        Assert.Contains("Scoring Formula Version:", content);
         Assert.Contains("Assignment Rationale Drift", content);
         Assert.Contains("Assignment Model Audit", content);
         Assert.Contains("variability", content);
@@ -50,6 +51,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("## Rolling Session History", content);
         Assert.Contains("## Per-Target Comparison", content);
         Assert.Contains("## Assignment Selection Rationale", content);
+        Assert.Contains("- Scoring Formula Version:", content);
         Assert.Contains("## Assignment Rationale Drift", content);
         Assert.Contains("## Assignment Model Audit", content);
         Assert.Contains("| Target | Delta | Confidence Move | Current Avg | Previous Avg | Variability | Drift |", content);
@@ -92,6 +94,7 @@ public sealed class ReportExportFormatterTests
         Assert.Contains("TargetComparisonTable", content);
         Assert.Contains("AssignmentSelectionSummary", content);
         Assert.Contains("AssignmentSelectionDetails", content);
+        Assert.Contains("AssignmentScoringFormulaVersion", content);
         Assert.Contains("AssignmentRationaleDriftSummary", content);
         Assert.Contains("AssignmentModelAuditSummary", content);
         Assert.Contains("var", content);
@@ -158,7 +161,8 @@ public sealed class ReportExportFormatterTests
             AssignmentSelectionSummary = "Focus on r and s based on weighted priority.",
             AssignmentSelectionDetails = "- r: priority 0.72\n- s: priority 0.61",
             AssignmentRationaleDriftSummary = "Rationale overlap 82%; focus target changes: 1.",
-            AssignmentModelAuditSummary = "Latest calibration - matched targets 2, MAE 0.120, MSE 0.030, rank agreement 100%, top-target hit 100%."
+            AssignmentModelAuditSummary = "Latest calibration - matched targets 2, MAE 0.120, MSE 0.030, rank agreement 100%, top-target hit 100%.",
+            AssignmentScoringFormulaVersion = "assign-v3.0-adaptive-calibrated"
         };
     }
 

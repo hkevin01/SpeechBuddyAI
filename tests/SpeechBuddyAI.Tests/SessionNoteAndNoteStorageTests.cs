@@ -28,6 +28,7 @@ public sealed class SessionNoteAndNoteStorageTests
         var assignmentDateProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentSnapshotDate));
         var driftSummaryProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentRationaleDriftSummary));
         var modelAuditSummaryProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentModelAuditSummary));
+        var formulaVersionProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentScoringFormulaVersion));
 
         Assert.NotNull(idProperty);
         Assert.NotNull(ticksProperty);
@@ -35,6 +36,7 @@ public sealed class SessionNoteAndNoteStorageTests
         Assert.NotNull(assignmentDateProperty);
         Assert.NotNull(driftSummaryProperty);
         Assert.NotNull(modelAuditSummaryProperty);
+        Assert.NotNull(formulaVersionProperty);
 
         Assert.NotNull(idProperty!.GetCustomAttributes(typeof(PrimaryKeyAttribute), inherit: true).FirstOrDefault());
         Assert.NotNull(ticksProperty!.GetCustomAttributes(typeof(IndexedAttribute), inherit: true).FirstOrDefault());
@@ -42,6 +44,7 @@ public sealed class SessionNoteAndNoteStorageTests
         Assert.NotNull(assignmentDateProperty!.GetCustomAttributes(typeof(IgnoreAttribute), inherit: true).FirstOrDefault());
         Assert.Equal(typeof(string), driftSummaryProperty!.PropertyType);
         Assert.Equal(typeof(string), modelAuditSummaryProperty!.PropertyType);
+        Assert.Equal(typeof(string), formulaVersionProperty!.PropertyType);
     }
 
     [Fact]

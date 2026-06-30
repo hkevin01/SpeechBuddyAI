@@ -139,6 +139,7 @@ public sealed class ReportServiceTests
         Assert.Contains("Previous rationale:", report.AssignmentSelectionDetails);
         Assert.Contains("Current rationale:", report.AssignmentSelectionDetails);
         Assert.Contains("calibration", report.AssignmentModelAuditSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AiTextService.ScoringFormulaVersion, report.AssignmentScoringFormulaVersion);
     }
 
     private static (ReportService Service, AssignmentSnapshotService Snapshots) CreateService()

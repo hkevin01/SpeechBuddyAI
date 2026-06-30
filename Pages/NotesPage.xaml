@@ -222,6 +222,78 @@
                     <Label x:Name="DeclineTrendChartLabel" Text="Decline trend: -" FontSize="11" TextColor="#555555" />
                     <Label x:Name="FrequencyTrendChartLabel" Text="Frequency trend: -" FontSize="11" TextColor="#555555" />
                     <Label x:Name="ConfidenceTrendChartLabel" Text="Confidence trend: -" FontSize="11" TextColor="#555555" />
+
+                    <Label Text="Longitudinal Model Audit" FontAttributes="Bold" FontSize="12" Margin="0,10,0,0" />
+                    <Label x:Name="AssignmentModelAuditSummaryLabel" Text="No assignment model-audit snapshots available." FontSize="11" />
+                    <Label x:Name="AssignmentFormulaVersionSummaryLabel" Text="Formula versions: n/a" FontSize="11" TextColor="#555555" />
+                    <Label x:Name="AssignmentAdvisoryWeightLabel" Text="No advisory weight suggestion available yet." FontSize="11" TextColor="#555555" />
+
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Calib next-1" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="0" Grid.Column="1"
+                                        x:Name="CalibrationNext1SparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="28">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6" HeightRequest="{Binding Height}" VerticalOptions="End" Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Calib next-3" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="1" Grid.Column="1"
+                                        x:Name="CalibrationNext3SparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="28">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6" HeightRequest="{Binding Height}" VerticalOptions="End" Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="Trace drift" FontSize="12" VerticalOptions="Center" />
+                        <CollectionView Grid.Row="2" Grid.Column="1"
+                                        x:Name="TraceDriftSparklineCollection"
+                                        SelectionMode="None"
+                                        HeightRequest="28">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <BoxView WidthRequest="6" HeightRequest="{Binding Height}" VerticalOptions="End" Color="{Binding ColorHex}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+
+                    <CollectionView x:Name="AssignmentModelAuditCollection"
+                                    SelectionMode="None"
+                                    HeightRequest="180">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BorderColor="#E9ECEF" BackgroundColor="#F8FAFC" Padding="8,6" Margin="0,0,0,6">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding SnapshotDateText}" FontAttributes="Bold" FontSize="12" />
+                                        <Label Text="{Binding FormulaVersionText}" FontSize="11" TextColor="#555555" />
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding Next1MaeText}" FontSize="11" />
+                                            <Label Text="{Binding Next3MaeText}" FontSize="11" />
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding TraceDriftText}" FontSize="11" />
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
                 </VerticalStackLayout>
             </Frame>
 
