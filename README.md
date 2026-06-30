@@ -536,6 +536,12 @@ dotnet build
 - [x] M6.4: add target-sound filter on Progress dashboard
 - [x] M6.5: add real report export and share flow from Notes
 - [x] M6.6: add current-session vs previous-session comparison cards in Progress
+- [x] M7.1: add per-target confidence-interval reliability thresholds with clinician-defined minimum samples
+- [x] M7.2: extend calibration to multi-horizon outcomes (next snapshot and next 3 snapshots)
+- [x] M7.3: add dedicated longitudinal model-audit view in Notes with calibration and trace-drift trends
+- [x] M7.4: add advisory automatic weight-suggestion logic requiring clinician approval
+- [x] M7.5: add snapshot-level scoring-formula versioning for cross-revision audit comparison
+- [x] M7.6: tighten advisory weight guardrails with minimum history depth and capped per-update deltas
 
 > [!IMPORTANT]
 > Favor backward-compatible output contracts in service responses so historical data and dashboard rendering remain stable across model and storage upgrades.
