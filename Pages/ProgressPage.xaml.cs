@@ -13,6 +13,7 @@ public partial class ProgressPage : ContentPage
     private readonly ProgressPageViewModel _viewModel;
 
     private IReadOnlyList<Models.ProgressEntry> _allEntries = Array.Empty<Models.ProgressEntry>();
+    private LayoutBucket _currentLayoutBucket = LayoutBucket.Unknown;
 
     public ProgressPage()
     {
@@ -27,6 +28,7 @@ public partial class ProgressPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        ApplyResponsiveLayout(Width);
         TrajectoryLabel.Text = "Loading progress...";
 
         try
@@ -48,6 +50,12 @@ public partial class ProgressPage : ContentPage
             HighThresholdLabel.Text = "High threshold: -";
             TrajectoryLabel.Text = ex.Message;
         }
+    }
+
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+        ApplyResponsiveLayout(width);
     }
 
     private void OnFilterTextChanged(object? sender, TextChangedEventArgs e)
@@ -127,5 +135,57 @@ public partial class ProgressPage : ContentPage
         }
 
         throw new InvalidOperationException($"Service {typeof(T).Name} is not registered.");
+    }
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var bucket = width >= 768
+            ? LayoutBucket.Tablet
+            : width > 0 && width < 390
+                ? LayoutBucket.CompactPhone
+                : LayoutBucket.Phone;
+
+        if (bucket == _currentLayoutBucket)
+        {
+            return;
+        }
+
+        _currentLayoutBucket = bucket;
+
+        if (bucket == LayoutBucket.CompactPhone)
+        {
+            SessionComparisonGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star)
+            };
+            Grid.SetColumn(CurrentSessionCard, 0);
+            Grid.SetRow(CurrentSessionCard, 0);
+            Grid.SetColumn(PreviousSessionCard, 0);
+            Grid.SetRow(PreviousSessionCard, 1);
+            SessionTimelineCollection.HeightRequest = 220;
+            TrendCollection.HeightRequest = 220;
+        }
+        else
+        {
+            SessionComparisonGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Star)
+            };
+            Grid.SetColumn(CurrentSessionCard, 0);
+            Grid.SetRow(CurrentSessionCard, 0);
+            Grid.SetColumn(PreviousSessionCard, 1);
+            Grid.SetRow(PreviousSessionCard, 0);
+            SessionTimelineCollection.HeightRequest = bucket == LayoutBucket.Tablet ? 220 : 180;
+            TrendCollection.HeightRequest = bucket == LayoutBucket.Tablet ? 220 : 180;
+        }
+    }
+
+    private enum LayoutBucket
+    {
+        Unknown,
+        CompactPhone,
+        Phone,
+        Tablet
     }
 }

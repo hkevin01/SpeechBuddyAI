@@ -7,7 +7,9 @@
         <VerticalStackLayout Style="{StaticResource PageRootLayoutStyle}">
             <Label Text="SpeechBuddy AI" Style="{StaticResource PageTitleLabelStyle}" />
             <Label Text="A therapist companion app for articulation, practice planning, progress tracking, and session notes." />
-            <Button Text="Open Practice" Clicked="OnPracticeClicked" />
+                <Button Text="Open Practice"
+                    SemanticProperties.Description="Open the Practice tab to score attempts"
+                    Clicked="OnPracticeClicked" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

@@ -20,6 +20,7 @@ public partial class NotesPage : ContentPage
     private IReadOnlyList<AssignmentSnapshot> _assignmentSnapshots = Array.Empty<AssignmentSnapshot>();
     private int? _selectedSnapshotId;
     private string? _selectedTarget;
+    private LayoutBucket _currentLayoutBucket = LayoutBucket.Unknown;
 
     public NotesPage()
     {
@@ -36,11 +37,18 @@ public partial class NotesPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        ApplyResponsiveLayout(Width);
         LoadExportPreferences();
         InitializeDateRangeIfNeeded();
         await RefreshHistoryAsync();
         await RefreshComparisonPreviewAsync();
         await RefreshAssignmentAnalyticsAsync();
+    }
+
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+        ApplyResponsiveLayout(width);
     }
 
     private async void OnGenerateSummariesClicked(object? sender, EventArgs e)
@@ -355,5 +363,68 @@ public partial class NotesPage : ContentPage
             return typedService;
 
         throw new InvalidOperationException($"Service {typeof(T).Name} is not registered.");
+    }
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var bucket = width >= 768
+            ? LayoutBucket.Tablet
+            : width > 0 && width < 390
+                ? LayoutBucket.CompactPhone
+                : LayoutBucket.Phone;
+
+        if (bucket == _currentLayoutBucket)
+        {
+            return;
+        }
+
+        _currentLayoutBucket = bucket;
+
+        if (bucket == LayoutBucket.CompactPhone)
+        {
+            ExportFormatRow.Orientation = StackOrientation.Vertical;
+            ExportFormatRow.Spacing = 6;
+            AssignmentTargetRow.Orientation = StackOrientation.Vertical;
+            AssignmentTargetRow.Spacing = 6;
+            PrioritySparklineGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(new GridLength(96)),
+                new ColumnDefinition(GridLength.Star)
+            };
+            ModelAuditSparklineGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(new GridLength(102)),
+                new ColumnDefinition(GridLength.Star)
+            };
+            AssignmentSnapshotCollection.HeightRequest = 220;
+            AssignmentModelAuditCollection.HeightRequest = 220;
+        }
+        else
+        {
+            ExportFormatRow.Orientation = StackOrientation.Horizontal;
+            ExportFormatRow.Spacing = 10;
+            AssignmentTargetRow.Orientation = StackOrientation.Horizontal;
+            AssignmentTargetRow.Spacing = 8;
+            PrioritySparklineGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(new GridLength(110)),
+                new ColumnDefinition(GridLength.Star)
+            };
+            ModelAuditSparklineGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(new GridLength(120)),
+                new ColumnDefinition(GridLength.Star)
+            };
+            AssignmentSnapshotCollection.HeightRequest = bucket == LayoutBucket.Tablet ? 240 : 180;
+            AssignmentModelAuditCollection.HeightRequest = bucket == LayoutBucket.Tablet ? 220 : 180;
+        }
+    }
+
+    private enum LayoutBucket
+    {
+        Unknown,
+        CompactPhone,
+        Phone,
+        Tablet
     }
 }

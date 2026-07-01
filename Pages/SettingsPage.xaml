@@ -15,6 +15,7 @@
                     <Label Text="Moderate threshold" FontAttributes="Bold" />
                     <Label x:Name="ModerateValueLabel" Text="0.60" />
                     <Slider x:Name="ModerateSlider"
+                            SemanticProperties.Description="Set moderate confidence threshold"
                             Minimum="0.20"
                             Maximum="0.90"
                             ValueChanged="OnSliderValueChanged" />
@@ -22,13 +23,15 @@
                     <Label Text="High threshold" FontAttributes="Bold" />
                     <Label x:Name="HighValueLabel" Text="0.80" />
                     <Slider x:Name="HighSlider"
+                            SemanticProperties.Description="Set high confidence threshold"
                             Minimum="0.30"
                             Maximum="0.98"
                             ValueChanged="OnSliderValueChanged" />
 
                     <Label Text="Session comparison normalization" FontAttributes="Bold" Margin="0,6,0,0" />
                     <Label Text="Use attempt-weighted averages or balance each target within the session day before comparison." />
-                    <Picker x:Name="ComparisonNormalizationPicker">
+                        <Picker x:Name="ComparisonNormalizationPicker"
+                            SemanticProperties.Description="Select session comparison normalization mode">
                         <Picker.Items>
                             <x:String>Attempt-weighted averages</x:String>
                             <x:String>Day-weighted averages</x:String>
@@ -37,7 +40,8 @@
 
                     <Label Text="Timeline smoothing strength" FontAttributes="Bold" Margin="0,6,0,0" />
                     <Label Text="Choose how aggressively noisy session-to-session changes are smoothed in comparison views and reports." />
-                    <Picker x:Name="ComparisonSmoothingPicker">
+                        <Picker x:Name="ComparisonSmoothingPicker"
+                            SemanticProperties.Description="Select timeline smoothing strength for session comparison">
                         <Picker.Items>
                             <x:String>Conservative smoothing</x:String>
                             <x:String>Balanced smoothing</x:String>
@@ -51,6 +55,7 @@
                             <Label Text="Severity weight" FontAttributes="Bold" />
                             <Label x:Name="AssignmentSeverityValueLabel" Text="45%" />
                             <Slider x:Name="AssignmentSeveritySlider"
+                                SemanticProperties.Description="Set assignment severity weight"
                                 Minimum="0.05"
                                 Maximum="0.80"
                                 ValueChanged="OnSliderValueChanged" />
@@ -58,6 +63,7 @@
                             <Label Text="Instability weight" FontAttributes="Bold" />
                             <Label x:Name="AssignmentInstabilityValueLabel" Text="20%" />
                             <Slider x:Name="AssignmentInstabilitySlider"
+                                SemanticProperties.Description="Set assignment instability weight"
                                 Minimum="0.05"
                                 Maximum="0.70"
                                 ValueChanged="OnSliderValueChanged" />
@@ -65,6 +71,7 @@
                             <Label Text="Decline weight" FontAttributes="Bold" />
                             <Label x:Name="AssignmentDeclineValueLabel" Text="20%" />
                             <Slider x:Name="AssignmentDeclineSlider"
+                                SemanticProperties.Description="Set assignment decline-trend weight"
                                 Minimum="0.05"
                                 Maximum="0.70"
                                 ValueChanged="OnSliderValueChanged" />
@@ -72,6 +79,7 @@
                             <Label Text="Frequency weight" FontAttributes="Bold" />
                             <Label x:Name="AssignmentFrequencyValueLabel" Text="15%" />
                             <Slider x:Name="AssignmentFrequencySlider"
+                                SemanticProperties.Description="Set assignment repetition-frequency weight"
                                 Minimum="0.05"
                                 Maximum="0.60"
                                 ValueChanged="OnSliderValueChanged" />
@@ -79,6 +87,7 @@
                             <Label Text="Low-confidence penalty strength" FontAttributes="Bold" />
                             <Label x:Name="AssignmentConfidencePenaltyValueLabel" Text="60%" />
                             <Slider x:Name="AssignmentConfidencePenaltySlider"
+                                SemanticProperties.Description="Set low-confidence penalty strength"
                                 Minimum="0.00"
                                 Maximum="1.00"
                                 ValueChanged="OnSliderValueChanged" />
@@ -86,6 +95,7 @@
                                 <Label Text="Confidence variance gate" FontAttributes="Bold" />
                                 <Label x:Name="AssignmentConfidenceVarianceGateValueLabel" Text="3.0%" />
                                 <Slider x:Name="AssignmentConfidenceVarianceGateSlider"
+                                    SemanticProperties.Description="Set confidence variance gate for suppression behavior"
                                     Minimum="0.005"
                                     Maximum="0.120"
                                     ValueChanged="OnSliderValueChanged" />
@@ -93,12 +103,14 @@
                                 <Label Text="Minimum samples for CI display" FontAttributes="Bold" />
                                 <Label x:Name="AssignmentCiMinSamplesValueLabel" Text="5" />
                                 <Slider x:Name="AssignmentCiMinSamplesSlider"
+                                    SemanticProperties.Description="Set minimum samples required to display confidence interval"
                                     Minimum="2"
                                     Maximum="20"
                                     ValueChanged="OnSliderValueChanged" />
 
                                 <Label Text="Suppression behavior when variance exceeds gate" FontAttributes="Bold" />
-                                <Picker x:Name="AssignmentSuppressionBehaviorPicker">
+                                <Picker x:Name="AssignmentSuppressionBehaviorPicker"
+                                    SemanticProperties.Description="Select suppression behavior when confidence variance exceeds gate">
                                     <Picker.Items>
                                         <x:String>Hard freeze</x:String>
                                         <x:String>Partial update</x:String>
@@ -109,10 +121,12 @@
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button Grid.Column="0"
                             Text="Save Clinician Settings"
+                            SemanticProperties.Description="Save current clinician confidence and assignment settings"
                             Clicked="OnSaveClicked"
                             HorizontalOptions="Fill" />
                         <Button Grid.Column="1"
                             Text="Reset Defaults"
+                            SemanticProperties.Description="Reset clinician settings to default values"
                             Clicked="OnResetClicked"
                             HorizontalOptions="Fill" />
                         </Grid>
@@ -123,13 +137,16 @@
                 <VerticalStackLayout Spacing="10">
                         <Label Text="Default Share Behavior" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Label Text="Choose what happens when Share Latest Report is used in Notes." />
-                    <Picker x:Name="ShareBehaviorPicker" SelectedIndex="1">
+                        <Picker x:Name="ShareBehaviorPicker"
+                            SemanticProperties.Description="Select default share behavior for latest report"
+                            SelectedIndex="1">
                         <Picker.Items>
                             <x:String>Export only</x:String>
                             <x:String>Export and open share sheet</x:String>
                         </Picker.Items>
                     </Picker>
                     <Button Text="Save Share Behavior"
+                            SemanticProperties.Description="Save default report share behavior"
                             Clicked="OnSaveShareBehaviorClicked"
                             HorizontalOptions="Fill" />
                 </VerticalStackLayout>

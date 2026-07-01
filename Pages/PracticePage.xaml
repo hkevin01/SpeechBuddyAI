@@ -14,7 +14,9 @@
             <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or sh" />
 
             <Label Text="Word position (optional)" FontAttributes="Bold" />
-            <Picker x:Name="PositionPicker" Title="Any position">
+            <Picker x:Name="PositionPicker"
+                    Title="Any position"
+                    SemanticProperties.Description="Select word position for generated practice words">
                 <Picker.Items>
                     <x:String>Any</x:String>
                     <x:String>Initial</x:String>

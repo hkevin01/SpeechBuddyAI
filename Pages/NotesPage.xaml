@@ -131,7 +131,7 @@
 
                     <Label Text="Priority Component Trends (across snapshots)" FontAttributes="Bold" FontSize="12" />
 
-                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
+                    <Grid x:Name="PrioritySparklineGrid" ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="Severity" FontSize="12" VerticalOptions="Center" />
                         <CollectionView Grid.Row="0" Grid.Column="1"
                                         x:Name="SeveritySparklineCollection"
@@ -234,7 +234,7 @@
                     <Label x:Name="AssignmentFormulaVersionSummaryLabel" Text="Formula versions: n/a" FontSize="11" TextColor="#555555" />
                     <Label x:Name="AssignmentAdvisoryWeightLabel" Text="No advisory weight suggestion available yet." FontSize="11" TextColor="#555555" />
 
-                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
+                    <Grid x:Name="ModelAuditSparklineGrid" ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="Calib next-1" FontSize="12" VerticalOptions="Center" />
                         <CollectionView Grid.Row="0" Grid.Column="1"
                                         x:Name="CalibrationNext1SparklineCollection"
