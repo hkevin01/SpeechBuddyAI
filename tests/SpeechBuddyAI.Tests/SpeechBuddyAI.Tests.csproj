@@ -3,6 +3,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,8 @@
     <Compile Include="../../Models/PracticeAttemptResult.cs" Link="Shared/PracticeAttemptResult.cs" />
     <Compile Include="../../Models/TrendPoint.cs" Link="Shared/TrendPoint.cs" />
     <Compile Include="../../Models/SessionComparisonSnapshot.cs" Link="Shared/SessionComparisonSnapshot.cs" />
+    <Compile Include="../../Models/SessionComparisonNormalizationMode.cs" Link="Shared/SessionComparisonNormalizationMode.cs" />
+    <Compile Include="../../Models/SessionComparisonSmoothingStrength.cs" Link="Shared/SessionComparisonSmoothingStrength.cs" />
     <Compile Include="../../Models/SessionNote.cs" Link="Shared/SessionNote.cs" />
     <Compile Include="../../Models/HomeAssignment.cs" Link="Shared/HomeAssignment.cs" />
     <Compile Include="../../Models/AssignmentPrioritySettings.cs" Link="Shared/AssignmentPrioritySettings.cs" />
@@ -42,16 +45,20 @@
     <Compile Include="../../Services/AiSpeechService.cs" Link="Shared/AiSpeechService.cs" />
     <Compile Include="../../Services/AiTextService.cs" Link="Shared/AiTextService.cs" />
     <Compile Include="../../Services/AssignmentSnapshotService.cs" Link="Shared/AssignmentSnapshotService.cs" />
+    <Compile Include="../../Services/ComparisonExportBuilderService.cs" Link="Shared/ComparisonExportBuilderService.cs" />
+    <Compile Include="../../Services/ComparisonNarrativeGenerator.cs" Link="Shared/ComparisonNarrativeGenerator.cs" />
+    <Compile Include="../../Services/ComparisonSnapshotCacheService.cs" Link="Shared/ComparisonSnapshotCacheService.cs" />
     <Compile Include="../../Services/DashboardStatsService.cs" Link="Shared/DashboardStatsService.cs" />
     <Compile Include="../../Services/SessionComparisonService.cs" Link="Shared/SessionComparisonService.cs" />
+    <Compile Include="../../Services/TrendAnalysisService.cs" Link="Shared/TrendAnalysisService.cs" />
     <Compile Include="../../Services/ReportService.cs" Link="Shared/ReportService.cs" />
+    <Compile Include="../../Services/Confidence/ConfidenceSettingsService.cs" Link="Shared/ConfidenceSettingsService.cs" />
     <Compile Include="../../Services/NoteStorageService.cs" Link="Shared/NoteStorageService.cs" />
     <Compile Include="../../Services/Reports/ReportExportFormat.cs" Link="Shared/ReportExportFormat.cs" />
     <Compile Include="../../Services/Reports/ReportExportFormatter.cs" Link="Shared/ReportExportFormatter.cs" />
     <Compile Include="../../Services/Reports/ReportShareBehavior.cs" Link="Shared/ReportShareBehavior.cs" />
     <Compile Include="../../Services/Reports/ReportExportSettingsService.cs" Link="Shared/ReportExportSettingsService.cs" />
+    <Compile Include="../../Pages/ViewModels/ProgressPageViewModel.cs" Link="Shared/ProgressPageViewModel.cs" />
     <Compile Include="../../Pages/ViewModels/NotesPageViewModel.cs" Link="Shared/NotesPageViewModel.cs" />
-    <Compile Include="Stubs/MauiStubs.cs" />
-    <Compile Include="Stubs/SQLiteStubs.cs" />
   </ItemGroup>
 </Project>
