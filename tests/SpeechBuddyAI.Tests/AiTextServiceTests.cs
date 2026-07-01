@@ -225,6 +225,52 @@ public sealed class AiTextServiceTests
         Assert.Equal(0.0, reason.OverallScoreCiUpper, 3);
     }
 
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_CrossTargetNormalization_PrioritizesSevereLowerFrequencyTarget()
+    {
+        var now = DateTime.UtcNow;
+        var highFrequencyModerate = Enumerable.Range(0, 18)
+            .Select(index => Entry("r:initial", 0.58 + ((index % 3) * 0.02), now.AddDays(-25 + index), "pattern_r", 0.78))
+            .ToArray();
+        var lowFrequencySevere = new[]
+        {
+            Entry("th:initial", 0.26, now.AddDays(-5), "pattern_th", 0.70),
+            Entry("th:medial", 0.24, now.AddDays(-3), "pattern_th", 0.72),
+            Entry("th:final", 0.22, now.AddDays(-1), "pattern_th", 0.74)
+        };
+
+        var history = highFrequencyModerate.Concat(lowFrequencySevere).ToArray();
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), new AssignmentSnapshotService());
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        Assert.NotEmpty(assignment.FocusTargets);
+        Assert.Equal("th", assignment.FocusTargets[0]);
+    }
+
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_ReliabilityProfile_CanTriggerSuppressionFlag()
+    {
+        var now = DateTime.UtcNow;
+        var settingsStore = new InMemoryStore();
+        var settings = new ConfidenceSettingsService(settingsStore);
+        settings.SaveAssignmentSuppressionBehavior(AssignmentSuppressionBehavior.HardFreeze);
+        settings.SaveAssignmentConfidenceVarianceGate(0.90);
+
+        var volatileSparseHistory = new[]
+        {
+            Entry("r:initial", 0.18, now.AddDays(-2), "pattern_r", 0.95),
+            Entry("r:initial", 0.89, now.AddDays(-1), "pattern_r", 0.22),
+            Entry("r:initial", 0.20, now, "pattern_r", 0.91)
+        };
+
+        var service = new AiTextService(new PhonemeWordBankService(), settings, new AssignmentSnapshotService());
+        var assignment = await service.GenerateHomeAssignmentAsync(volatileSparseHistory);
+
+        Assert.NotEmpty(assignment.FocusTargetReasons);
+        Assert.Contains(assignment.FocusTargetReasons, reason => reason.AssignmentChangeSuppressed);
+        Assert.Contains(assignment.FocusTargetReasons, reason => reason.ReliabilityScore < 0.5);
+    }
+
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
     {
         return new ProgressEntry

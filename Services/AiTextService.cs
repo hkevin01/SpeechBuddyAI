@@ -18,6 +18,12 @@ public class AiTextService
     private const double DeclineWindowDays = 7.0;
     private const int MinimumAdaptiveWindow = 3;
     private const int MaximumAdaptiveWindow = 12;
+    private static readonly IReadOnlyDictionary<string, double> PositionImportanceWeights = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["initial"] = 0.50,
+        ["medial"] = 0.30,
+        ["final"] = 0.20
+    };
     private static readonly string[] PositionOrder = ["initial", "medial", "final"];
 
     private readonly PhonemeWordBankService _wordBank;
@@ -87,10 +93,12 @@ public class AiTextService
                 .OrderByDescending(c => c.Priority)
                 .Take(MaxFocusTargets)
                 .ToArray();
+            var hasLowReliabilityRisk = candidates.Any(candidate => candidate.ReliabilityScore < 0.40);
+            var shouldSuppressForReliability = candidates.Take(MaxFocusTargets).Any(candidate => candidate.ReliabilityScore < 0.35);
 
             var latestSnapshot = await _assignmentSnapshotService.GetLatestSnapshotAsync();
             var suppressChange = false;
-            if (exceedsVarianceGate)
+            if (exceedsVarianceGate || shouldSuppressForReliability)
             {
                 switch (suppressionBehavior)
                 {
@@ -161,8 +169,14 @@ public class AiTextService
                     InstabilityScore = candidate.Instability,
                     DeclineScore = candidate.Decline,
                     FrequencyScore = candidate.Frequency,
+                    PositionWeightedDeclineScore = candidate.PositionWeightedDecline,
+                    FrequencyNormalizationFactor = candidate.FrequencyNormalizationFactor,
                     ConfidenceFactor = candidate.ConfidenceFactor,
                     EvidenceStrength = candidate.EvidenceStrength,
+                    ReliabilityScore = candidate.ReliabilityScore,
+                    ReliabilitySampleDepthScore = candidate.ReliabilitySampleDepthScore,
+                    ReliabilityVarianceScore = candidate.ReliabilityVarianceScore,
+                    ReliabilityTrendStabilityScore = candidate.ReliabilityTrendStabilityScore,
                     ConfidenceVariance = confidenceVariance,
                     AssignmentChangeSuppressed = suppressChange,
                     OverallScoreMean = candidate.OverallScoreMean,
@@ -192,7 +206,7 @@ public class AiTextService
                 .Select(g => g.Key)
                 .FirstOrDefault() ?? "mixed_patterns";
 
-            var rationale = BuildRationale(candidates, commonPattern, settings, suppressChange, confidenceVariance, confidenceVarianceGate, suppressionBehavior, exceedsVarianceGate);
+            var rationale = BuildRationale(candidates, commonPattern, settings, suppressChange, confidenceVariance, confidenceVarianceGate, suppressionBehavior, exceedsVarianceGate, hasLowReliabilityRisk);
 
             return new HomeAssignment
             {
@@ -217,10 +231,38 @@ public class AiTextService
     {
         var now = DateTime.UtcNow;
 
-        return entries
+        var baseCandidates = entries
             .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
             .GroupBy(ResolveBaseTarget, StringComparer.OrdinalIgnoreCase)
-                    .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings, ciMinSamples))
+            .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings, ciMinSamples))
+            .ToArray();
+
+        if (baseCandidates.Length == 0)
+        {
+            return Array.Empty<TargetAssignmentCandidate>();
+        }
+
+        var maxAttempts = Math.Max(1, baseCandidates.Max(candidate => candidate.Attempts));
+        var averageAttempts = baseCandidates.Average(candidate => candidate.Attempts);
+
+        return baseCandidates
+            .Select(candidate =>
+            {
+                var normalizedFrequency = Clamp((double)candidate.Attempts / maxAttempts);
+                var frequencyNormalizationFactor = Clamp(Math.Sqrt((averageAttempts + 1.0) / (candidate.Attempts + 1.0)));
+                var priority = ComputePriority(candidate with
+                {
+                    Frequency = normalizedFrequency,
+                    FrequencyNormalizationFactor = frequencyNormalizationFactor
+                }, settings);
+
+                return candidate with
+                {
+                    Frequency = normalizedFrequency,
+                    FrequencyNormalizationFactor = frequencyNormalizationFactor,
+                    Priority = priority
+                };
+            })
             .OrderByDescending(candidate => candidate.Priority)
             .ToArray();
     }
@@ -241,12 +283,20 @@ public class AiTextService
         var recentMean = ComputeConfidenceWeightedAverage(recent, settings.ConfidencePenaltyStrength);
         var severity = Clamp(1.0 - recentMean);
         var instability = Math.Sqrt(ComputeVariance(recent.Select(e => Clamp(e.OverallScore)).ToArray()));
-        var decline = Clamp(Math.Max(0.0, -ComputeConfidenceWeightedTrendSlope(declineScoped, settings.ConfidencePenaltyStrength) * DeclineWindowDays));
+        var overallDecline = Clamp(Math.Max(0.0, -ComputeConfidenceWeightedTrendSlope(declineScoped, settings.ConfidencePenaltyStrength) * DeclineWindowDays));
+        var positionTrendSlopes = BuildPositionTrendSlopes(target, entries);
+        var positionWeightedDecline = ComputePositionWeightedDecline(positionTrendSlopes);
+        var decline = Clamp((overallDecline * 0.55) + (positionWeightedDecline * 0.45));
         var frequency = Clamp(Math.Log(entries.Count + 1, 2) / 4.0);
         var daysSinceLast = Math.Max(0.0, (now - ordered[^1].Timestamp).TotalDays);
         var recency = Math.Exp(-daysSinceLast / 14.0);
         var averageConfidence = Clamp(ordered.Average(entry => NormalizeConfidence(entry.ConfidenceScore)));
         var evidence = ComputeEvidenceStrength(entries.Count);
+        var reliabilitySampleDepthScore = Clamp(entries.Count / 8.0);
+        var reliabilityVarianceScore = Clamp(1.0 - Math.Min(1.0, ComputeVariance(recent.Select(item => Clamp(item.OverallScore)).ToArray()) / 0.08));
+        var overallTrend = ComputeConfidenceWeightedTrendSlope(declineScoped, settings.ConfidencePenaltyStrength);
+        var reliabilityTrendStabilityScore = Clamp(1.0 - Math.Min(1.0, Math.Abs(overallTrend * DeclineWindowDays) / 0.45));
+        var reliabilityScore = Clamp((reliabilitySampleDepthScore + reliabilityVarianceScore + reliabilityTrendStabilityScore) / 3.0);
         var (ciLower, ciUpper) = ComputeScoreConfidenceInterval(recent.Select(item => Clamp(item.OverallScore)).ToArray());
         var ciSuppressed = recent.Length < Math.Max(2, ciMinSamples);
         var positionSamples = BuildPositionSamples(target, entries);
@@ -277,9 +327,15 @@ public class AiTextService
             instability,
             decline,
             frequency,
+            1.0,
             averageConfidence,
             recency,
             evidence,
+            positionWeightedDecline,
+            reliabilityScore,
+            reliabilitySampleDepthScore,
+            reliabilityVarianceScore,
+            reliabilityTrendStabilityScore,
             recentMean,
             ciLower,
             ciUpper,
@@ -288,6 +344,7 @@ public class AiTextService
             declineWindow,
             entries.Count,
             ordered[^1].Timestamp,
+            positionTrendSlopes,
             positionSequence,
                 positionDeltas,
                 positionAverages,
@@ -303,7 +360,8 @@ public class AiTextService
         double confidenceVariance,
         double confidenceVarianceGate,
         AssignmentSuppressionBehavior suppressionBehavior,
-        bool exceedsVarianceGate)
+        bool exceedsVarianceGate,
+        bool hasLowReliabilityRisk)
     {
         if (candidates.Count == 0)
         {
@@ -315,15 +373,18 @@ public class AiTextService
         var gatingText = exceedsVarianceGate
             ? $" Confidence variance {confidenceVariance:0.000} exceeded gate {confidenceVarianceGate:0.000} under {suppressionBehavior.ToDisplayLabel().ToLowerInvariant()} behavior."
             : string.Empty;
+        var reliabilityText = hasLowReliabilityRisk
+            ? " Reliability profile indicates low-support targets; suppression guardrails may hold updates until stability improves."
+            : string.Empty;
         var suppressionText = suppressChange
             ? " Assignment updates were suppressed for this cycle."
             : string.Empty;
 
          return $"Focus on {targetList} based on weighted priority from recent severity, instability, trend decline, and repetition frequency. " +
                $"Weights are severity {settings.SeverityWeight:0.00}, instability {settings.InstabilityWeight:0.00}, decline {settings.DeclineWeight:0.00}, frequency {settings.FrequencyWeight:0.00}, with confidence penalty strength {settings.ConfidencePenaltyStrength:0.00}. " +
-               $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}, confidence factor {top.ConfidenceFactor:0.00}). " +
+               $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}, position-weighted decline {top.PositionWeightedDecline:0.00}, confidence factor {top.ConfidenceFactor:0.00}). " +
              $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed." +
-               gatingText + suppressionText;
+               gatingText + reliabilityText + suppressionText;
     }
 
     private static double ComputePriority(TargetAssignmentCandidate candidate, AssignmentPrioritySettings settings)
@@ -334,7 +395,76 @@ public class AiTextService
                        (settings.InstabilityWeight * candidate.Instability) +
                        (settings.DeclineWeight * candidate.Decline) +
                        (settings.FrequencyWeight * candidate.Frequency);
-        return Clamp(weighted * candidate.Recency * confidenceFactor * candidate.EvidenceStrength);
+        var reliabilityFactor = 0.70 + (0.30 * candidate.ReliabilityScore);
+        return Clamp(weighted * candidate.Recency * confidenceFactor * candidate.EvidenceStrength * candidate.FrequencyNormalizationFactor * reliabilityFactor);
+    }
+
+    private static IReadOnlyDictionary<string, double> BuildPositionTrendSlopes(string target, IReadOnlyList<ProgressEntry> entries)
+    {
+        var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var position in PositionOrder)
+        {
+            var values = entries
+                .Where(entry => IsPositionMatch(target, position, entry))
+                .OrderBy(entry => entry.Timestamp)
+                .Select(entry => Clamp(entry.OverallScore))
+                .ToArray();
+            result[position] = ComputeSimpleTrendSlope(values);
+        }
+
+        return result;
+    }
+
+    private static double ComputePositionWeightedDecline(IReadOnlyDictionary<string, double> positionTrendSlopes)
+    {
+        if (positionTrendSlopes.Count == 0)
+        {
+            return 0.0;
+        }
+
+        var weightedDecline = 0.0;
+        var totalWeight = 0.0;
+        foreach (var position in PositionOrder)
+        {
+            var slope = positionTrendSlopes.TryGetValue(position, out var value) ? value : 0.0;
+            var weight = PositionImportanceWeights.TryGetValue(position, out var positionWeight) ? positionWeight : 0.0;
+            weightedDecline += weight * Math.Max(0.0, -slope * DeclineWindowDays);
+            totalWeight += weight;
+        }
+
+        if (totalWeight <= 0)
+        {
+            return 0.0;
+        }
+
+        return Clamp(weightedDecline / totalWeight);
+    }
+
+    private static double ComputeSimpleTrendSlope(IReadOnlyList<double> values)
+    {
+        if (values.Count < 2)
+        {
+            return 0.0;
+        }
+
+        var n = values.Count;
+        var meanX = (n - 1) / 2.0;
+        var meanY = values.Average();
+        var covariance = 0.0;
+        var variance = 0.0;
+        for (var i = 0; i < n; i++)
+        {
+            var x = i - meanX;
+            covariance += x * (values[i] - meanY);
+            variance += x * x;
+        }
+
+        if (variance <= 1e-9)
+        {
+            return 0.0;
+        }
+
+        return covariance / variance;
     }
 
     private static Dictionary<string, double[]> BuildPositionSamples(string target, IReadOnlyList<ProgressEntry> entries)
@@ -694,9 +824,15 @@ public class AiTextService
         double Instability,
         double Decline,
         double Frequency,
+        double FrequencyNormalizationFactor,
         double AverageConfidence,
         double Recency,
         double EvidenceStrength,
+        double PositionWeightedDecline,
+        double ReliabilityScore,
+        double ReliabilitySampleDepthScore,
+        double ReliabilityVarianceScore,
+        double ReliabilityTrendStabilityScore,
         double OverallScoreMean,
         double OverallScoreCiLower,
         double OverallScoreCiUpper,
@@ -705,6 +841,7 @@ public class AiTextService
         int DeclineWindowSize,
         int Attempts,
         DateTime LastAttemptAt,
+        IReadOnlyDictionary<string, double> PositionTrendSlopes,
         IReadOnlyList<string> PositionSequence,
         IReadOnlyDictionary<string, double> PositionDeltas,
         IReadOnlyDictionary<string, double> PositionAverages,

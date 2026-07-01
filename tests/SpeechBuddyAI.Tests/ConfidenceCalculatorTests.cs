@@ -49,6 +49,24 @@ public sealed class ConfidenceCalculatorTests
         Assert.InRange(value, 0.0, 1.0);
     }
 
+    [Fact]
+    public void ComputeScore_LowSupportConsistencyBand_IsDownWeighted()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var scores = new ScoreComponents
+        {
+            PhonemeScore = 0.82,
+            FluencyScore = 0.80,
+            ConsistencyScore = 0.81,
+            OverallScore = 0.81
+        };
+
+        var highSupport = calculator.ComputeScore(scores, "rabbit rain", 10, "offline-heuristic", 0.15, "HighSupport");
+        var lowSupport = calculator.ComputeScore(scores, "rabbit rain", 1, "offline-heuristic", 0.85, "LowSupport");
+
+        Assert.True(highSupport > lowSupport);
+    }
+
     private sealed class StubProvider : IConfidenceThresholdProvider
     {
         private readonly ConfidenceThresholds _thresholds;

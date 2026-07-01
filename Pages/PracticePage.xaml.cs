@@ -40,6 +40,11 @@ public partial class PracticePage : ContentPage
 
             StatusLabel.Text =
                 $"Saved trial {result.Entry.TrialCount} for '{result.Entry.TargetSound}' (pattern: {result.Entry.ErrorPattern}).";
+
+            if (result.HistoricalDriftDetected)
+            {
+                StatusLabel.Text += $" {result.HistoricalDriftSummary}";
+            }
         }
         catch (Exception ex)
         {

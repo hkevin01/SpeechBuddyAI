@@ -22,6 +22,7 @@ public static class MauiProgram
             builder.Services.AddSingleton<Services.Confidence.IConfidenceThresholdProvider>(sp =>
                 sp.GetRequiredService<Services.Confidence.ConfidenceSettingsService>());
             builder.Services.AddSingleton<Services.Confidence.ConfidenceCalculator>();
+            builder.Services.AddSingleton<Services.SpeechScoring.ConsistencyEstimator>();
             builder.Services.AddSingleton<Services.PhonemeWordBankService>();
             builder.Services.AddSingleton<Services.AiSpeechService>();
             builder.Services.AddSingleton<Services.AiTextService>();
