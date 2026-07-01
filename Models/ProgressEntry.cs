@@ -30,6 +30,12 @@ public class ProgressEntry
     public string ScoringProvider { get; set; } = "unknown";
     public double ConfidenceScore { get; set; }
     public string ConfidenceBand { get; set; } = "Low";
+    public string ScoringFormulaVersion { get; set; } = string.Empty;
+    public bool HistoricalDriftDetected { get; set; }
+    public double HistoricalDriftZScore { get; set; }
+    public string HistoricalDriftSummary { get; set; } = string.Empty;
+    public double AdaptiveModerateThreshold { get; set; }
+    public double AdaptiveHighThreshold { get; set; }
 
     [Ignore]
     public ConfidenceBand ConfidenceBandValue => ConfidenceBandExtensions.Parse(ConfidenceBand);

@@ -59,6 +59,11 @@ public sealed class ConfidenceCalculator
     public string ComputeBand(double confidenceScore)
     {
         var thresholds = _thresholdProvider.GetThresholds();
+        return ComputeBand(confidenceScore, thresholds);
+    }
+
+    public string ComputeBand(double confidenceScore, ConfidenceThresholds thresholds)
+    {
         var score = Clamp(confidenceScore);
 
         if (score >= thresholds.HighThreshold)
@@ -72,6 +77,49 @@ public sealed class ConfidenceCalculator
         }
 
         return "Low";
+    }
+
+    public ConfidenceThresholds ComputeAdaptiveThresholds(
+        IReadOnlyList<ProgressEntry> targetHistory,
+        double consistencyUncertainty)
+    {
+        var baseline = _thresholdProvider.GetThresholds();
+        var history = targetHistory ?? Array.Empty<ProgressEntry>();
+
+        if (history.Count == 0)
+        {
+            return baseline;
+        }
+
+        var recent = history
+            .OrderByDescending(entry => entry.Timestamp)
+            .Take(12)
+            .ToArray();
+
+        var confidenceValues = recent
+            .Select(entry => Clamp(entry.ConfidenceScore <= 0 ? 0.5 : entry.ConfidenceScore))
+            .ToArray();
+        var variance = ComputeVariance(confidenceValues);
+        var variancePenalty = Math.Min(variance / 0.05, 1.0) * 0.06;
+
+        var supportFactor = Math.Min(recent.Length, 12) / 12.0;
+        var supportAdjustment = (1.0 - supportFactor) * 0.04;
+        var uncertaintyPenalty = Clamp(consistencyUncertainty) * 0.07;
+
+        var moderate = Clamp(baseline.ModerateThreshold + variancePenalty + supportAdjustment + uncertaintyPenalty);
+        var high = Clamp(baseline.HighThreshold + (0.9 * variancePenalty) + (0.8 * supportAdjustment) + (0.85 * uncertaintyPenalty));
+
+        if (high <= moderate)
+        {
+            high = Math.Min(1.0, moderate + 0.08);
+        }
+
+        if (high <= moderate)
+        {
+            moderate = Math.Max(0.0, high - 0.05);
+        }
+
+        return new ConfidenceThresholds(moderate, high);
     }
 
     private static double Clamp(double value)
@@ -97,5 +145,16 @@ public sealed class ConfidenceCalculator
         };
 
         return baseTerm - supportPenalty + bandAdjustment;
+    }
+
+    private static double ComputeVariance(IReadOnlyList<double> values)
+    {
+        if (values.Count < 2)
+        {
+            return 0.0;
+        }
+
+        var mean = values.Average();
+        return values.Average(value => Math.Pow(value - mean, 2));
     }
 }

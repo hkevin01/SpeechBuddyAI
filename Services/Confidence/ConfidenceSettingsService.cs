@@ -14,6 +14,9 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string AssignmentDeclineWeightKey = "assignment.weight.decline";
     private const string AssignmentFrequencyWeightKey = "assignment.weight.frequency";
     private const string AssignmentConfidencePenaltyStrengthKey = "assignment.weight.confidencePenaltyStrength";
+    private const string AssignmentPositionInitialWeightKey = "assignment.position.initialWeight";
+    private const string AssignmentPositionMedialWeightKey = "assignment.position.medialWeight";
+    private const string AssignmentPositionFinalWeightKey = "assignment.position.finalWeight";
     private const string AssignmentConfidenceVarianceGateKey = "assignment.weight.confidenceVarianceGate";
     private const string AssignmentSuppressionBehaviorKey = "assignment.weight.suppressionBehavior";
     private const string AssignmentConfidenceIntervalMinSamplesKey = "assignment.weight.ciMinSamples";
@@ -168,7 +171,10 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
             InstabilityWeight = Clamp(_store.Get(AssignmentInstabilityWeightKey, AssignmentPrioritySettings.DefaultInstabilityWeight)),
             DeclineWeight = Clamp(_store.Get(AssignmentDeclineWeightKey, AssignmentPrioritySettings.DefaultDeclineWeight)),
             FrequencyWeight = Clamp(_store.Get(AssignmentFrequencyWeightKey, AssignmentPrioritySettings.DefaultFrequencyWeight)),
-            ConfidencePenaltyStrength = Clamp(_store.Get(AssignmentConfidencePenaltyStrengthKey, AssignmentPrioritySettings.DefaultConfidencePenaltyStrength))
+            ConfidencePenaltyStrength = Clamp(_store.Get(AssignmentConfidencePenaltyStrengthKey, AssignmentPrioritySettings.DefaultConfidencePenaltyStrength)),
+            PositionInitialWeight = Clamp(_store.Get(AssignmentPositionInitialWeightKey, AssignmentPrioritySettings.DefaultPositionInitialWeight)),
+            PositionMedialWeight = Clamp(_store.Get(AssignmentPositionMedialWeightKey, AssignmentPrioritySettings.DefaultPositionMedialWeight)),
+            PositionFinalWeight = Clamp(_store.Get(AssignmentPositionFinalWeightKey, AssignmentPrioritySettings.DefaultPositionFinalWeight))
         }.Normalize();
     }
 
@@ -190,6 +196,9 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(AssignmentDeclineWeightKey, normalized.DeclineWeight);
         _store.Set(AssignmentFrequencyWeightKey, normalized.FrequencyWeight);
         _store.Set(AssignmentConfidencePenaltyStrengthKey, normalized.ConfidencePenaltyStrength);
+        _store.Set(AssignmentPositionInitialWeightKey, normalized.PositionInitialWeight);
+        _store.Set(AssignmentPositionMedialWeightKey, normalized.PositionMedialWeight);
+        _store.Set(AssignmentPositionFinalWeightKey, normalized.PositionFinalWeight);
     }
 
     public void SaveAssignmentConfidenceVarianceGate(double varianceGate)

@@ -71,6 +71,7 @@ public class AiSpeechService
             var consistency = consistencyProfile.Score;
             var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
+            var adaptiveThresholds = _confidenceCalculator.ComputeAdaptiveThresholds(priorEntries, consistencyProfile.Uncertainty);
             var confidenceScore = _confidenceCalculator.ComputeScore(
                 scores,
                 normalizedTranscript,
@@ -78,7 +79,7 @@ public class AiSpeechService
                 adapterResult.Provider,
                 consistencyProfile.Uncertainty,
                 consistencyProfile.UncertaintyBand);
-            var confidenceBand = _confidenceCalculator.ComputeBand(confidenceScore);
+            var confidenceBand = _confidenceCalculator.ComputeBand(confidenceScore, adaptiveThresholds);
             var drift = DetectHistoricalDrift(priorEntries, scores.OverallScore);
 
             var trialCount = priorEntries.Count + 1;
@@ -98,7 +99,13 @@ public class AiSpeechService
                 ErrorPattern = InferErrorPattern(scores),
                 ScoringProvider = adapterResult.Provider,
                 ConfidenceScore = confidenceScore,
-                ConfidenceBand = confidenceBand
+                ConfidenceBand = confidenceBand,
+                ScoringFormulaVersion = ScoringFormulaVersion,
+                HistoricalDriftDetected = drift.Detected,
+                HistoricalDriftZScore = drift.ZScore,
+                HistoricalDriftSummary = drift.Summary,
+                AdaptiveModerateThreshold = adaptiveThresholds.ModerateThreshold,
+                AdaptiveHighThreshold = adaptiveThresholds.HighThreshold
             };
 
             await _progressTrackingService.AddEntryAsync(entry);
