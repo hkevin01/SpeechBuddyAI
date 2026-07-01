@@ -23,3 +23,44 @@ jobs:
 
       - name: Build
         run: dotnet build SpeechBuddyAI.csproj --configuration Release --no-restore
+
+  ui-device-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore solution
+        run: dotnet restore
+
+      - name: Capture compact-phone snapshots on Android emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_4
+          disable-animations: true
+          script: bash .github/scripts/capture_android_compact_snapshots.sh
+
+      - name: Run UI guardrail tests against captured snapshots
+        env:
+          UI_SNAPSHOT_BASELINE_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/baseline/compact-phone
+          UI_SNAPSHOT_CURRENT_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone
+          UI_LAYOUT_BOUNDS_CURRENT_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone/layout-bounds
+        run: dotnet test tests/SpeechBuddyAI.Tests/SpeechBuddyAI.Tests.csproj --filter "UiFocusOrderGuardrailsTests|UiSnapshotVisualRegressionTests|UiAccessibilityGuardrailsTests|UiLayoutBoundsOverlapGuardrailsTests"
+
+      - name: Upload captured UI snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compact-phone-ui-snapshots
+          path: tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone
