@@ -75,9 +75,6 @@ public sealed class UiSnapshotVisualRegressionTests
 
         for (var y = 0; y < baseline.Height; y++)
         {
-            var baselineRow = baseline.DangerousGetPixelRowMemory(y).Span;
-            var currentRow = current.DangerousGetPixelRowMemory(y).Span;
-
             for (var x = 0; x < baseline.Width; x++)
             {
                 if (IsIgnored(ignoreRegions, x, y))
@@ -85,8 +82,8 @@ public sealed class UiSnapshotVisualRegressionTests
                     continue;
                 }
 
-                var b = baselineRow[x];
-                var c = currentRow[x];
+                var b = baseline[x, y];
+                var c = current[x, y];
 
                 var channelDelta = Math.Abs(b.R - c.R) + Math.Abs(b.G - c.G) + Math.Abs(b.B - c.B);
                 totalDelta += channelDelta / (255d * 3d);

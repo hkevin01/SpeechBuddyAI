@@ -495,8 +495,13 @@ public sealed class AssignmentSnapshotService
 
         if (calibration is null)
         {
-            return anchor with
+            return new AssignmentWeightSuggestion
             {
+                SuggestedSeverityWeight = anchor.SuggestedSeverityWeight,
+                SuggestedInstabilityWeight = anchor.SuggestedInstabilityWeight,
+                SuggestedDeclineWeight = anchor.SuggestedDeclineWeight,
+                SuggestedFrequencyWeight = anchor.SuggestedFrequencyWeight,
+                SuggestedConfidencePenaltyStrength = anchor.SuggestedConfidencePenaltyStrength,
                 Summary = "advisory only - no calibration snapshot available, retaining prior weights.",
                 AdvisoryOnly = true
             };
@@ -506,8 +511,13 @@ public sealed class AssignmentSnapshotService
             calibration.MatchedTargetCountNext1 < MinMatchedTargetsNext1ForWeightShift ||
             calibration.MatchedTargetCountNext3 < MinMatchedTargetsNext3ForWeightShift)
         {
-            return anchor with
+            return new AssignmentWeightSuggestion
             {
+                SuggestedSeverityWeight = anchor.SuggestedSeverityWeight,
+                SuggestedInstabilityWeight = anchor.SuggestedInstabilityWeight,
+                SuggestedDeclineWeight = anchor.SuggestedDeclineWeight,
+                SuggestedFrequencyWeight = anchor.SuggestedFrequencyWeight,
+                SuggestedConfidencePenaltyStrength = anchor.SuggestedConfidencePenaltyStrength,
                 Summary = $"advisory only - insufficient history for safe weight shift (history {historyDepth}, next-1 matched {calibration.MatchedTargetCountNext1}, next-3 matched {calibration.MatchedTargetCountNext3}); retaining prior weights.",
                 AdvisoryOnly = true
             };

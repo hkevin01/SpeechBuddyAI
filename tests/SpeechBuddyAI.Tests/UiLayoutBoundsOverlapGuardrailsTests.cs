@@ -173,10 +173,9 @@ public sealed class UiLayoutBoundsOverlapGuardrailsTests
 
         for (var y = top; y <= bottom; y++)
         {
-            var row = image.DangerousGetPixelRowMemory(y).Span;
             for (var x = left; x <= right; x++)
             {
-                row[x] = Blend(row[x], color);
+                image[x, y] = Blend(image[x, y], color);
             }
         }
     }

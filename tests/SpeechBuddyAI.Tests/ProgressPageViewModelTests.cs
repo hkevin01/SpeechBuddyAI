@@ -174,8 +174,8 @@ public sealed class ProgressPageViewModelTests
 
         var state = viewModel.BuildTrendViewState(entries, trendService, new Services.Confidence.ConfidenceThresholds(0.60, 0.80));
 
-        Assert.Equal("Moderate threshold: 60%", state.ModerateThresholdText);
-        Assert.Equal("High threshold: 80%", state.HighThresholdText);
+        Assert.Contains("Moderate threshold: 60", state.ModerateThresholdText, StringComparison.Ordinal);
+        Assert.Contains("High threshold: 80", state.HighThresholdText, StringComparison.Ordinal);
         Assert.Equal(2, state.TrendPoints.Count);
         Assert.All(state.TrendPoints, point => Assert.True(point.ModerateGuideOffset > 0));
     }

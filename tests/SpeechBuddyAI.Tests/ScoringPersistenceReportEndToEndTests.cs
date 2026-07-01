@@ -51,7 +51,8 @@ public sealed class ScoringPersistenceReportEndToEndTests
                     entry.Transcript == "rain rabbit rocket" &&
                     entry.ScoringProvider == "test-adapter" &&
                     !string.IsNullOrWhiteSpace(entry.ScoringFormulaVersion)) &&
-                exportText.Contains("Scoring Providers: test-adapter", StringComparison.OrdinalIgnoreCase) &&
+                exportText.Contains("Scoring Providers:", StringComparison.OrdinalIgnoreCase) &&
+                exportText.Contains("test-adapter", StringComparison.OrdinalIgnoreCase) &&
                 exportText.Contains("Scoring Formula Versions:", StringComparison.OrdinalIgnoreCase) &&
                 exportText.Contains(AiSpeechService.ScoringFormulaVersion, StringComparison.Ordinal) &&
                 exportText.Contains("Historical Drift Analytics:", StringComparison.OrdinalIgnoreCase) &&

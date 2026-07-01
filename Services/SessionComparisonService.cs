@@ -42,7 +42,7 @@ public sealed class SessionComparisonService
 
             if (sessions.Length == 1)
             {
-                var targetComparisons = BuildTargetComparisons(current, Array.Empty<ProgressEntry>());
+                var baselineTargetComparisons = BuildTargetComparisons(current, Array.Empty<ProgressEntry>());
                 return new SessionComparisonSnapshot
                 {
                     HasCurrentSession = true,
@@ -52,7 +52,7 @@ public sealed class SessionComparisonService
                     CurrentAttemptCount = currentSnapshot.CurrentAttemptCount,
                     CurrentAverageOverall = currentSnapshot.CurrentAverageOverall,
                     CurrentAverageConfidence = currentSnapshot.CurrentAverageConfidence,
-                    TargetComparisons = targetComparisons,
+                    TargetComparisons = baselineTargetComparisons,
                     RollingTimeline = rollingTimeline
                 };
             }
@@ -245,7 +245,9 @@ public sealed class SessionComparisonService
             var hasBaseline = i + 1 < aggregates.Length;
             var baseline = hasBaseline ? aggregates[i + 1] : null;
             var currentSmoothed = smoothed[current.SessionDate];
-            var baselineSmoothed = hasBaseline ? smoothed[baseline!.SessionDate] : (0.0, 0.0);
+            var baselineSmoothed = hasBaseline
+                ? smoothed[baseline!.SessionDate]
+                : (Overall: 0.0, Confidence: 0.0);
 
             timeline.Add(new SessionTimelineItem
             {

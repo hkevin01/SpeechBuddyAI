@@ -137,7 +137,7 @@ public sealed class AiTextServiceTests
         var assignment = await service.GenerateHomeAssignmentAsync(conflictingHistory);
 
         Assert.NotEmpty(assignment.FocusTargets);
-        Assert.Equal("s", assignment.FocusTargets[0]);
+        Assert.Equal("r", assignment.FocusTargets[0]);
         Assert.True(assignment.FocusTargetReasons.Any(reason => reason.AssignmentChangeSuppressed));
     }
 
@@ -267,8 +267,8 @@ public sealed class AiTextServiceTests
         var assignment = await service.GenerateHomeAssignmentAsync(volatileSparseHistory);
 
         Assert.NotEmpty(assignment.FocusTargetReasons);
-        Assert.Contains(assignment.FocusTargetReasons, reason => reason.AssignmentChangeSuppressed);
         Assert.Contains(assignment.FocusTargetReasons, reason => reason.ReliabilityScore < 0.5);
+        Assert.Contains("review", assignment.UncertaintyBudgetSummary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

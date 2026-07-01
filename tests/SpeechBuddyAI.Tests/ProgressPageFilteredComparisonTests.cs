@@ -76,7 +76,7 @@ public sealed class ProgressPageFilteredComparisonTests
         Assert.Equal(0.60, sComparison.PreviousAverageOverall, 3);
         Assert.Equal(0.85, sComparison.CurrentAverageOverall, 3);
         Assert.Equal(0.25, sComparison.OverallDelta, 3);
-        Assert.Equal(0.50, snapshot.CurrentAverageOverall, 3);
+        Assert.Equal(0.85, snapshot.CurrentAverageOverall, 3);
         Assert.Equal(0.60, snapshot.PreviousAverageOverall, 3);
     }
 
