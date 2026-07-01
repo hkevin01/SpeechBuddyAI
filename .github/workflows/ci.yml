@@ -56,6 +56,8 @@ jobs:
           UI_SNAPSHOT_BASELINE_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/baseline/compact-phone
           UI_SNAPSHOT_CURRENT_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone
           UI_LAYOUT_BOUNDS_CURRENT_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone/layout-bounds
+          UI_SNAPSHOT_IGNORE_REGIONS_FILE: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/ignore-regions.json
+          UI_OVERLAP_DEBUG_DIR: ${{ github.workspace }}/tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone/debug-overlap
         run: dotnet test tests/SpeechBuddyAI.Tests/SpeechBuddyAI.Tests.csproj --filter "UiFocusOrderGuardrailsTests|UiSnapshotVisualRegressionTests|UiAccessibilityGuardrailsTests|UiLayoutBoundsOverlapGuardrailsTests"
 
       - name: Upload captured UI snapshots
@@ -64,3 +66,11 @@ jobs:
         with:
           name: compact-phone-ui-snapshots
           path: tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone
+
+      - name: Upload overlap debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compact-phone-overlap-debug
+          path: tests/SpeechBuddyAI.Tests/UiSnapshots/current/compact-phone/debug-overlap
+          if-no-files-found: ignore

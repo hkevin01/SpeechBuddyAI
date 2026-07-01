@@ -6,6 +6,7 @@ This folder supports screenshot-based visual regression checks for compact phone
 
 - `baseline/compact-phone/*.png` - approved baseline snapshots.
 - `current/compact-phone/*.png` - newly captured snapshots from the latest run.
+- `ignore-regions.json` - per-screen noise masks used during image diff.
 
 ## Naming Convention
 
@@ -24,6 +25,23 @@ Use stable file names per screen, for example:
 - If baseline or current directories are missing, the test exits early (non-failing).
 - If baseline images exist, each baseline file must have a matching current file.
 - Any image-size mismatch or high pixel delta fails the test.
+- Ignore regions are applied per screen before pixel-delta computation.
+
+## Ignore Regions
+
+`ignore-regions.json` supports keys by screen file stem or file name, for example `progress` or `progress.png`.
+
+Each key maps to a list of rectangles:
+
+```json
+{
+  "progress": [
+    { "x": 0, "y": 0, "width": 120, "height": 36 }
+  ]
+}
+```
+
+Use ignore regions only for intentionally dynamic areas such as runtime timestamps or transient animation overlays.
 
 ## Device-Lab Capture Runner
 
@@ -47,6 +65,7 @@ The runner:
 - checks enabled clickable/focusable elements,
 - fails if two actionable elements overlap with meaningful intersection area,
 - ignores parent-child containment overlap to reduce false positives.
+- writes annotated debug images and `overlap-violations.txt` to `current/compact-phone/debug-overlap` on failure.
 
 ## CI Usage
 
@@ -55,3 +74,5 @@ You can override default snapshot paths with environment variables:
 - `UI_SNAPSHOT_BASELINE_DIR`
 - `UI_SNAPSHOT_CURRENT_DIR`
 - `UI_LAYOUT_BOUNDS_CURRENT_DIR`
+- `UI_SNAPSHOT_IGNORE_REGIONS_FILE`
+- `UI_OVERLAP_DEBUG_DIR`
