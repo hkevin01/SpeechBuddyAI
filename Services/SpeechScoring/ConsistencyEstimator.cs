@@ -9,10 +9,15 @@ public sealed class ConsistencyEstimator
 
     public double Estimate(IReadOnlyList<ProgressEntry> entries, string? positionTag)
     {
+        return EstimateProfile(entries, positionTag).Score;
+    }
+
+    public ConsistencyEstimateProfile EstimateProfile(IReadOnlyList<ProgressEntry> entries, string? positionTag)
+    {
         var sourceEntries = entries ?? Array.Empty<ProgressEntry>();
         if (sourceEntries.Count < 2)
         {
-            return 0.5;
+            return new ConsistencyEstimateProfile(0.5, 1.0, "LowSupport", sourceEntries.Count);
         }
 
         try
@@ -20,7 +25,7 @@ public sealed class ConsistencyEstimator
             var scoped = FilterByPositionWithFallback(sourceEntries, positionTag);
             if (scoped.Count < 2)
             {
-                return 0.5;
+                return new ConsistencyEstimateProfile(0.5, 1.0, "LowSupport", scoped.Count);
             }
 
             var ordered = scoped
@@ -49,7 +54,16 @@ public sealed class ConsistencyEstimator
             var divergencePenalty = Math.Min(divergence / 0.35, 1.0) * 0.25;
             var trendBonus = ComputeTrendBonus(overall);
 
-            return Clamp(1.0 - normalizedVariance - divergencePenalty + trendBonus);
+            var score = Clamp(1.0 - normalizedVariance - divergencePenalty + trendBonus);
+            var supportScore = Clamp(scoped.Count / 10.0);
+            var uncertainty = Clamp((1.0 - supportScore) * 0.7 + normalizedVariance * 0.3);
+            var band = uncertainty > 0.66
+                ? "LowSupport"
+                : uncertainty > 0.33
+                    ? "ModerateSupport"
+                    : "HighSupport";
+
+            return new ConsistencyEstimateProfile(score, uncertainty, band, scoped.Count);
         }
         catch (Exception ex)
         {
@@ -126,4 +140,10 @@ public sealed class ConsistencyEstimator
     {
         return Math.Max(0.0, Math.Min(1.0, value));
     }
+
+    public sealed record ConsistencyEstimateProfile(
+        double Score,
+        double Uncertainty,
+        string UncertaintyBand,
+        int EffectiveSampleCount);
 }
