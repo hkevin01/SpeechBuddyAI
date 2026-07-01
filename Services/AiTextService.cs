@@ -18,12 +18,6 @@ public class AiTextService
     private const double DeclineWindowDays = 7.0;
     private const int MinimumAdaptiveWindow = 3;
     private const int MaximumAdaptiveWindow = 12;
-    private static readonly IReadOnlyDictionary<string, double> PositionImportanceWeights = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["initial"] = 0.50,
-        ["medial"] = 0.30,
-        ["final"] = 0.20
-    };
     private static readonly string[] PositionOrder = ["initial", "medial", "final"];
 
     private readonly PhonemeWordBankService _wordBank;
@@ -83,6 +77,7 @@ public class AiTextService
             var confidenceVarianceGate = _settingsService.GetAssignmentConfidenceVarianceGate();
             var suppressionBehavior = _settingsService.GetAssignmentSuppressionBehavior();
             var ciMinSamples = _settingsService.GetAssignmentConfidenceIntervalMinSamples();
+            var uncertaintyBudgetCap = _settingsService.GetAssignmentUncertaintyBudgetCap();
             var confidenceVariance = ComputeConfidenceVariance(sourceEntries);
             var exceedsVarianceGate = confidenceVariance > Math.Max(0.0, confidenceVarianceGate);
             var candidates = BuildTargetCandidates(sourceEntries, settings, ciMinSamples)
@@ -95,6 +90,11 @@ public class AiTextService
                 .ToArray();
             var hasLowReliabilityRisk = candidates.Any(candidate => candidate.ReliabilityScore < 0.40);
             var shouldSuppressForReliability = candidates.Take(MaxFocusTargets).Any(candidate => candidate.ReliabilityScore < 0.35);
+            var uncertaintyBudgetScore = ComputeAssignmentUncertaintyBudget(candidates);
+            var reviewRequired = uncertaintyBudgetScore > uncertaintyBudgetCap;
+            var uncertaintyBudgetSummary = reviewRequired
+                ? $"Assignment flagged for clinician review: uncertainty budget {uncertaintyBudgetScore:0.000} exceeded cap {uncertaintyBudgetCap:0.000}."
+                : $"Uncertainty budget {uncertaintyBudgetScore:0.000} is within cap {uncertaintyBudgetCap:0.000}.";
 
             var latestSnapshot = await _assignmentSnapshotService.GetLatestSnapshotAsync();
             var suppressChange = false;
@@ -130,7 +130,11 @@ public class AiTextService
                     ScoringFormulaVersion = ScoringFormulaVersion,
                     FocusTargets = Array.Empty<string>(),
                     SuggestedWords = ["rabbit", "lamp", "sun"],
-                    FocusTargetReasons = Array.Empty<AssignmentFocusTargetReason>()
+                    FocusTargetReasons = Array.Empty<AssignmentFocusTargetReason>(),
+                    ReviewRequired = false,
+                    UncertaintyBudgetScore = 0.0,
+                    UncertaintyBudgetCap = uncertaintyBudgetCap,
+                    UncertaintyBudgetSummary = "Uncertainty budget not computed because no focus targets were selected."
                 };
             }
 
@@ -207,6 +211,10 @@ public class AiTextService
                 .FirstOrDefault() ?? "mixed_patterns";
 
             var rationale = BuildRationale(candidates, commonPattern, settings, suppressChange, confidenceVariance, confidenceVarianceGate, suppressionBehavior, exceedsVarianceGate, hasLowReliabilityRisk);
+            if (reviewRequired)
+            {
+                rationale += " Review is required because low-support evidence exceeded the assignment uncertainty budget cap.";
+            }
 
             return new HomeAssignment
             {
@@ -215,7 +223,11 @@ public class AiTextService
                 ScoringFormulaVersion = ScoringFormulaVersion,
                 FocusTargets = targets,
                 SuggestedWords = suggestedWords.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-                FocusTargetReasons = reasons
+                FocusTargetReasons = reasons,
+                ReviewRequired = reviewRequired,
+                UncertaintyBudgetScore = uncertaintyBudgetScore,
+                UncertaintyBudgetCap = uncertaintyBudgetCap,
+                UncertaintyBudgetSummary = uncertaintyBudgetSummary
             };
         }
         catch (Exception ex)
@@ -230,11 +242,12 @@ public class AiTextService
         int ciMinSamples)
     {
         var now = DateTime.UtcNow;
+        var positionImportanceWeights = BuildPositionImportanceWeights(settings);
 
         var baseCandidates = entries
             .Where(e => !string.IsNullOrWhiteSpace(e.TargetSound))
             .GroupBy(ResolveBaseTarget, StringComparer.OrdinalIgnoreCase)
-            .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings, ciMinSamples))
+            .Select(group => BuildTargetCandidate(group.Key, group.ToArray(), now, settings, ciMinSamples, positionImportanceWeights))
             .ToArray();
 
         if (baseCandidates.Length == 0)
@@ -272,7 +285,8 @@ public class AiTextService
         IReadOnlyList<ProgressEntry> entries,
         DateTime now,
         AssignmentPrioritySettings settings,
-        int ciMinSamples)
+        int ciMinSamples,
+        IReadOnlyDictionary<string, double> positionImportanceWeights)
     {
         var ordered = entries.OrderBy(e => e.Timestamp).ToArray();
         var instabilityWindow = ResolveAdaptiveWindow(ordered.Length);
@@ -285,7 +299,7 @@ public class AiTextService
         var instability = Math.Sqrt(ComputeVariance(recent.Select(e => Clamp(e.OverallScore)).ToArray()));
         var overallDecline = Clamp(Math.Max(0.0, -ComputeConfidenceWeightedTrendSlope(declineScoped, settings.ConfidencePenaltyStrength) * DeclineWindowDays));
         var positionTrendSlopes = BuildPositionTrendSlopes(target, entries);
-        var positionWeightedDecline = ComputePositionWeightedDecline(positionTrendSlopes);
+        var positionWeightedDecline = ComputePositionWeightedDecline(positionTrendSlopes, positionImportanceWeights);
         var decline = Clamp((overallDecline * 0.55) + (positionWeightedDecline * 0.45));
         var frequency = Clamp(Math.Log(entries.Count + 1, 2) / 4.0);
         var daysSinceLast = Math.Max(0.0, (now - ordered[^1].Timestamp).TotalDays);
@@ -415,7 +429,9 @@ public class AiTextService
         return result;
     }
 
-    private static double ComputePositionWeightedDecline(IReadOnlyDictionary<string, double> positionTrendSlopes)
+    private static double ComputePositionWeightedDecline(
+        IReadOnlyDictionary<string, double> positionTrendSlopes,
+        IReadOnlyDictionary<string, double> positionImportanceWeights)
     {
         if (positionTrendSlopes.Count == 0)
         {
@@ -427,7 +443,7 @@ public class AiTextService
         foreach (var position in PositionOrder)
         {
             var slope = positionTrendSlopes.TryGetValue(position, out var value) ? value : 0.0;
-            var weight = PositionImportanceWeights.TryGetValue(position, out var positionWeight) ? positionWeight : 0.0;
+            var weight = positionImportanceWeights.TryGetValue(position, out var positionWeight) ? positionWeight : 0.0;
             weightedDecline += weight * Math.Max(0.0, -slope * DeclineWindowDays);
             totalWeight += weight;
         }
@@ -780,6 +796,59 @@ public class AiTextService
         var count = Math.Max(0, attempts);
         var scaled = 1.0 - Math.Exp(-count / EvidenceHalfLifeAttempts);
         return Clamp(EvidenceFloor + ((1.0 - EvidenceFloor) * scaled));
+    }
+
+    private static IReadOnlyDictionary<string, double> BuildPositionImportanceWeights(AssignmentPrioritySettings settings)
+    {
+        var weights = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["initial"] = Clamp(settings.PositionInitialWeight),
+            ["medial"] = Clamp(settings.PositionMedialWeight),
+            ["final"] = Clamp(settings.PositionFinalWeight)
+        };
+
+        var sum = weights.Values.Sum();
+        if (sum <= 0)
+        {
+            return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["initial"] = AssignmentPrioritySettings.DefaultPositionInitialWeight,
+                ["medial"] = AssignmentPrioritySettings.DefaultPositionMedialWeight,
+                ["final"] = AssignmentPrioritySettings.DefaultPositionFinalWeight
+            };
+        }
+
+        return weights.ToDictionary(item => item.Key, item => item.Value / sum, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static double ComputeAssignmentUncertaintyBudget(IReadOnlyList<TargetAssignmentCandidate> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return 0.0;
+        }
+
+        var scoped = candidates.Take(MaxFocusTargets).ToArray();
+        var weights = scoped
+            .Select(candidate => Math.Max(candidate.Priority, 0.01))
+            .ToArray();
+        var weightSum = weights.Sum();
+        if (weightSum <= 0)
+        {
+            return 0.0;
+        }
+
+        var aggregate = 0.0;
+        for (var i = 0; i < scoped.Length; i++)
+        {
+            var candidate = scoped[i];
+            var evidenceUncertainty = 1.0 - Clamp(candidate.EvidenceStrength);
+            var reliabilityUncertainty = 1.0 - Clamp(candidate.ReliabilityScore);
+            var candidateUncertainty = Clamp((0.45 * evidenceUncertainty) + (0.55 * reliabilityUncertainty));
+            aggregate += candidateUncertainty * (weights[i] / weightSum);
+        }
+
+        return Clamp(aggregate);
     }
 
     private static int ResolveAdaptiveWindow(int attemptCount)

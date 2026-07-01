@@ -67,7 +67,11 @@ public sealed class AssignmentSnapshotService
                     CalibrationMetricsJson = JsonSerializer.Serialize(calibration),
                     CalibrationSummary = calibration.Summary,
                     ScoringFormulaVersion = scoringFormulaVersion,
-                    AdvisoryWeightSuggestionJson = JsonSerializer.Serialize(advisorySuggestion)
+                    AdvisoryWeightSuggestionJson = JsonSerializer.Serialize(advisorySuggestion),
+                    ReviewRequired = assignment.ReviewRequired,
+                    UncertaintyBudgetScore = assignment.UncertaintyBudgetScore,
+                    UncertaintyBudgetCap = assignment.UncertaintyBudgetCap,
+                    UncertaintyBudgetSummary = assignment.UncertaintyBudgetSummary ?? string.Empty
                 };
 
                 await Database.InsertAsync(snapshot);
@@ -235,6 +239,7 @@ public sealed class AssignmentSnapshotService
             $"Latest calibration - {latestCalibration.Summary}" + Environment.NewLine +
             $"Horizon next-1 MAE {latestCalibration.MeanAbsoluteErrorNext1:0.000}, next-3 MAE {latestCalibration.MeanAbsoluteErrorNext3:0.000}." + Environment.NewLine +
             $"Formula versions in window: {string.Join(", ", formulaVersions)}." + Environment.NewLine +
+            $"Uncertainty budget: {(latest.ReviewRequired ? "review-required" : "within-cap")} (score {latest.UncertaintyBudgetScore:0.000}, cap {latest.UncertaintyBudgetCap:0.000})." + Environment.NewLine +
             $"Advisory weighting: {latestSuggestion.Summary}" + Environment.NewLine +
             $"Latest component trace - {latestTraceText}";
     }
@@ -361,6 +366,14 @@ public sealed class AssignmentSnapshotService
             commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN ScoringFormulaVersion TEXT NOT NULL DEFAULT '';");
         if (!existing.Contains("AdvisoryWeightSuggestionJson"))
             commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN AdvisoryWeightSuggestionJson TEXT NOT NULL DEFAULT '{}';");
+        if (!existing.Contains("ReviewRequired"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN ReviewRequired INTEGER NOT NULL DEFAULT 0;");
+        if (!existing.Contains("UncertaintyBudgetScore"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN UncertaintyBudgetScore REAL NOT NULL DEFAULT 0.0;");
+        if (!existing.Contains("UncertaintyBudgetCap"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN UncertaintyBudgetCap REAL NOT NULL DEFAULT 0.0;");
+        if (!existing.Contains("UncertaintyBudgetSummary"))
+            commands.Add("ALTER TABLE AssignmentSnapshot ADD COLUMN UncertaintyBudgetSummary TEXT NOT NULL DEFAULT '';");
 
         foreach (var command in commands)
         {

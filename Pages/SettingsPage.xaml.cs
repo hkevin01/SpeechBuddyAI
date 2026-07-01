@@ -37,6 +37,10 @@ public partial class SettingsPage : ContentPage
             AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
             AssignmentCiMinSamplesSlider.Value = _settingsService.GetAssignmentConfidenceIntervalMinSamples();
             AssignmentSuppressionBehaviorPicker.SelectedIndex = (int)_settingsService.GetAssignmentSuppressionBehavior();
+            AssignmentUncertaintyBudgetCapSlider.Value = _settingsService.GetAssignmentUncertaintyBudgetCap();
+            AssignmentPositionInitialSlider.Value = assignmentSettings.PositionInitialWeight;
+            AssignmentPositionMedialSlider.Value = assignmentSettings.PositionMedialWeight;
+            AssignmentPositionFinalSlider.Value = assignmentSettings.PositionFinalWeight;
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
@@ -78,12 +82,16 @@ public partial class SettingsPage : ContentPage
                 InstabilityWeight = AssignmentInstabilitySlider.Value,
                 DeclineWeight = AssignmentDeclineSlider.Value,
                 FrequencyWeight = AssignmentFrequencySlider.Value,
-                ConfidencePenaltyStrength = AssignmentConfidencePenaltySlider.Value
+                ConfidencePenaltyStrength = AssignmentConfidencePenaltySlider.Value,
+                PositionInitialWeight = AssignmentPositionInitialSlider.Value,
+                PositionMedialWeight = AssignmentPositionMedialSlider.Value,
+                PositionFinalWeight = AssignmentPositionFinalSlider.Value
             };
             _settingsService.SaveAssignmentPrioritySettings(assignmentSettings);
             _settingsService.SaveAssignmentConfidenceVarianceGate(AssignmentConfidenceVarianceGateSlider.Value);
             _settingsService.SaveAssignmentConfidenceIntervalMinSamples((int)Math.Round(AssignmentCiMinSamplesSlider.Value));
             _settingsService.SaveAssignmentSuppressionBehavior((AssignmentSuppressionBehavior)Math.Clamp(AssignmentSuppressionBehaviorPicker.SelectedIndex, 0, 2));
+            _settingsService.SaveAssignmentUncertaintyBudgetCap(AssignmentUncertaintyBudgetCapSlider.Value);
             StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
@@ -112,6 +120,10 @@ public partial class SettingsPage : ContentPage
             AssignmentConfidenceVarianceGateSlider.Value = _settingsService.GetAssignmentConfidenceVarianceGate();
             AssignmentCiMinSamplesSlider.Value = _settingsService.GetAssignmentConfidenceIntervalMinSamples();
             AssignmentSuppressionBehaviorPicker.SelectedIndex = (int)_settingsService.GetAssignmentSuppressionBehavior();
+            AssignmentUncertaintyBudgetCapSlider.Value = _settingsService.GetAssignmentUncertaintyBudgetCap();
+            AssignmentPositionInitialSlider.Value = assignmentDefaults.PositionInitialWeight;
+            AssignmentPositionMedialSlider.Value = assignmentDefaults.PositionMedialWeight;
+            AssignmentPositionFinalSlider.Value = assignmentDefaults.PositionFinalWeight;
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";
@@ -149,6 +161,10 @@ public partial class SettingsPage : ContentPage
         AssignmentConfidencePenaltyValueLabel.Text = $"{AssignmentConfidencePenaltySlider.Value:P0}";
         AssignmentConfidenceVarianceGateValueLabel.Text = $"{AssignmentConfidenceVarianceGateSlider.Value:P1}";
         AssignmentCiMinSamplesValueLabel.Text = $"{Math.Round(AssignmentCiMinSamplesSlider.Value)}";
+        AssignmentUncertaintyBudgetCapValueLabel.Text = $"{AssignmentUncertaintyBudgetCapSlider.Value:P0}";
+        AssignmentPositionInitialValueLabel.Text = $"{AssignmentPositionInitialSlider.Value:P0}";
+        AssignmentPositionMedialValueLabel.Text = $"{AssignmentPositionMedialSlider.Value:P0}";
+        AssignmentPositionFinalValueLabel.Text = $"{AssignmentPositionFinalSlider.Value:P0}";
     }
 
     private static T ResolveService<T>() where T : notnull

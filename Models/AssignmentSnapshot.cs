@@ -25,6 +25,10 @@ public sealed class AssignmentSnapshot
     public string CalibrationSummary { get; set; } = string.Empty;
     public string ScoringFormulaVersion { get; set; } = string.Empty;
     public string AdvisoryWeightSuggestionJson { get; set; } = "{}";
+    public bool ReviewRequired { get; set; }
+    public double UncertaintyBudgetScore { get; set; }
+    public double UncertaintyBudgetCap { get; set; }
+    public string UncertaintyBudgetSummary { get; set; } = string.Empty;
 
     [Ignore]
     public DateTimeOffset SnapshotDate

@@ -130,16 +130,55 @@
                                     </Picker.Items>
                                 </Picker>
 
+                                <Label Text="Assignment uncertainty budget cap" FontAttributes="Bold" />
+                                <Label x:Name="AssignmentUncertaintyBudgetCapValueLabel" Text="40%" />
+                                <Slider x:Name="AssignmentUncertaintyBudgetCapSlider"
+                                    TabIndex="12"
+                                    SemanticProperties.Description="Set assignment uncertainty budget cap for review-required gating"
+                                    Minimum="0.10"
+                                    Maximum="0.90"
+                                    ValueChanged="OnSliderValueChanged" />
+
+                                <Label Text="Position Importance Weights" FontAttributes="Bold" Margin="0,10,0,0" />
+                                <Label Text="Tune assignment sensitivity to position-specific decline trends, normalized across initial, medial, and final." />
+
+                                <Label Text="Initial position importance" FontAttributes="Bold" />
+                                <Label x:Name="AssignmentPositionInitialValueLabel" Text="50%" />
+                                <Slider x:Name="AssignmentPositionInitialSlider"
+                                    TabIndex="13"
+                                    SemanticProperties.Description="Set initial position importance weight"
+                                    Minimum="0.05"
+                                    Maximum="0.90"
+                                    ValueChanged="OnSliderValueChanged" />
+
+                                <Label Text="Medial position importance" FontAttributes="Bold" />
+                                <Label x:Name="AssignmentPositionMedialValueLabel" Text="30%" />
+                                <Slider x:Name="AssignmentPositionMedialSlider"
+                                    TabIndex="14"
+                                    SemanticProperties.Description="Set medial position importance weight"
+                                    Minimum="0.05"
+                                    Maximum="0.90"
+                                    ValueChanged="OnSliderValueChanged" />
+
+                                <Label Text="Final position importance" FontAttributes="Bold" />
+                                <Label x:Name="AssignmentPositionFinalValueLabel" Text="20%" />
+                                <Slider x:Name="AssignmentPositionFinalSlider"
+                                    TabIndex="15"
+                                    SemanticProperties.Description="Set final position importance weight"
+                                    Minimum="0.05"
+                                    Maximum="0.90"
+                                    ValueChanged="OnSliderValueChanged" />
+
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button Grid.Column="0"
                             Text="Save Clinician Settings"
-                            TabIndex="12"
+                            TabIndex="16"
                             SemanticProperties.Description="Save current clinician confidence and assignment settings"
                             Clicked="OnSaveClicked"
                             HorizontalOptions="Fill" />
                         <Button Grid.Column="1"
                             Text="Reset Defaults"
-                            TabIndex="13"
+                            TabIndex="17"
                             SemanticProperties.Description="Reset clinician settings to default values"
                             Clicked="OnResetClicked"
                             HorizontalOptions="Fill" />
@@ -152,7 +191,7 @@
                         <Label Text="Default Share Behavior" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Label Text="Choose what happens when Share Latest Report is used in Notes." />
                         <Picker x:Name="ShareBehaviorPicker"
-                                TabIndex="14"
+                            TabIndex="18"
                             SemanticProperties.Description="Select default share behavior for latest report"
                             SelectedIndex="1">
                         <Picker.Items>
@@ -161,7 +200,7 @@
                         </Picker.Items>
                     </Picker>
                     <Button Text="Save Share Behavior"
-                            TabIndex="15"
+                            TabIndex="19"
                             SemanticProperties.Description="Save default report share behavior"
                             Clicked="OnSaveShareBehaviorClicked"
                             HorizontalOptions="Fill" />

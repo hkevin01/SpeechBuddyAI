@@ -58,7 +58,10 @@ public static class ReportExportFormatter
             "Metadata" + Environment.NewLine +
             "--------" + Environment.NewLine +
             $"Scoring Providers: {BuildProviderSummary(entries)}" + Environment.NewLine +
+            $"Scoring Formula Versions: {BuildFormulaVersionSummary(entries)}" + Environment.NewLine +
             $"Confidence Bands: {BuildConfidenceBandSummary(entries)}" + Environment.NewLine +
+            $"Historical Drift Analytics: {BuildDriftSummary(entries)}" + Environment.NewLine +
+            $"Adaptive Thresholds: {BuildAdaptiveThresholdSummary(entries)}" + Environment.NewLine +
             $"Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
@@ -114,7 +117,10 @@ public static class ReportExportFormatter
             Environment.NewLine +
             $"- Session Date: {sessionDate}" + Environment.NewLine +
             $"- Scoring Providers: {BuildProviderSummary(entries)}" + Environment.NewLine +
+            $"- Scoring Formula Versions: {BuildFormulaVersionSummary(entries)}" + Environment.NewLine +
             $"- Confidence Bands: {BuildConfidenceBandSummary(entries)}" + Environment.NewLine +
+            $"- Historical Drift Analytics: {BuildDriftSummary(entries)}" + Environment.NewLine +
+            $"- Adaptive Thresholds: {BuildAdaptiveThresholdSummary(entries)}" + Environment.NewLine +
             $"- Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"- Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"- Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
@@ -171,7 +177,10 @@ public static class ReportExportFormatter
             "Metric,Value",
             CsvLine("SessionDate", sessionDate),
             CsvLine("ScoringProviders", BuildProviderSummary(entries)),
+            CsvLine("ScoringFormulaVersions", BuildFormulaVersionSummary(entries)),
             CsvLine("ConfidenceBands", BuildConfidenceBandSummary(entries)),
+            CsvLine("HistoricalDriftAnalytics", BuildDriftSummary(entries)),
+            CsvLine("AdaptiveThresholds", BuildAdaptiveThresholdSummary(entries)),
             CsvLine("TargetLevelDeltas", BuildTargetDeltaSummary(entries)),
             CsvLine("SessionComparison", BuildSessionComparisonOverview(snapshot)),
             CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
@@ -238,6 +247,55 @@ public static class ReportExportFormatter
             .Select(g => $"{g.Key}: {g.Count()}");
 
         return string.Join(" | ", grouped);
+    }
+
+    private static string BuildFormulaVersionSummary(IReadOnlyList<ProgressEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var versions = entries
+            .Select(entry => Normalize(entry.ScoringFormulaVersion, "unknown"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return versions.Length == 0 ? "n/a" : string.Join(" | ", versions);
+    }
+
+    private static string BuildDriftSummary(IReadOnlyList<ProgressEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var detected = entries.Count(entry => entry.HistoricalDriftDetected);
+        var ratio = (double)detected / entries.Count;
+        var meanZ = entries.Where(entry => entry.HistoricalDriftDetected).Select(entry => Math.Abs(entry.HistoricalDriftZScore)).DefaultIfEmpty(0.0).Average();
+        return $"detected {detected}/{entries.Count} ({ratio:P0}), mean |z| {meanZ:0.00}";
+    }
+
+    private static string BuildAdaptiveThresholdSummary(IReadOnlyList<ProgressEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var populated = entries
+            .Where(entry => entry.AdaptiveModerateThreshold > 0 || entry.AdaptiveHighThreshold > 0)
+            .ToArray();
+        if (populated.Length == 0)
+        {
+            return "n/a";
+        }
+
+        var avgModerate = populated.Average(entry => entry.AdaptiveModerateThreshold);
+        var avgHigh = populated.Average(entry => entry.AdaptiveHighThreshold);
+        return $"avg moderate {avgModerate:0.00}, avg high {avgHigh:0.00} ({populated.Length} entries)";
     }
 
     private static string BuildTargetDeltaSummary(IReadOnlyList<ProgressEntry> entries)

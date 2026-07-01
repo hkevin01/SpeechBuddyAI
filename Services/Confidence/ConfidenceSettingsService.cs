@@ -20,6 +20,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string AssignmentConfidenceVarianceGateKey = "assignment.weight.confidenceVarianceGate";
     private const string AssignmentSuppressionBehaviorKey = "assignment.weight.suppressionBehavior";
     private const string AssignmentConfidenceIntervalMinSamplesKey = "assignment.weight.ciMinSamples";
+    private const string AssignmentUncertaintyBudgetCapKey = "assignment.weight.uncertaintyBudgetCap";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -30,6 +31,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const double DefaultAssignmentConfidenceVarianceGate = 0.030;
     public const AssignmentSuppressionBehavior DefaultAssignmentSuppressionBehavior = AssignmentSuppressionBehavior.HardFreeze;
     public const int DefaultAssignmentConfidenceIntervalMinSamples = 5;
+    public const double DefaultAssignmentUncertaintyBudgetCap = 0.40;
 
     private readonly IKeyValueStore _store;
 
@@ -78,6 +80,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         SaveAssignmentConfidenceVarianceGate(DefaultAssignmentConfidenceVarianceGate);
         SaveAssignmentSuppressionBehavior(DefaultAssignmentSuppressionBehavior);
         SaveAssignmentConfidenceIntervalMinSamples(DefaultAssignmentConfidenceIntervalMinSamples);
+        SaveAssignmentUncertaintyBudgetCap(DefaultAssignmentUncertaintyBudgetCap);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -236,6 +239,16 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         }
 
         _store.Set(AssignmentSuppressionBehaviorKey, (double)behavior);
+    }
+
+    public double GetAssignmentUncertaintyBudgetCap()
+    {
+        return Clamp(_store.Get(AssignmentUncertaintyBudgetCapKey, DefaultAssignmentUncertaintyBudgetCap));
+    }
+
+    public void SaveAssignmentUncertaintyBudgetCap(double budgetCap)
+    {
+        _store.Set(AssignmentUncertaintyBudgetCapKey, Clamp(budgetCap));
     }
 
     private static double Clamp(double value)

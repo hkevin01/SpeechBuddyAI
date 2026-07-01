@@ -8,4 +8,8 @@ public sealed class HomeAssignment
     public IReadOnlyList<string> FocusTargets { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> SuggestedWords { get; init; } = Array.Empty<string>();
     public IReadOnlyList<AssignmentFocusTargetReason> FocusTargetReasons { get; init; } = Array.Empty<AssignmentFocusTargetReason>();
+    public bool ReviewRequired { get; init; }
+    public double UncertaintyBudgetScore { get; init; }
+    public double UncertaintyBudgetCap { get; init; }
+    public string UncertaintyBudgetSummary { get; init; } = string.Empty;
 }
