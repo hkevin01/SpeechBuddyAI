@@ -100,6 +100,9 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(AssignmentPrioritySettings.DefaultDeclineWeight, settings.DeclineWeight, 3);
         Assert.Equal(AssignmentPrioritySettings.DefaultFrequencyWeight, settings.FrequencyWeight, 3);
         Assert.Equal(AssignmentPrioritySettings.DefaultConfidencePenaltyStrength, settings.ConfidencePenaltyStrength, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultPositionInitialWeight, settings.PositionInitialWeight, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultPositionMedialWeight, settings.PositionMedialWeight, 3);
+        Assert.Equal(AssignmentPrioritySettings.DefaultPositionFinalWeight, settings.PositionFinalWeight, 3);
     }
 
     [Fact]
@@ -113,13 +116,18 @@ public sealed class ConfidenceSettingsServiceTests
             InstabilityWeight = 1.0,
             DeclineWeight = 1.0,
             FrequencyWeight = 1.0,
-            ConfidencePenaltyStrength = 0.8
+            ConfidencePenaltyStrength = 0.8,
+            PositionInitialWeight = 0.8,
+            PositionMedialWeight = 0.8,
+            PositionFinalWeight = 0.8
         });
 
         var settings = service.GetAssignmentPrioritySettings();
         var sum = settings.SeverityWeight + settings.InstabilityWeight + settings.DeclineWeight + settings.FrequencyWeight;
+        var positionSum = settings.PositionInitialWeight + settings.PositionMedialWeight + settings.PositionFinalWeight;
 
         Assert.Equal(1.0, sum, 3);
+        Assert.Equal(1.0, positionSum, 3);
         Assert.Equal(0.8, settings.ConfidencePenaltyStrength, 3);
     }
 
@@ -141,6 +149,16 @@ public sealed class ConfidenceSettingsServiceTests
         service.SaveAssignmentSuppressionBehavior(AssignmentSuppressionBehavior.WarningOnly);
 
         Assert.Equal(AssignmentSuppressionBehavior.WarningOnly, service.GetAssignmentSuppressionBehavior());
+    }
+
+    [Fact]
+    public void SaveAssignmentUncertaintyBudgetCap_PersistsValue()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveAssignmentUncertaintyBudgetCap(0.52);
+
+        Assert.Equal(0.52, service.GetAssignmentUncertaintyBudgetCap(), 3);
     }
 
     [Fact]

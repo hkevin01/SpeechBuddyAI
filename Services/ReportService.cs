@@ -39,7 +39,7 @@ public class ReportService
                 ParentSummary = BuildParentSummary(safeEntries),
                 AssignmentSnapshotDate = latestAssignmentSnapshot?.SnapshotDate,
                 AssignmentSelectionSummary = latestAssignmentSnapshot?.Rationale ?? "No assignment snapshot available for this report window.",
-                AssignmentSelectionDetails = AssignmentSnapshotService.BuildSelectionDetails(targetReasons),
+                AssignmentSelectionDetails = BuildAssignmentSelectionDetails(latestAssignmentSnapshot, targetReasons),
                 AssignmentRationaleDriftSummary = latestAssignmentSnapshot?.RationaleDriftSummary ?? "No rationale drift comparison available yet.",
                 AssignmentModelAuditSummary = AssignmentSnapshotService.BuildModelAuditSummary(recentAssignmentSnapshots),
                 AssignmentScoringFormulaVersion = latestAssignmentSnapshot?.ScoringFormulaVersion ?? string.Empty
@@ -232,5 +232,25 @@ public class ReportService
         }
 
         return "Compared with the earlier session in this review window, performance stayed fairly steady overall.";
+    }
+
+    private static string BuildAssignmentSelectionDetails(
+        AssignmentSnapshot? snapshot,
+        IReadOnlyList<AssignmentFocusTargetReason> reasons)
+    {
+        var reasonDetails = AssignmentSnapshotService.BuildSelectionDetails(reasons);
+        if (snapshot is null)
+        {
+            return reasonDetails;
+        }
+
+        var budgetStatus = snapshot.ReviewRequired ? "review-required" : "within-cap";
+        var budgetLine = $"Uncertainty budget: {budgetStatus} (score {snapshot.UncertaintyBudgetScore:0.000}, cap {snapshot.UncertaintyBudgetCap:0.000}).";
+        if (!string.IsNullOrWhiteSpace(snapshot.UncertaintyBudgetSummary))
+        {
+            budgetLine += " " + snapshot.UncertaintyBudgetSummary.Trim();
+        }
+
+        return budgetLine + Environment.NewLine + reasonDetails;
     }
 }

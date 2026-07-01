@@ -67,6 +67,67 @@ public sealed class ConfidenceCalculatorTests
         Assert.True(highSupport > lowSupport);
     }
 
+    [Fact]
+    public void ComputeAdaptiveThresholds_HigherVarianceAndLowerSupport_RaiseThresholds()
+    {
+        var baseline = new ConfidenceThresholds(0.60, 0.80);
+        var calculator = new ConfidenceCalculator(new StubProvider(baseline));
+
+        var stableHistory = Enumerable.Range(0, 12)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-12 + index),
+                ConfidenceScore = 0.80 + ((index % 2 == 0) ? 0.01 : -0.01)
+            })
+            .ToArray();
+        var noisySparseHistory = new[]
+        {
+            new ProgressEntry { Timestamp = DateTime.UtcNow.AddDays(-2), ConfidenceScore = 0.20 },
+            new ProgressEntry { Timestamp = DateTime.UtcNow.AddDays(-1), ConfidenceScore = 0.92 },
+            new ProgressEntry { Timestamp = DateTime.UtcNow, ConfidenceScore = 0.25 }
+        };
+
+        var stableThresholds = calculator.ComputeAdaptiveThresholds(stableHistory, consistencyUncertainty: 0.15);
+        var noisyThresholds = calculator.ComputeAdaptiveThresholds(noisySparseHistory, consistencyUncertainty: 0.85);
+
+        Assert.True(noisyThresholds.ModerateThreshold > stableThresholds.ModerateThreshold);
+        Assert.True(noisyThresholds.HighThreshold > stableThresholds.HighThreshold);
+    }
+
+    [Fact]
+    public void CalibrationMonitoring_SyntheticHistories_ProduceExpectedBandDistributions()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var stableHistory = Enumerable.Range(0, 12)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-12 + index),
+                ConfidenceScore = 0.78 + ((index % 2 == 0) ? 0.01 : -0.01)
+            })
+            .ToArray();
+        var noisyHistory = new[]
+        {
+            new ProgressEntry { Timestamp = DateTime.UtcNow.AddDays(-2), ConfidenceScore = 0.18 },
+            new ProgressEntry { Timestamp = DateTime.UtcNow.AddDays(-1), ConfidenceScore = 0.91 },
+            new ProgressEntry { Timestamp = DateTime.UtcNow, ConfidenceScore = 0.24 }
+        };
+
+        var scoreSamples = new[] { 0.66, 0.70, 0.74, 0.78, 0.82, 0.86 };
+        var stableThresholds = calculator.ComputeAdaptiveThresholds(stableHistory, consistencyUncertainty: 0.20);
+        var noisyThresholds = calculator.ComputeAdaptiveThresholds(noisyHistory, consistencyUncertainty: 0.90);
+
+        var stableBands = scoreSamples.Select(score => calculator.ComputeBand(score, stableThresholds)).ToArray();
+        var noisyBands = scoreSamples.Select(score => calculator.ComputeBand(score, noisyThresholds)).ToArray();
+
+        var stableHighCount = stableBands.Count(band => band == "High");
+        var noisyHighCount = noisyBands.Count(band => band == "High");
+        var stableLowCount = stableBands.Count(band => band == "Low");
+        var noisyLowCount = noisyBands.Count(band => band == "Low");
+
+        Assert.True(stableHighCount >= noisyHighCount);
+        Assert.True(noisyLowCount >= stableLowCount);
+    }
+
     private sealed class StubProvider : IConfidenceThresholdProvider
     {
         private readonly ConfidenceThresholds _thresholds;

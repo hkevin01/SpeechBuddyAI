@@ -147,7 +147,10 @@ public sealed class AssignmentSnapshotServiceTests
                 ComponentTracesJson = tracesJson,
                 CalibrationMetricsJson = calibrationJson,
                 AdvisoryWeightSuggestionJson = suggestionJson,
-                ScoringFormulaVersion = "assign-v3.0-adaptive-calibrated"
+                ScoringFormulaVersion = "assign-v3.0-adaptive-calibrated",
+                ReviewRequired = true,
+                UncertaintyBudgetScore = 0.52,
+                UncertaintyBudgetCap = 0.40
             }
         };
 
@@ -160,5 +163,7 @@ public sealed class AssignmentSnapshotServiceTests
         Assert.Contains("advisory", summary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("component trace", summary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ci95", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("uncertainty budget", summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("review-required", summary, StringComparison.OrdinalIgnoreCase);
     }
 }

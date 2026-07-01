@@ -271,6 +271,79 @@ public sealed class AiTextServiceTests
         Assert.Contains(assignment.FocusTargetReasons, reason => reason.ReliabilityScore < 0.5);
     }
 
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_UncertaintyBudgetCap_CanMarkReviewRequired()
+    {
+        var now = DateTime.UtcNow;
+        var store = new InMemoryStore();
+        var settings = new ConfidenceSettingsService(store);
+        settings.SaveAssignmentUncertaintyBudgetCap(0.10);
+
+        var history = new[]
+        {
+            Entry("r:initial", 0.18, now.AddDays(-2), "pattern_r", 0.25),
+            Entry("r:initial", 0.88, now.AddDays(-1), "pattern_r", 0.20),
+            Entry("s:initial", 0.26, now, "pattern_s", 0.28)
+        };
+
+        var service = new AiTextService(new PhonemeWordBankService(), settings, new AssignmentSnapshotService());
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        Assert.True(assignment.ReviewRequired);
+        Assert.True(assignment.UncertaintyBudgetScore > assignment.UncertaintyBudgetCap);
+        Assert.Contains("review", assignment.UncertaintyBudgetSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_PositionWeightTuning_ShiftsPositionWeightedDecline()
+    {
+        var now = DateTime.UtcNow;
+        var history = new[]
+        {
+            Entry("r:initial", 0.92, now.AddDays(-9), "pattern_r", 0.86),
+            Entry("r:initial", 0.86, now.AddDays(-8), "pattern_r", 0.84),
+            Entry("r:initial", 0.80, now.AddDays(-7), "pattern_r", 0.82),
+            Entry("r:initial", 0.74, now.AddDays(-6), "pattern_r", 0.80),
+            Entry("r:medial", 0.70, now.AddDays(-5), "pattern_r", 0.80),
+            Entry("r:medial", 0.69, now.AddDays(-4), "pattern_r", 0.80),
+            Entry("r:medial", 0.68, now.AddDays(-3), "pattern_r", 0.80),
+            Entry("r:final", 0.66, now.AddDays(-2), "pattern_r", 0.80),
+            Entry("r:final", 0.65, now.AddDays(-1), "pattern_r", 0.80),
+            Entry("r:final", 0.64, now, "pattern_r", 0.80)
+        };
+
+        var defaultService = new AiTextService(
+            new PhonemeWordBankService(),
+            new ConfidenceSettingsService(new InMemoryStore()),
+            new AssignmentSnapshotService());
+        var defaultAssignment = await defaultService.GenerateHomeAssignmentAsync(history);
+
+        var weightedStore = new InMemoryStore();
+        var weightedSettings = new ConfidenceSettingsService(weightedStore);
+        weightedSettings.SaveAssignmentPrioritySettings(new AssignmentPrioritySettings
+        {
+            SeverityWeight = 0.45,
+            InstabilityWeight = 0.20,
+            DeclineWeight = 0.20,
+            FrequencyWeight = 0.15,
+            ConfidencePenaltyStrength = 0.60,
+            PositionInitialWeight = 0.90,
+            PositionMedialWeight = 0.05,
+            PositionFinalWeight = 0.05
+        });
+
+        var weightedService = new AiTextService(
+            new PhonemeWordBankService(),
+            weightedSettings,
+            new AssignmentSnapshotService());
+        var weightedAssignment = await weightedService.GenerateHomeAssignmentAsync(history);
+
+        var baselineDecline = Assert.Single(defaultAssignment.FocusTargetReasons).PositionWeightedDeclineScore;
+        var tunedDecline = Assert.Single(weightedAssignment.FocusTargetReasons).PositionWeightedDeclineScore;
+
+        Assert.True(tunedDecline > baselineDecline);
+    }
+
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
     {
         return new ProgressEntry

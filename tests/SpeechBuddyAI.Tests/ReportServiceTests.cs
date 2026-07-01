@@ -138,6 +138,7 @@ public sealed class ReportServiceTests
         Assert.Contains("Rationale overlap", report.AssignmentRationaleDriftSummary);
         Assert.Contains("Previous rationale:", report.AssignmentSelectionDetails);
         Assert.Contains("Current rationale:", report.AssignmentSelectionDetails);
+        Assert.Contains("Uncertainty budget:", report.AssignmentSelectionDetails);
         Assert.Contains("calibration", report.AssignmentModelAuditSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(AiTextService.ScoringFormulaVersion, report.AssignmentScoringFormulaVersion);
     }
