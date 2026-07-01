@@ -6,6 +6,8 @@ namespace SpeechBuddyAI.Services;
 
 public class AiSpeechService
 {
+    public const string ScoringFormulaVersion = "score-v2.0-position-aware-consistency";
+
     private readonly ProgressTrackingService _progressTrackingService;
     private readonly IReadOnlyList<ISpeechScoringAdapter> _scoringAdapters;
     private readonly ConfidenceCalculator _confidenceCalculator;
@@ -65,15 +67,19 @@ public class AiSpeechService
         try
         {
             var priorEntries = await _progressTrackingService.GetEntriesForSoundAsync(baseTarget);
-            var consistency = _consistencyEstimator.Estimate(priorEntries, positionTag);
+            var consistencyProfile = _consistencyEstimator.EstimateProfile(priorEntries, positionTag);
+            var consistency = consistencyProfile.Score;
             var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
             var confidenceScore = _confidenceCalculator.ComputeScore(
                 scores,
                 normalizedTranscript,
                 priorEntries.Count,
-                adapterResult.Provider);
+                adapterResult.Provider,
+                consistencyProfile.Uncertainty,
+                consistencyProfile.UncertaintyBand);
             var confidenceBand = _confidenceCalculator.ComputeBand(confidenceScore);
+            var drift = DetectHistoricalDrift(priorEntries, scores.OverallScore);
 
             var trialCount = priorEntries.Count + 1;
             var entry = new ProgressEntry
@@ -103,7 +109,11 @@ public class AiSpeechService
                 Entry = entry,
                 Provider = adapterResult.Provider,
                 ConfidenceScore = confidenceScore,
-                ConfidenceBand = confidenceBand
+                ConfidenceBand = confidenceBand,
+                ScoringFormulaVersion = ScoringFormulaVersion,
+                HistoricalDriftDetected = drift.Detected,
+                HistoricalDriftZScore = drift.ZScore,
+                HistoricalDriftSummary = drift.Summary
             };
         }
         catch (Exception ex) when (ex is not ArgumentException)
@@ -189,6 +199,36 @@ public class AiSpeechService
         return Math.Max(0.0, Math.Min(1.0, value));
     }
 
+    private static HistoricalDriftState DetectHistoricalDrift(
+        IReadOnlyList<ProgressEntry> priorEntries,
+        double currentOverallScore)
+    {
+        var source = priorEntries ?? Array.Empty<ProgressEntry>();
+        if (source.Count < 6)
+        {
+            return new HistoricalDriftState(false, 0.0, "Insufficient history for drift detection.");
+        }
+
+        var baseline = source
+            .OrderByDescending(entry => entry.Timestamp)
+            .Take(12)
+            .Select(entry => Clamp(entry.OverallScore))
+            .ToArray();
+
+        var mean = baseline.Average();
+        var variance = baseline.Average(value => Math.Pow(value - mean, 2));
+        var stdDev = Math.Sqrt(Math.Max(variance, 1e-6));
+        var zScore = (Clamp(currentOverallScore) - mean) / stdDev;
+        var boundedZ = Math.Clamp(zScore, -3.0, 3.0);
+        var detected = Math.Abs(boundedZ) >= 2.0;
+
+        var summary = detected
+            ? $"Drift flagged between legacy scoring profile and {ScoringFormulaVersion}; z={boundedZ:+0.00;-0.00;0.00}."
+            : $"No abrupt drift detected against historical baseline; z={boundedZ:+0.00;-0.00;0.00}.";
+
+        return new HistoricalDriftState(detected, boundedZ, summary);
+    }
+
     private static (string BaseTarget, string PositionTag) ParseTargetMetadata(string target)
     {
         var normalized = (target ?? string.Empty).Trim().ToLowerInvariant();
@@ -202,4 +242,6 @@ public class AiSpeechService
         var position = parts.Length > 1 ? parts[1].Trim() : string.Empty;
         return (baseTarget, position);
     }
+
+    private sealed record HistoricalDriftState(bool Detected, double ZScore, string Summary);
 }

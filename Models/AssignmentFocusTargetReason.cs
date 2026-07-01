@@ -29,4 +29,10 @@ public sealed class AssignmentFocusTargetReason
     public IReadOnlyList<double> FinalAttemptScores { get; init; } = Array.Empty<double>();
     public string PositionSequence { get; init; } = "initial -> medial -> final";
     public string PositionDeltaSummary { get; init; } = "initial +0.00 | medial +0.00 | final +0.00";
+    public double PositionWeightedDeclineScore { get; init; }
+    public double FrequencyNormalizationFactor { get; init; }
+    public double ReliabilityScore { get; init; }
+    public double ReliabilitySampleDepthScore { get; init; }
+    public double ReliabilityVarianceScore { get; init; }
+    public double ReliabilityTrendStabilityScore { get; init; }
 }
