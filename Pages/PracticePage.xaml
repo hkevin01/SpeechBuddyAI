@@ -11,11 +11,12 @@
             <Label Text="Capture an attempt, compute score components, and persist the result." />
 
             <Label Text="Target sound" FontAttributes="Bold" />
-            <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or sh" />
+            <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or sh" TabIndex="0" />
 
             <Label Text="Word position (optional)" FontAttributes="Bold" />
             <Picker x:Name="PositionPicker"
                     Title="Any position"
+                    TabIndex="1"
                     SemanticProperties.Description="Select word position for generated practice words">
                 <Picker.Items>
                     <x:String>Any</x:String>
@@ -28,6 +29,7 @@
             <Label Text="Attempt transcript" FontAttributes="Bold" />
                 <Editor x:Name="TranscriptEditor"
                     Placeholder="Type recognized transcript here"
+                        TabIndex="2"
                     SemanticProperties.Description="Transcript editor for captured speech"
                     AutoSize="TextChanges"
                     HeightRequest="120" />
@@ -35,11 +37,13 @@
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Button Grid.Column="0"
                     Text="Score Attempt"
+                    TabIndex="3"
                     SemanticProperties.Description="Score current attempt and save results"
                     Clicked="OnScoreAttemptClicked"
                     HorizontalOptions="Fill" />
                 <Button Grid.Column="1"
                     Text="Generate Practice List"
+                    TabIndex="4"
                     SemanticProperties.Description="Generate practice words for the selected target"
                     Clicked="OnGeneratePracticeListClicked"
                     HorizontalOptions="Fill" />

@@ -8,15 +8,17 @@
     <ScrollView>
     <VerticalStackLayout Style="{StaticResource PageRootLayoutStyle}">
         <Label Text="Session Notes" Style="{StaticResource PageTitleLabelStyle}" />
-            <Editor x:Name="RawNoteEditor" Placeholder="Type or dictate your note here..." HeightRequest="180" />
+            <Editor x:Name="RawNoteEditor" Placeholder="Type or dictate your note here..." HeightRequest="180" TabIndex="0" />
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
         <Button Grid.Column="0"
             Text="Generate Summaries"
+            TabIndex="1"
                 SemanticProperties.Description="Generate clinician and parent summaries from current note and recent progress"
             Clicked="OnGenerateSummariesClicked" />
         <Button Grid.Column="1"
             Text="Save Note"
+            TabIndex="2"
                 SemanticProperties.Description="Save generated note and summaries to note history"
             Clicked="OnSaveNoteClicked" />
         </Grid>
@@ -24,6 +26,7 @@
             <HorizontalStackLayout x:Name="ExportFormatRow" Spacing="10" VerticalOptions="Center">
                 <Label Text="Export format" VerticalOptions="Center" />
                 <Picker x:Name="ExportFormatPicker"
+                    TabIndex="3"
                 SemanticProperties.Description="Select export format for reports"
                         SelectedIndex="0"
                         SelectedIndexChanged="OnExportFormatChanged">
@@ -43,12 +46,14 @@
                         <VerticalStackLayout>
                             <Label Text="Start" FontSize="12" />
                             <DatePicker x:Name="ExportStartDatePicker"
+                                        TabIndex="4"
                                         SemanticProperties.Description="Start date for export metadata window"
                                         DateSelected="OnExportPreviewWindowChanged" />
                         </VerticalStackLayout>
                         <VerticalStackLayout>
                             <Label Text="End" FontSize="12" />
                             <DatePicker x:Name="ExportEndDatePicker"
+                                        TabIndex="5"
                                         SemanticProperties.Description="End date for export metadata window"
                                         DateSelected="OnExportPreviewWindowChanged" />
                         </VerticalStackLayout>
@@ -108,6 +113,7 @@
                     <HorizontalStackLayout x:Name="AssignmentTargetRow" Spacing="8" VerticalOptions="Center">
                         <Label Text="Target drill-down" VerticalOptions="Center" />
                         <Picker x:Name="AssignmentTargetPicker"
+                            TabIndex="6"
                                 SemanticProperties.Description="Select target sound for assignment analytics drill-down"
                                 SelectedIndexChanged="OnAssignmentTargetChanged" />
                     </HorizontalStackLayout>
@@ -306,10 +312,12 @@
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Button Grid.Column="0"
                     Text="Export Latest Report"
+                    TabIndex="7"
                         SemanticProperties.Description="Export latest report using selected format and metadata window"
                     Clicked="OnExportLatestClicked" />
                 <Button Grid.Column="1"
                     Text="Share Latest Report"
+                    TabIndex="8"
                         SemanticProperties.Description="Share latest report or export only based on settings"
                     Clicked="OnShareLatestClicked" />
                 </Grid>

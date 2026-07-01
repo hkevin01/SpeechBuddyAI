@@ -97,6 +97,34 @@ public sealed class UiAccessibilityGuardrailsTests
         AssertContrastAtLeast(colors, "OnSecondary", "Secondary", 4.5);
     }
 
+    [Fact]
+    public void DarkThemeRolePairs_MeetWcagContrastThreshold_WhenDarkPaletteExists()
+    {
+        var colors = LoadColorDictionary();
+
+        var darkPairs = new (string Foreground, string Background)[]
+        {
+            ("OnDarkBackground", "DarkBackground"),
+            ("OnDarkSurface", "DarkSurface"),
+            ("OnDarkPrimary", "DarkPrimary"),
+            ("OnDarkSecondary", "DarkSecondary")
+        };
+
+        foreach (var (foreground, background) in darkPairs)
+        {
+            var hasForeground = colors.ContainsKey(foreground);
+            var hasBackground = colors.ContainsKey(background);
+
+            if (!hasForeground && !hasBackground)
+            {
+                continue;
+            }
+
+            Assert.True(hasForeground && hasBackground, $"Dark theme pair must define both keys: {foreground} and {background}.");
+            AssertContrastAtLeast(colors, foreground, background, 4.5);
+        }
+    }
+
     private static Dictionary<string, string> LoadColorDictionary()
     {
         var document = LoadXaml("Resources/Styles/Colors.xaml");

@@ -13,9 +13,11 @@
             <HorizontalStackLayout Spacing="8">
                 <Entry x:Name="FilterEntry"
                        Placeholder="Filter by target sound..."
+                       TabIndex="0"
                        HorizontalOptions="FillAndExpand"
                        TextChanged="OnFilterTextChanged" />
                 <Button Text="Clear"
+                    TabIndex="1"
                         SemanticProperties.Description="Clear target-sound filter"
                         Clicked="OnFilterClearClicked" />
             </HorizontalStackLayout>
@@ -26,12 +28,14 @@
                         <VerticalStackLayout Spacing="3">
                             <Label Text="Start" FontSize="12" />
                             <DatePicker x:Name="ProgressStartDatePicker"
+                                        TabIndex="2"
                                         SemanticProperties.Description="Start date for comparison range"
                                         DateSelected="OnDateRangeChanged" />
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="3">
                             <Label Text="End" FontSize="12" />
                             <DatePicker x:Name="ProgressEndDatePicker"
+                                        TabIndex="3"
                                         SemanticProperties.Description="End date for comparison range"
                                         DateSelected="OnDateRangeChanged" />
                         </VerticalStackLayout>

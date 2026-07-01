@@ -47,6 +47,7 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Home Assignment" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Button Text="Generate from Weak Patterns"
+                            TabIndex="0"
                         SemanticProperties.Description="Generate a home assignment using recent weak-pattern evidence"
                             Clicked="OnGenerateAssignmentClicked" />
                     <Label x:Name="AssignmentTitleLabel" Text="No assignment generated yet." FontAttributes="Bold" />
