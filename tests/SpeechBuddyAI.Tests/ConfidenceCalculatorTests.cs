@@ -128,6 +128,42 @@ public sealed class ConfidenceCalculatorTests
         Assert.True(noisyLowCount >= stableLowCount);
     }
 
+    [Fact]
+    public void ComputeScore_LowEmpiricalOutcome_WithHighSupport_CalibratesDown()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var scores = new ScoreComponents
+        {
+            PhonemeScore = 0.88,
+            FluencyScore = 0.84,
+            ConsistencyScore = 0.86,
+            OverallScore = 0.87
+        };
+
+        var uncalibrated = calculator.ComputeScore(scores, "rain rabbit", 10, "offline-heuristic", 0.20, "HighSupport");
+        var calibrated = calculator.ComputeScore(scores, "rain rabbit", 10, "offline-heuristic", 0.20, "HighSupport", empiricalOutcomeMean: 0.45, empiricalOutcomeSupport: 1.0);
+
+        Assert.True(calibrated < uncalibrated);
+    }
+
+    [Fact]
+    public void ComputeScore_HighEmpiricalOutcome_WithHighSupport_CalibratesUp()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var scores = new ScoreComponents
+        {
+            PhonemeScore = 0.70,
+            FluencyScore = 0.68,
+            ConsistencyScore = 0.69,
+            OverallScore = 0.69
+        };
+
+        var uncalibrated = calculator.ComputeScore(scores, "rain rabbit", 10, "offline-heuristic", 0.20, "HighSupport");
+        var calibrated = calculator.ComputeScore(scores, "rain rabbit", 10, "offline-heuristic", 0.20, "HighSupport", empiricalOutcomeMean: 0.90, empiricalOutcomeSupport: 1.0);
+
+        Assert.True(calibrated > uncalibrated);
+    }
+
     private sealed class StubProvider : IConfidenceThresholdProvider
     {
         private readonly ConfidenceThresholds _thresholds;

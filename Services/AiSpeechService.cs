@@ -71,6 +71,7 @@ public class AiSpeechService
             var consistency = consistencyProfile.Score;
             var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
+            var calibrationContext = BuildCalibrationContext(priorEntries, positionTag);
             var adaptiveThresholds = _confidenceCalculator.ComputeAdaptiveThresholds(priorEntries, consistencyProfile.Uncertainty);
             var confidenceScore = _confidenceCalculator.ComputeScore(
                 scores,
@@ -78,7 +79,9 @@ public class AiSpeechService
                 priorEntries.Count,
                 adapterResult.Provider,
                 consistencyProfile.Uncertainty,
-                consistencyProfile.UncertaintyBand);
+                consistencyProfile.UncertaintyBand,
+                calibrationContext.OutcomeMean,
+                calibrationContext.Support);
             var confidenceBand = _confidenceCalculator.ComputeBand(confidenceScore, adaptiveThresholds);
             var drift = DetectHistoricalDrift(priorEntries, scores.OverallScore);
 
@@ -250,5 +253,36 @@ public class AiSpeechService
         return (baseTarget, position);
     }
 
+    private static ConfidenceCalibrationContext BuildCalibrationContext(
+        IReadOnlyList<ProgressEntry> priorEntries,
+        string positionTag)
+    {
+        var source = priorEntries ?? Array.Empty<ProgressEntry>();
+        if (source.Count == 0)
+        {
+            return new ConfidenceCalibrationContext(0.5, 0.0);
+        }
+
+        var normalizedPosition = (positionTag ?? string.Empty).Trim().ToLowerInvariant();
+        var positionScoped = source
+            .Where(entry => string.Equals((entry.PositionTag ?? string.Empty).Trim(), normalizedPosition, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(entry => entry.Timestamp)
+            .Take(12)
+            .ToArray();
+
+        var pool = positionScoped.Length >= 4
+            ? positionScoped
+            : source
+                .OrderByDescending(entry => entry.Timestamp)
+                .Take(12)
+                .ToArray();
+
+        var outcomeMean = pool.Average(entry => Clamp(entry.OverallScore));
+        var support = Math.Min(pool.Length, 12) / 12.0;
+
+        return new ConfidenceCalibrationContext(outcomeMean, support);
+    }
+
     private sealed record HistoricalDriftState(bool Detected, double ZScore, string Summary);
+    private sealed record ConfidenceCalibrationContext(double OutcomeMean, double Support);
 }

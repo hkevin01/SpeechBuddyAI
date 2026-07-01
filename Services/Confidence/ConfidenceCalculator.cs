@@ -17,7 +17,9 @@ public sealed class ConfidenceCalculator
         int priorEntryCount,
         string provider,
         double consistencyUncertainty = 0.5,
-        string consistencyUncertaintyBand = "ModerateSupport")
+        string consistencyUncertaintyBand = "ModerateSupport",
+        double empiricalOutcomeMean = 0.5,
+        double empiricalOutcomeSupport = 0.0)
     {
         if (scores is null)
         {
@@ -53,7 +55,20 @@ public sealed class ConfidenceCalculator
             providerBonus -
             (0.15 * spreadPenalty);
 
-        return Clamp(rawScore);
+        var provisional = Clamp(rawScore);
+        var outcomeMean = Clamp(empiricalOutcomeMean);
+        var support = Clamp(empiricalOutcomeSupport);
+
+        if (support <= 0.0)
+        {
+            return provisional;
+        }
+
+        var shrinkWeight = 0.35 * support;
+        var shrunk = provisional + (shrinkWeight * (outcomeMean - provisional));
+        var calibrationPenalty = Math.Abs(provisional - outcomeMean) * 0.08 * support;
+
+        return Clamp(shrunk - calibrationPenalty);
     }
 
     public string ComputeBand(double confidenceScore)
