@@ -9,17 +9,20 @@ public class AiSpeechService
     private readonly ProgressTrackingService _progressTrackingService;
     private readonly IReadOnlyList<ISpeechScoringAdapter> _scoringAdapters;
     private readonly ConfidenceCalculator _confidenceCalculator;
+    private readonly ConsistencyEstimator _consistencyEstimator;
 
     public AiSpeechService(
         ProgressTrackingService progressTrackingService,
         IEnumerable<ISpeechScoringAdapter> scoringAdapters,
-        ConfidenceCalculator confidenceCalculator)
+        ConfidenceCalculator confidenceCalculator,
+        ConsistencyEstimator? consistencyEstimator = null)
     {
         _progressTrackingService = progressTrackingService;
         _scoringAdapters = scoringAdapters
             .OrderBy(a => a.Priority)
             .ToArray();
         _confidenceCalculator = confidenceCalculator ?? throw new ArgumentNullException(nameof(confidenceCalculator));
+        _consistencyEstimator = consistencyEstimator ?? new ConsistencyEstimator();
 
         if (_scoringAdapters.Count == 0)
         {
@@ -62,7 +65,7 @@ public class AiSpeechService
         try
         {
             var priorEntries = await _progressTrackingService.GetEntriesForSoundAsync(baseTarget);
-            var consistency = ComputeConsistencyScore(priorEntries);
+            var consistency = _consistencyEstimator.Estimate(priorEntries, positionTag);
             var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
             var confidenceScore = _confidenceCalculator.ComputeScore(
@@ -158,34 +161,6 @@ public class AiSpeechService
         catch (Exception ex)
         {
             throw new InvalidOperationException("Failed to compose score components.", ex);
-        }
-    }
-
-    private static double ComputeConsistencyScore(IReadOnlyList<ProgressEntry> entries)
-    {
-        var sourceEntries = entries ?? Array.Empty<ProgressEntry>();
-
-        if (sourceEntries.Count < 2)
-        {
-            return 0.5;
-        }
-
-        try
-        {
-            var recent = sourceEntries
-                .OrderByDescending(e => e.Timestamp)
-                .Take(5)
-                .Select(e => e.OverallScore)
-                .ToArray();
-
-            var mean = recent.Average();
-            var variance = recent.Average(s => Math.Pow(s - mean, 2));
-            var normalizedVariance = Math.Min(variance / 0.08, 1.0);
-            return Clamp(1.0 - normalizedVariance);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Failed to compute consistency score.", ex);
         }
     }
 
