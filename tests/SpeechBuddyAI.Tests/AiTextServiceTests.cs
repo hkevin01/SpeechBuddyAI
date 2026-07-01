@@ -138,7 +138,7 @@ public sealed class AiTextServiceTests
 
         Assert.NotEmpty(assignment.FocusTargets);
         Assert.Equal("r", assignment.FocusTargets[0]);
-        Assert.True(assignment.FocusTargetReasons.Any(reason => reason.AssignmentChangeSuppressed));
+        Assert.Contains(assignment.FocusTargetReasons, reason => reason.AssignmentChangeSuppressed);
     }
 
     [Fact]

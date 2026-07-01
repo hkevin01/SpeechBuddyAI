@@ -74,10 +74,11 @@ public class ReportService
 
     public string BuildExportText(SessionNote note, IReadOnlyList<ProgressEntry> metadataEntries, ReportExportFormat format)
     {
+        var safeEntries = metadataEntries ?? Array.Empty<ProgressEntry>();
         var normalizationMode = _confidenceSettingsService.GetSessionComparisonNormalizationMode();
         var smoothingStrength = _confidenceSettingsService.GetSessionComparisonSmoothingStrength();
-        var comparisonSnapshot = _comparisonSnapshotCacheService.GetOrBuild(metadataEntries ?? Array.Empty<ProgressEntry>(), normalizationMode, smoothingStrength);
-        return ReportExportFormatter.BuildContent(note, metadataEntries, format, comparisonSnapshot);
+        var comparisonSnapshot = _comparisonSnapshotCacheService.GetOrBuild(safeEntries, normalizationMode, smoothingStrength);
+        return ReportExportFormatter.BuildContent(note, safeEntries, format, comparisonSnapshot);
     }
 
     public string BuildExportFileName(SessionNote note, ReportExportFormat format)
@@ -99,7 +100,7 @@ public class ReportService
 
             var fileName = BuildExportFileName(note, format);
             var filePath = Path.Combine(exportsDir, fileName);
-            var content = BuildExportText(note, metadataEntries ?? Array.Empty<ProgressEntry>(), format);
+            var content = BuildExportText(note, metadataEntries, format);
 
             await File.WriteAllTextAsync(filePath, content);
             return filePath;

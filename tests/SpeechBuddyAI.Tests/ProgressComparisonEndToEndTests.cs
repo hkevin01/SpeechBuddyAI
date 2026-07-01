@@ -49,7 +49,7 @@ public sealed class ProgressComparisonEndToEndTests
         Assert.Equal("Date: 2026-06-20", state.CurrentSessionDateText);
         Assert.Equal("Normalization: Day-weighted averages", state.NormalizationModeText);
         Assert.Equal(2, state.TimelineRows.Count);
-        Assert.Equal(1, state.TargetComparisons.Count);
+        Assert.Single(state.TargetComparisons);
         Assert.Equal("Strongest Improved", state.SummaryBadges[0].Title);
         Assert.Equal("Most Variable", state.SummaryBadges[1].Title);
         Assert.Contains("Across the last 2 sessions in view", state.ComparisonNarrativeText);

@@ -109,14 +109,16 @@ public sealed class SessionComparisonService
         {
             var hasCurrentData = currentByTarget.TryGetValue(target, out var currentData);
             var hasPreviousData = previousByTarget.TryGetValue(target, out var previousData);
+            var currentItems = hasCurrentData ? currentData! : Array.Empty<ProgressEntry>();
+            var previousItems = hasPreviousData ? previousData! : Array.Empty<ProgressEntry>();
 
-            var currentAvg = hasCurrentData ? currentData.Average(e => e.OverallScore) : 0.0;
-            var previousAvg = hasPreviousData ? previousData.Average(e => e.OverallScore) : 0.0;
-            var currentConfidenceAvg = hasCurrentData ? currentData.Average(e => e.ConfidenceScore) : 0.0;
-            var previousConfidenceAvg = hasPreviousData ? previousData.Average(e => e.ConfidenceScore) : 0.0;
-            var currentVariance = ComputeVariance(currentData, entry => entry.OverallScore);
-            var previousVariance = ComputeVariance(previousData, entry => entry.OverallScore);
-            var recentVariance = ComputeVariance(ConcatEntries(currentData, previousData), entry => entry.OverallScore);
+            var currentAvg = currentItems.Length > 0 ? currentItems.Average(e => e.OverallScore) : 0.0;
+            var previousAvg = previousItems.Length > 0 ? previousItems.Average(e => e.OverallScore) : 0.0;
+            var currentConfidenceAvg = currentItems.Length > 0 ? currentItems.Average(e => e.ConfidenceScore) : 0.0;
+            var previousConfidenceAvg = previousItems.Length > 0 ? previousItems.Average(e => e.ConfidenceScore) : 0.0;
+            var currentVariance = ComputeVariance(currentItems, entry => entry.OverallScore);
+            var previousVariance = ComputeVariance(previousItems, entry => entry.OverallScore);
+            var recentVariance = ComputeVariance(ConcatEntries(currentItems, previousItems), entry => entry.OverallScore);
             var consistencyDecay = Math.Max(0.0, currentVariance - previousVariance);
             var variabilityIndex = Math.Sqrt(Math.Max(0.0, recentVariance)) + (0.5 * consistencyDecay);
 
@@ -127,10 +129,10 @@ public sealed class SessionComparisonService
                 PreviousAverageOverall = previousAvg,
                 CurrentAverageConfidence = currentConfidenceAvg,
                 PreviousAverageConfidence = previousConfidenceAvg,
-                CurrentConfidenceBand = ResolveDominantBand(currentData),
-                PreviousConfidenceBand = ResolveDominantBand(previousData),
-                CurrentAttemptCount = hasCurrentData ? currentData.Length : 0,
-                PreviousAttemptCount = hasPreviousData ? previousData.Length : 0,
+                CurrentConfidenceBand = ResolveDominantBand(currentItems),
+                PreviousConfidenceBand = ResolveDominantBand(previousItems),
+                CurrentAttemptCount = currentItems.Length,
+                PreviousAttemptCount = previousItems.Length,
                 CurrentSessionVariance = currentVariance,
                 PreviousSessionVariance = previousVariance,
                 RecentSessionVariance = recentVariance,
@@ -245,9 +247,11 @@ public sealed class SessionComparisonService
             var hasBaseline = i + 1 < aggregates.Length;
             var baseline = hasBaseline ? aggregates[i + 1] : null;
             var currentSmoothed = smoothed[current.SessionDate];
-            var baselineSmoothed = hasBaseline
-                ? smoothed[baseline!.SessionDate]
-                : (Overall: 0.0, Confidence: 0.0);
+            var baselineSmoothed = (Overall: 0.0, Confidence: 0.0);
+            if (baseline is not null)
+            {
+                baselineSmoothed = smoothed[baseline.SessionDate];
+            }
 
             timeline.Add(new SessionTimelineItem
             {
