@@ -15,6 +15,8 @@
   <ItemGroup>
     <Compile Include="../../Models/ScoreComponents.cs" Link="Shared/ScoreComponents.cs" />
     <Compile Include="../../Models/ProgressEntry.cs" Link="Shared/ProgressEntry.cs" />
+    <Compile Include="../../Models/ConfidenceBand.cs" Link="Shared/ConfidenceBand.cs" />
+    <Compile Include="../../Models/PracticeAttemptResult.cs" Link="Shared/PracticeAttemptResult.cs" />
     <Compile Include="../../Models/TrendPoint.cs" Link="Shared/TrendPoint.cs" />
     <Compile Include="../../Models/SessionComparisonSnapshot.cs" Link="Shared/SessionComparisonSnapshot.cs" />
     <Compile Include="../../Models/SessionNote.cs" Link="Shared/SessionNote.cs" />
@@ -33,7 +35,11 @@
     <Compile Include="../../Services/Confidence/ConfidenceCalculator.cs" Link="Shared/ConfidenceCalculator.cs" />
     <Compile Include="../../Services/Storage/ProgressSchemaMigration.cs" Link="Shared/ProgressSchemaMigration.cs" />
     <Compile Include="../../Services/SpeechScoring/ConsistencyEstimator.cs" Link="Shared/ConsistencyEstimator.cs" />
+    <Compile Include="../../Services/SpeechScoring/ISpeechScoringAdapter.cs" Link="Shared/ISpeechScoringAdapter.cs" />
+    <Compile Include="../../Services/SpeechScoring/AdapterScoreResult.cs" Link="Shared/AdapterScoreResult.cs" />
     <Compile Include="../../Services/PhonemeWordBankService.cs" Link="Shared/PhonemeWordBankService.cs" />
+    <Compile Include="../../Services/ProgressTrackingService.cs" Link="Shared/ProgressTrackingService.cs" />
+    <Compile Include="../../Services/AiSpeechService.cs" Link="Shared/AiSpeechService.cs" />
     <Compile Include="../../Services/AiTextService.cs" Link="Shared/AiTextService.cs" />
     <Compile Include="../../Services/AssignmentSnapshotService.cs" Link="Shared/AssignmentSnapshotService.cs" />
     <Compile Include="../../Services/DashboardStatsService.cs" Link="Shared/DashboardStatsService.cs" />
