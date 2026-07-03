@@ -41,6 +41,11 @@ public partial class SettingsPage : ContentPage
             AssignmentPositionInitialSlider.Value = assignmentSettings.PositionInitialWeight;
             AssignmentPositionMedialSlider.Value = assignmentSettings.PositionMedialWeight;
             AssignmentPositionFinalSlider.Value = assignmentSettings.PositionFinalWeight;
+            var calibrationCoefficients = _settingsService.GetCalibrationPositionSupportCoefficients();
+            CalibrationInitialSupportSlider.Value = calibrationCoefficients.InitialCoefficient;
+            CalibrationMedialSupportSlider.Value = calibrationCoefficients.MedialCoefficient;
+            CalibrationFinalSupportSlider.Value = calibrationCoefficients.FinalCoefficient;
+            CalibrationTableActivationSamplesSlider.Value = _settingsService.GetCalibrationTableActivationMinSamples();
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
@@ -92,6 +97,11 @@ public partial class SettingsPage : ContentPage
             _settingsService.SaveAssignmentConfidenceIntervalMinSamples((int)Math.Round(AssignmentCiMinSamplesSlider.Value));
             _settingsService.SaveAssignmentSuppressionBehavior((AssignmentSuppressionBehavior)Math.Clamp(AssignmentSuppressionBehaviorPicker.SelectedIndex, 0, 2));
             _settingsService.SaveAssignmentUncertaintyBudgetCap(AssignmentUncertaintyBudgetCapSlider.Value);
+            _settingsService.SaveCalibrationPositionSupportCoefficients(new PositionSupportCoefficients(
+                CalibrationInitialSupportSlider.Value,
+                CalibrationMedialSupportSlider.Value,
+                CalibrationFinalSupportSlider.Value));
+            _settingsService.SaveCalibrationTableActivationMinSamples((int)Math.Round(CalibrationTableActivationSamplesSlider.Value));
             StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
@@ -124,6 +134,11 @@ public partial class SettingsPage : ContentPage
             AssignmentPositionInitialSlider.Value = assignmentDefaults.PositionInitialWeight;
             AssignmentPositionMedialSlider.Value = assignmentDefaults.PositionMedialWeight;
             AssignmentPositionFinalSlider.Value = assignmentDefaults.PositionFinalWeight;
+            var calibrationDefaults = _settingsService.GetCalibrationPositionSupportCoefficients();
+            CalibrationInitialSupportSlider.Value = calibrationDefaults.InitialCoefficient;
+            CalibrationMedialSupportSlider.Value = calibrationDefaults.MedialCoefficient;
+            CalibrationFinalSupportSlider.Value = calibrationDefaults.FinalCoefficient;
+            CalibrationTableActivationSamplesSlider.Value = _settingsService.GetCalibrationTableActivationMinSamples();
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";
@@ -165,6 +180,10 @@ public partial class SettingsPage : ContentPage
         AssignmentPositionInitialValueLabel.Text = $"{AssignmentPositionInitialSlider.Value:P0}";
         AssignmentPositionMedialValueLabel.Text = $"{AssignmentPositionMedialSlider.Value:P0}";
         AssignmentPositionFinalValueLabel.Text = $"{AssignmentPositionFinalSlider.Value:P0}";
+        CalibrationInitialSupportValueLabel.Text = $"{CalibrationInitialSupportSlider.Value:0.00}x";
+        CalibrationMedialSupportValueLabel.Text = $"{CalibrationMedialSupportSlider.Value:0.00}x";
+        CalibrationFinalSupportValueLabel.Text = $"{CalibrationFinalSupportSlider.Value:0.00}x";
+        CalibrationTableActivationSamplesValueLabel.Text = $"{Math.Round(CalibrationTableActivationSamplesSlider.Value)} samples";
     }
 
     private static T ResolveService<T>() where T : notnull

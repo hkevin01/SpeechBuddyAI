@@ -182,6 +182,47 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(ConfidenceSettingsService.DefaultAssignmentConfidenceIntervalMinSamples, service.GetAssignmentConfidenceIntervalMinSamples());
     }
 
+    [Fact]
+    public void CalibrationPositionSupportCoefficients_PersistAndClampToSupportedRange()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveCalibrationPositionSupportCoefficients(new PositionSupportCoefficients(3.0, 0.05, 1.35));
+
+        var coefficients = service.GetCalibrationPositionSupportCoefficients();
+        Assert.Equal(2.0, coefficients.InitialCoefficient, 3);
+        Assert.Equal(0.1, coefficients.MedialCoefficient, 3);
+        Assert.Equal(1.35, coefficients.FinalCoefficient, 3);
+    }
+
+    [Fact]
+    public void CalibrationTableActivationMinSamples_PersistsAndClamps()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveCalibrationTableActivationMinSamples(40);
+        Assert.Equal(24, service.GetCalibrationTableActivationMinSamples());
+
+        service.SaveCalibrationTableActivationMinSamples(2);
+        Assert.Equal(4, service.GetCalibrationTableActivationMinSamples());
+    }
+
+    [Fact]
+    public void ResetDefaults_RestoresCalibrationDefaults()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+        service.SaveCalibrationPositionSupportCoefficients(new PositionSupportCoefficients(1.8, 1.7, 1.6));
+        service.SaveCalibrationTableActivationMinSamples(16);
+
+        service.ResetDefaults();
+
+        var coefficients = service.GetCalibrationPositionSupportCoefficients();
+        Assert.Equal(ConfidenceSettingsService.DefaultCalibrationPositionSupportCoefficients.InitialCoefficient, coefficients.InitialCoefficient, 3);
+        Assert.Equal(ConfidenceSettingsService.DefaultCalibrationPositionSupportCoefficients.MedialCoefficient, coefficients.MedialCoefficient, 3);
+        Assert.Equal(ConfidenceSettingsService.DefaultCalibrationPositionSupportCoefficients.FinalCoefficient, coefficients.FinalCoefficient, 3);
+        Assert.Equal(ConfidenceSettingsService.DefaultCalibrationTableActivationMinSamples, service.GetCalibrationTableActivationMinSamples());
+    }
+
     private sealed class InMemoryStore : IKeyValueStore
     {
         private readonly Dictionary<string, double> _values = new(StringComparer.Ordinal);

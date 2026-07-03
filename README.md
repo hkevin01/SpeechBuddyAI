@@ -22,15 +22,16 @@ This README is both a product guide and a technical implementation reference. It
 
 1. What This Project Does
 2. Fast Comparison Tables (Use/Do Not Use)
-3. Current Milestone Status
-4. Tech Stack and Architecture
-5. Algorithms and Formulas
-6. Public Libraries and API Strategy
-7. Collapsible API Reference
-8. GitHub Workflow and Tracking
-9. Research Citations
-10. Operations and Reliability Playbook
-11. Build, Run, and Practical Notes
+3. Recent Calibration and Reliability Updates
+4. Current Milestone Status
+5. Tech Stack and Architecture
+6. Algorithms and Formulas
+7. Public Libraries and API Strategy
+8. Collapsible API Reference
+9. GitHub Workflow and Tracking
+10. Research Citations
+11. Operations and Reliability Playbook
+12. Build, Run, and Practical Notes
 
 ## What This Project Does
 
@@ -40,6 +41,46 @@ The app currently demonstrates a complete vertical slice for M1. A user can ente
 
 > [!NOTE]
 > Persistence now uses app-local SQLite. Baseline roadmap features through M5 are implemented, including trend analysis, assignment generation, fallback scoring adapters, and report generation.
+
+## Recent Calibration and Reliability Updates
+
+For a full change log, see [CHANGELOG.md](./CHANGELOG.md).
+
+This release added a calibration-focused reliability layer so confidence scoring is not only accurate in-the-moment, but also auditable and tunable across time.
+
+### What was added
+
+- Per-attempt calibration evidence is now persisted:
+  - raw confidence before calibration
+  - empirical outcome mean/support
+  - residual error magnitude $|raw - empirical|$
+  - calibration method and serialized table snapshot
+  - uncertainty decomposition into variance-driven vs sparsity-driven components
+- Per-target non-linear calibration tables were added using binned isotonic correction when enough samples are available.
+- Position-specific support weighting is now part of calibration context:
+  - initial, medial, and final support coefficients
+- Reports now include:
+  - longitudinal calibration drift by target
+  - reliability-aware uncertainty decomposition summaries
+- Settings UI now includes clinician-facing controls for:
+  - initial/medial/final calibration support coefficients
+  - calibration table activation threshold (minimum samples)
+
+### Why these features were added
+
+- Calibration residuals were added so clinicians can inspect whether confidence is systematically over- or under-estimating observed outcomes over time.
+- Non-linear per-target tables were added because linear shrinkage alone can miss curved calibration behavior in real articulation progress.
+- Position-specific support coefficients were added because initial/medial/final positions often have different stability and learning trajectories.
+- Uncertainty decomposition was added to separate "model is noisy" from "data is sparse," which supports safer interpretation and follow-up actions.
+- Clinician tuning controls were added to avoid hardcoded calibration policy and to enable practical adaptation without code changes.
+
+### Clinical and engineering benefits
+
+- Better trust: confidence outputs now include richer evidence and can be audited longitudinally.
+- Better safety: report-level uncertainty splitting clarifies whether caution is driven by instability or insufficient support.
+- Better adaptability: clinicians can tune calibration sensitivity in Settings instead of waiting for engineering changes.
+- Better robustness: synthetic regression tests now cover abrupt improvement, deterioration, and oscillatory shift scenarios.
+- Better maintainability: schema and service layers are aligned so new calibration fields remain migration-safe and test-covered.
 
 ## Reader-Level Guide (6 out of 10)
 
