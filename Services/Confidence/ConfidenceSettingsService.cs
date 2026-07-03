@@ -24,6 +24,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string CalibrationSupportInitialCoefficientKey = "calibration.support.initialCoefficient";
     private const string CalibrationSupportMedialCoefficientKey = "calibration.support.medialCoefficient";
     private const string CalibrationSupportFinalCoefficientKey = "calibration.support.finalCoefficient";
+    private const string CalibrationTableActivationMinSamplesKey = "calibration.table.activationMinSamples";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -36,6 +37,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const int DefaultAssignmentConfidenceIntervalMinSamples = 5;
     public const double DefaultAssignmentUncertaintyBudgetCap = 0.40;
     public static readonly PositionSupportCoefficients DefaultCalibrationPositionSupportCoefficients = new(1.00, 0.85, 0.92);
+    public const int DefaultCalibrationTableActivationMinSamples = 8;
 
     private readonly IKeyValueStore _store;
 
@@ -86,6 +88,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         SaveAssignmentConfidenceIntervalMinSamples(DefaultAssignmentConfidenceIntervalMinSamples);
         SaveAssignmentUncertaintyBudgetCap(DefaultAssignmentUncertaintyBudgetCap);
         SaveCalibrationPositionSupportCoefficients(DefaultCalibrationPositionSupportCoefficients);
+        SaveCalibrationTableActivationMinSamples(DefaultCalibrationTableActivationMinSamples);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -259,9 +262,9 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public PositionSupportCoefficients GetCalibrationPositionSupportCoefficients()
     {
         return new PositionSupportCoefficients(
-            Clamp(_store.Get(CalibrationSupportInitialCoefficientKey, DefaultCalibrationPositionSupportCoefficients.InitialCoefficient)),
-            Clamp(_store.Get(CalibrationSupportMedialCoefficientKey, DefaultCalibrationPositionSupportCoefficients.MedialCoefficient)),
-            Clamp(_store.Get(CalibrationSupportFinalCoefficientKey, DefaultCalibrationPositionSupportCoefficients.FinalCoefficient)));
+            ClampCoefficient(_store.Get(CalibrationSupportInitialCoefficientKey, DefaultCalibrationPositionSupportCoefficients.InitialCoefficient)),
+            ClampCoefficient(_store.Get(CalibrationSupportMedialCoefficientKey, DefaultCalibrationPositionSupportCoefficients.MedialCoefficient)),
+            ClampCoefficient(_store.Get(CalibrationSupportFinalCoefficientKey, DefaultCalibrationPositionSupportCoefficients.FinalCoefficient)));
     }
 
     public void SaveCalibrationPositionSupportCoefficients(PositionSupportCoefficients coefficients)
@@ -271,14 +274,31 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
             throw new ArgumentNullException(nameof(coefficients));
         }
 
-        _store.Set(CalibrationSupportInitialCoefficientKey, Clamp(coefficients.InitialCoefficient));
-        _store.Set(CalibrationSupportMedialCoefficientKey, Clamp(coefficients.MedialCoefficient));
-        _store.Set(CalibrationSupportFinalCoefficientKey, Clamp(coefficients.FinalCoefficient));
+        _store.Set(CalibrationSupportInitialCoefficientKey, ClampCoefficient(coefficients.InitialCoefficient));
+        _store.Set(CalibrationSupportMedialCoefficientKey, ClampCoefficient(coefficients.MedialCoefficient));
+        _store.Set(CalibrationSupportFinalCoefficientKey, ClampCoefficient(coefficients.FinalCoefficient));
+    }
+
+    public int GetCalibrationTableActivationMinSamples()
+    {
+        var stored = _store.Get(CalibrationTableActivationMinSamplesKey, (double)DefaultCalibrationTableActivationMinSamples);
+        return Math.Clamp((int)Math.Round(stored), 4, 24);
+    }
+
+    public void SaveCalibrationTableActivationMinSamples(int sampleCount)
+    {
+        var clamped = Math.Clamp(sampleCount, 4, 24);
+        _store.Set(CalibrationTableActivationMinSamplesKey, clamped);
     }
 
     private static double Clamp(double value)
     {
         return Math.Max(0.0, Math.Min(1.0, value));
+    }
+
+    private static double ClampCoefficient(double value)
+    {
+        return Math.Max(0.10, Math.Min(2.00, value));
     }
 }
 

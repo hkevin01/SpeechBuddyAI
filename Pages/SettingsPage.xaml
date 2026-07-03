@@ -169,16 +169,55 @@
                                     Maximum="0.90"
                                     ValueChanged="OnSliderValueChanged" />
 
+                                <Label Text="Calibration Reliability Controls" FontAttributes="Bold" Margin="0,10,0,0" />
+                                <Label Text="Tune calibration support weighting by target position and set the sample threshold before non-linear tables activate." />
+
+                                <Label Text="Calibration support coefficient - initial" FontAttributes="Bold" />
+                                <Label x:Name="CalibrationInitialSupportValueLabel" Text="1.00x" />
+                                <Slider x:Name="CalibrationInitialSupportSlider"
+                                    TabIndex="16"
+                                    SemanticProperties.Description="Set calibration support coefficient for initial position"
+                                    Minimum="0.10"
+                                    Maximum="2.00"
+                                    ValueChanged="OnSliderValueChanged" />
+
+                                <Label Text="Calibration support coefficient - medial" FontAttributes="Bold" />
+                                <Label x:Name="CalibrationMedialSupportValueLabel" Text="0.85x" />
+                                <Slider x:Name="CalibrationMedialSupportSlider"
+                                    TabIndex="17"
+                                    SemanticProperties.Description="Set calibration support coefficient for medial position"
+                                    Minimum="0.10"
+                                    Maximum="2.00"
+                                    ValueChanged="OnSliderValueChanged" />
+
+                                <Label Text="Calibration support coefficient - final" FontAttributes="Bold" />
+                                <Label x:Name="CalibrationFinalSupportValueLabel" Text="0.92x" />
+                                <Slider x:Name="CalibrationFinalSupportSlider"
+                                    TabIndex="18"
+                                    SemanticProperties.Description="Set calibration support coefficient for final position"
+                                    Minimum="0.10"
+                                    Maximum="2.00"
+                                    ValueChanged="OnSliderValueChanged" />
+
+                                <Label Text="Calibration table activation threshold" FontAttributes="Bold" />
+                                <Label x:Name="CalibrationTableActivationSamplesValueLabel" Text="8 samples" />
+                                <Slider x:Name="CalibrationTableActivationSamplesSlider"
+                                    TabIndex="19"
+                                    SemanticProperties.Description="Set minimum samples required before calibration table activates"
+                                    Minimum="4"
+                                    Maximum="24"
+                                    ValueChanged="OnSliderValueChanged" />
+
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button Grid.Column="0"
                             Text="Save Clinician Settings"
-                            TabIndex="16"
+                            TabIndex="20"
                             SemanticProperties.Description="Save current clinician confidence and assignment settings"
                             Clicked="OnSaveClicked"
                             HorizontalOptions="Fill" />
                         <Button Grid.Column="1"
                             Text="Reset Defaults"
-                            TabIndex="17"
+                            TabIndex="21"
                             SemanticProperties.Description="Reset clinician settings to default values"
                             Clicked="OnResetClicked"
                             HorizontalOptions="Fill" />
@@ -191,7 +230,7 @@
                         <Label Text="Default Share Behavior" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Label Text="Choose what happens when Share Latest Report is used in Notes." />
                         <Picker x:Name="ShareBehaviorPicker"
-                            TabIndex="18"
+                            TabIndex="22"
                             SemanticProperties.Description="Select default share behavior for latest report"
                             SelectedIndex="1">
                         <Picker.Items>
@@ -200,7 +239,7 @@
                         </Picker.Items>
                     </Picker>
                     <Button Text="Save Share Behavior"
-                            TabIndex="19"
+                            TabIndex="23"
                             SemanticProperties.Description="Save default report share behavior"
                             Clicked="OnSaveShareBehaviorClicked"
                             HorizontalOptions="Fill" />

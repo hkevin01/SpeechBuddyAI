@@ -76,7 +76,9 @@ public class AiSpeechService
             var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
             var calibrationContext = BuildCalibrationContext(priorEntries, positionTag);
-            var calibrationTable = _confidenceCalculator.BuildCalibrationTable(calibrationContext.RecentPool);
+            var calibrationMinSamples = _confidenceSettingsService?.GetCalibrationTableActivationMinSamples()
+                ?? ConfidenceSettingsService.DefaultCalibrationTableActivationMinSamples;
+            var calibrationTable = _confidenceCalculator.BuildCalibrationTable(calibrationContext.RecentPool, calibrationMinSamples);
             var rawConfidenceScore = _confidenceCalculator.ComputeRawScore(
                 scores,
                 normalizedTranscript,
