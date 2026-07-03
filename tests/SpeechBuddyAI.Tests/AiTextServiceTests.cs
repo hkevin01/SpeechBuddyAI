@@ -390,6 +390,7 @@ public sealed class AiTextServiceTests
         Assert.True(rReason.CalibrationQualityScore < sReason.CalibrationQualityScore);
         Assert.True(rReason.CalibrationConfidenceAdjustment < sReason.CalibrationConfidenceAdjustment);
         Assert.True(rReason.PriorityScore < sReason.PriorityScore);
+        Assert.Equal("s", assignment.FocusTargets[0]);
     }
 
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
