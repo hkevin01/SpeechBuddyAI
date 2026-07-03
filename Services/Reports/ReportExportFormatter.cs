@@ -62,6 +62,8 @@ public static class ReportExportFormatter
             $"Confidence Bands: {BuildConfidenceBandSummary(entries)}" + Environment.NewLine +
             $"Historical Drift Analytics: {BuildDriftSummary(entries)}" + Environment.NewLine +
             $"Adaptive Thresholds: {BuildAdaptiveThresholdSummary(entries)}" + Environment.NewLine +
+            $"Calibration Drift by Target: {BuildCalibrationDriftByTargetSummary(entries)}" + Environment.NewLine +
+            $"Uncertainty Decomposition: {BuildUncertaintyDecompositionSummary(entries)}" + Environment.NewLine +
             $"Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
@@ -121,6 +123,8 @@ public static class ReportExportFormatter
             $"- Confidence Bands: {BuildConfidenceBandSummary(entries)}" + Environment.NewLine +
             $"- Historical Drift Analytics: {BuildDriftSummary(entries)}" + Environment.NewLine +
             $"- Adaptive Thresholds: {BuildAdaptiveThresholdSummary(entries)}" + Environment.NewLine +
+            $"- Calibration Drift by Target: {BuildCalibrationDriftByTargetSummary(entries)}" + Environment.NewLine +
+            $"- Uncertainty Decomposition: {BuildUncertaintyDecompositionSummary(entries)}" + Environment.NewLine +
             $"- Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"- Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"- Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
@@ -181,6 +185,8 @@ public static class ReportExportFormatter
             CsvLine("ConfidenceBands", BuildConfidenceBandSummary(entries)),
             CsvLine("HistoricalDriftAnalytics", BuildDriftSummary(entries)),
             CsvLine("AdaptiveThresholds", BuildAdaptiveThresholdSummary(entries)),
+            CsvLine("CalibrationDriftByTarget", BuildCalibrationDriftByTargetSummary(entries)),
+            CsvLine("UncertaintyDecomposition", BuildUncertaintyDecompositionSummary(entries)),
             CsvLine("TargetLevelDeltas", BuildTargetDeltaSummary(entries)),
             CsvLine("SessionComparison", BuildSessionComparisonOverview(snapshot)),
             CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
@@ -319,6 +325,75 @@ public static class ReportExportFormatter
         }
 
         return deltas.Count == 0 ? "n/a" : string.Join(" | ", deltas);
+    }
+
+    private static string BuildCalibrationDriftByTargetSummary(IReadOnlyList<ProgressEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var summaries = new List<string>();
+        foreach (var group in entries
+                     .Where(entry => entry.CalibrationResidual > 0.0)
+                     .GroupBy(entry => Normalize(entry.TargetSound, "unknown"))
+                     .OrderBy(group => group.Key))
+        {
+            var ordered = group.OrderBy(entry => entry.Timestamp).ToArray();
+            if (ordered.Length < 3)
+            {
+                continue;
+            }
+
+            var firstWindow = ordered.Take(Math.Min(3, ordered.Length)).Average(entry => entry.CalibrationResidual);
+            var lastWindow = ordered.TakeLast(Math.Min(3, ordered.Length)).Average(entry => entry.CalibrationResidual);
+            var delta = lastWindow - firstWindow;
+            var direction = delta < -0.015
+                ? "improving"
+                : delta > 0.015
+                    ? "worsening"
+                    : "stable";
+            var avgSupport = ordered.Average(entry => entry.EmpiricalOutcomeSupport);
+
+            summaries.Add($"{group.Key}: {delta:+0.000;-0.000;0.000} ({direction}, support {avgSupport:0.00})");
+        }
+
+        return summaries.Count == 0 ? "n/a" : string.Join(" | ", summaries);
+    }
+
+    private static string BuildUncertaintyDecompositionSummary(IReadOnlyList<ProgressEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "n/a";
+        }
+
+        var populated = entries
+            .Where(entry => entry.VarianceUncertaintyComponent > 0.0 || entry.SparsityUncertaintyComponent > 0.0)
+            .ToArray();
+        if (populated.Length == 0)
+        {
+            return "n/a";
+        }
+
+        var varianceMean = populated.Average(entry => entry.VarianceUncertaintyComponent);
+        var sparsityMean = populated.Average(entry => entry.SparsityUncertaintyComponent);
+        var total = Math.Max(0.001, varianceMean + sparsityMean);
+        var varianceShare = varianceMean / total;
+        var sparsityShare = sparsityMean / total;
+
+        var perTarget = populated
+            .GroupBy(entry => Normalize(entry.TargetSound, "unknown"))
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var targetVariance = group.Average(entry => entry.VarianceUncertaintyComponent);
+                var targetSparsity = group.Average(entry => entry.SparsityUncertaintyComponent);
+                return $"{group.Key} v/s {targetVariance:0.00}/{targetSparsity:0.00}";
+            });
+
+        return $"variance {varianceShare:P0}, sparsity {sparsityShare:P0} | {string.Join(" | ", perTarget)}";
     }
 
     private static string BuildSessionComparisonOverview(SessionComparisonSnapshot snapshot)

@@ -1,6 +1,7 @@
 using SpeechBuddyAI.Models;
 using SpeechBuddyAI.Services.Confidence;
 using SpeechBuddyAI.Services.SpeechScoring;
+using System.Text.Json;
 
 namespace SpeechBuddyAI.Services;
 
@@ -12,12 +13,14 @@ public class AiSpeechService
     private readonly IReadOnlyList<ISpeechScoringAdapter> _scoringAdapters;
     private readonly ConfidenceCalculator _confidenceCalculator;
     private readonly ConsistencyEstimator _consistencyEstimator;
+    private readonly ConfidenceSettingsService? _confidenceSettingsService;
 
     public AiSpeechService(
         ProgressTrackingService progressTrackingService,
         IEnumerable<ISpeechScoringAdapter> scoringAdapters,
         ConfidenceCalculator confidenceCalculator,
-        ConsistencyEstimator? consistencyEstimator = null)
+        ConsistencyEstimator? consistencyEstimator = null,
+        ConfidenceSettingsService? confidenceSettingsService = null)
     {
         _progressTrackingService = progressTrackingService;
         _scoringAdapters = scoringAdapters
@@ -25,6 +28,7 @@ public class AiSpeechService
             .ToArray();
         _confidenceCalculator = confidenceCalculator ?? throw new ArgumentNullException(nameof(confidenceCalculator));
         _consistencyEstimator = consistencyEstimator ?? new ConsistencyEstimator();
+        _confidenceSettingsService = confidenceSettingsService;
 
         if (_scoringAdapters.Count == 0)
         {
@@ -72,6 +76,14 @@ public class AiSpeechService
             var adapterResult = await TryScoreWithFallbackAsync(baseTarget, normalizedTranscript, priorEntries);
             var scores = ComposeScoreComponents(adapterResult.PhonemeScore, adapterResult.FluencyScore, consistency);
             var calibrationContext = BuildCalibrationContext(priorEntries, positionTag);
+            var calibrationTable = _confidenceCalculator.BuildCalibrationTable(calibrationContext.RecentPool);
+            var rawConfidenceScore = _confidenceCalculator.ComputeRawScore(
+                scores,
+                normalizedTranscript,
+                priorEntries.Count,
+                adapterResult.Provider,
+                consistencyProfile.Uncertainty,
+                consistencyProfile.UncertaintyBand);
             var adaptiveThresholds = _confidenceCalculator.ComputeAdaptiveThresholds(priorEntries, consistencyProfile.Uncertainty);
             var confidenceScore = _confidenceCalculator.ComputeScore(
                 scores,
@@ -81,9 +93,12 @@ public class AiSpeechService
                 consistencyProfile.Uncertainty,
                 consistencyProfile.UncertaintyBand,
                 calibrationContext.OutcomeMean,
-                calibrationContext.Support);
+                calibrationContext.Support,
+                calibrationTable);
             var confidenceBand = _confidenceCalculator.ComputeBand(confidenceScore, adaptiveThresholds);
             var drift = DetectHistoricalDrift(priorEntries, scores.OverallScore);
+            var uncertainty = _confidenceCalculator.ComputeUncertaintyDecomposition(calibrationContext.RecentPool, consistencyProfile.Uncertainty);
+            var calibrationResidual = Math.Abs(rawConfidenceScore - calibrationContext.OutcomeMean);
 
             var trialCount = priorEntries.Count + 1;
             var entry = new ProgressEntry
@@ -108,7 +123,15 @@ public class AiSpeechService
                 HistoricalDriftZScore = drift.ZScore,
                 HistoricalDriftSummary = drift.Summary,
                 AdaptiveModerateThreshold = adaptiveThresholds.ModerateThreshold,
-                AdaptiveHighThreshold = adaptiveThresholds.HighThreshold
+                AdaptiveHighThreshold = adaptiveThresholds.HighThreshold,
+                RawConfidenceScore = rawConfidenceScore,
+                EmpiricalOutcomeMean = calibrationContext.OutcomeMean,
+                EmpiricalOutcomeSupport = calibrationContext.Support,
+                CalibrationResidual = calibrationResidual,
+                CalibrationMethod = calibrationTable.IsActive ? "isotonic-binned+empirical-shrinkage" : "empirical-shrinkage",
+                CalibrationTableJson = SerializeCalibrationTable(calibrationTable),
+                VarianceUncertaintyComponent = uncertainty.VarianceDriven,
+                SparsityUncertaintyComponent = uncertainty.SparsityDriven
             };
 
             await _progressTrackingService.AddEntryAsync(entry);
@@ -253,16 +276,18 @@ public class AiSpeechService
         return (baseTarget, position);
     }
 
-    private static ConfidenceCalibrationContext BuildCalibrationContext(
+    private ConfidenceCalibrationContext BuildCalibrationContext(
         IReadOnlyList<ProgressEntry> priorEntries,
         string positionTag)
     {
         var source = priorEntries ?? Array.Empty<ProgressEntry>();
         if (source.Count == 0)
         {
-            return new ConfidenceCalibrationContext(0.5, 0.0);
+            return new ConfidenceCalibrationContext(0.5, 0.0, Array.Empty<ProgressEntry>());
         }
 
+        var coefficients = _confidenceSettingsService?.GetCalibrationPositionSupportCoefficients()
+            ?? ConfidenceSettingsService.DefaultCalibrationPositionSupportCoefficients;
         var normalizedPosition = (positionTag ?? string.Empty).Trim().ToLowerInvariant();
         var positionScoped = source
             .Where(entry => string.Equals((entry.PositionTag ?? string.Empty).Trim(), normalizedPosition, StringComparison.OrdinalIgnoreCase))
@@ -278,11 +303,47 @@ public class AiSpeechService
                 .ToArray();
 
         var outcomeMean = pool.Average(entry => Clamp(entry.OverallScore));
-        var support = Math.Min(pool.Length, 12) / 12.0;
+        var weightedSupport = pool.Sum(entry => ResolvePositionSupportWeight((entry.PositionTag ?? string.Empty).Trim(), coefficients));
+        var maxCoefficient = Math.Max(0.001, Math.Max(coefficients.InitialCoefficient, Math.Max(coefficients.MedialCoefficient, coefficients.FinalCoefficient)));
+        var support = Clamp(weightedSupport / (12.0 * maxCoefficient));
 
-        return new ConfidenceCalibrationContext(outcomeMean, support);
+        return new ConfidenceCalibrationContext(outcomeMean, support, pool);
+    }
+
+    private static double ResolvePositionSupportWeight(string positionTag, PositionSupportCoefficients coefficients)
+    {
+        var normalized = (positionTag ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "initial" => coefficients.InitialCoefficient,
+            "medial" => coefficients.MedialCoefficient,
+            "final" => coefficients.FinalCoefficient,
+            _ => Math.Max(coefficients.InitialCoefficient, Math.Max(coefficients.MedialCoefficient, coefficients.FinalCoefficient))
+        };
+    }
+
+    private static string SerializeCalibrationTable(ConfidenceCalibrationTable table)
+    {
+        if (table is null || !table.IsActive || table.Bins.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var payload = new
+        {
+            support = table.Support,
+            bins = table.Bins.Select(bin => new
+            {
+                lower = bin.LowerBound,
+                upper = bin.UpperBound,
+                calibrated = bin.CalibratedOutcome,
+                count = bin.SampleCount
+            })
+        };
+
+        return JsonSerializer.Serialize(payload);
     }
 
     private sealed record HistoricalDriftState(bool Detected, double ZScore, string Summary);
-    private sealed record ConfidenceCalibrationContext(double OutcomeMean, double Support);
+    private sealed record ConfidenceCalibrationContext(double OutcomeMean, double Support, IReadOnlyList<ProgressEntry> RecentPool);
 }

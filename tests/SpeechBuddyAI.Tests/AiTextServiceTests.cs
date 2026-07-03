@@ -137,7 +137,8 @@ public sealed class AiTextServiceTests
         var assignment = await service.GenerateHomeAssignmentAsync(conflictingHistory);
 
         Assert.NotEmpty(assignment.FocusTargets);
-        Assert.Equal("r", assignment.FocusTargets[0]);
+        Assert.NotEmpty(baselineAssignment.FocusTargets);
+        Assert.Equal(baselineAssignment.FocusTargets[0], assignment.FocusTargets[0]);
         Assert.Contains(assignment.FocusTargetReasons, reason => reason.AssignmentChangeSuppressed);
     }
 

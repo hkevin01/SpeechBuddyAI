@@ -50,13 +50,20 @@ public sealed class ScoringPersistenceReportEndToEndTests
                     entry.TargetSound == "r" &&
                     entry.Transcript == "rain rabbit rocket" &&
                     entry.ScoringProvider == "test-adapter" &&
-                    !string.IsNullOrWhiteSpace(entry.ScoringFormulaVersion)) &&
+                    !string.IsNullOrWhiteSpace(entry.ScoringFormulaVersion) &&
+                    entry.RawConfidenceScore > 0.0 &&
+                    entry.EmpiricalOutcomeSupport > 0.0 &&
+                    entry.CalibrationResidual >= 0.0 &&
+                    entry.VarianceUncertaintyComponent >= 0.0 &&
+                    entry.SparsityUncertaintyComponent >= 0.0) &&
                 exportText.Contains("Scoring Providers:", StringComparison.OrdinalIgnoreCase) &&
                 exportText.Contains("test-adapter", StringComparison.OrdinalIgnoreCase) &&
                 exportText.Contains("Scoring Formula Versions:", StringComparison.OrdinalIgnoreCase) &&
                 exportText.Contains(AiSpeechService.ScoringFormulaVersion, StringComparison.Ordinal) &&
                 exportText.Contains("Historical Drift Analytics:", StringComparison.OrdinalIgnoreCase) &&
-                exportText.Contains("Adaptive Thresholds:", StringComparison.OrdinalIgnoreCase);
+                exportText.Contains("Adaptive Thresholds:", StringComparison.OrdinalIgnoreCase) &&
+                exportText.Contains("Calibration Drift by Target:", StringComparison.OrdinalIgnoreCase) &&
+                exportText.Contains("Uncertainty Decomposition:", StringComparison.OrdinalIgnoreCase);
 
             Assert.True(flowVerified, exportText);
         }

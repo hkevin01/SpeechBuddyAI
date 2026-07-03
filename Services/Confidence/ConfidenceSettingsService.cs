@@ -21,6 +21,9 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string AssignmentSuppressionBehaviorKey = "assignment.weight.suppressionBehavior";
     private const string AssignmentConfidenceIntervalMinSamplesKey = "assignment.weight.ciMinSamples";
     private const string AssignmentUncertaintyBudgetCapKey = "assignment.weight.uncertaintyBudgetCap";
+    private const string CalibrationSupportInitialCoefficientKey = "calibration.support.initialCoefficient";
+    private const string CalibrationSupportMedialCoefficientKey = "calibration.support.medialCoefficient";
+    private const string CalibrationSupportFinalCoefficientKey = "calibration.support.finalCoefficient";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -32,6 +35,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const AssignmentSuppressionBehavior DefaultAssignmentSuppressionBehavior = AssignmentSuppressionBehavior.HardFreeze;
     public const int DefaultAssignmentConfidenceIntervalMinSamples = 5;
     public const double DefaultAssignmentUncertaintyBudgetCap = 0.40;
+    public static readonly PositionSupportCoefficients DefaultCalibrationPositionSupportCoefficients = new(1.00, 0.85, 0.92);
 
     private readonly IKeyValueStore _store;
 
@@ -81,6 +85,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         SaveAssignmentSuppressionBehavior(DefaultAssignmentSuppressionBehavior);
         SaveAssignmentConfidenceIntervalMinSamples(DefaultAssignmentConfidenceIntervalMinSamples);
         SaveAssignmentUncertaintyBudgetCap(DefaultAssignmentUncertaintyBudgetCap);
+        SaveCalibrationPositionSupportCoefficients(DefaultCalibrationPositionSupportCoefficients);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -251,8 +256,33 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(AssignmentUncertaintyBudgetCapKey, Clamp(budgetCap));
     }
 
+    public PositionSupportCoefficients GetCalibrationPositionSupportCoefficients()
+    {
+        return new PositionSupportCoefficients(
+            Clamp(_store.Get(CalibrationSupportInitialCoefficientKey, DefaultCalibrationPositionSupportCoefficients.InitialCoefficient)),
+            Clamp(_store.Get(CalibrationSupportMedialCoefficientKey, DefaultCalibrationPositionSupportCoefficients.MedialCoefficient)),
+            Clamp(_store.Get(CalibrationSupportFinalCoefficientKey, DefaultCalibrationPositionSupportCoefficients.FinalCoefficient)));
+    }
+
+    public void SaveCalibrationPositionSupportCoefficients(PositionSupportCoefficients coefficients)
+    {
+        if (coefficients is null)
+        {
+            throw new ArgumentNullException(nameof(coefficients));
+        }
+
+        _store.Set(CalibrationSupportInitialCoefficientKey, Clamp(coefficients.InitialCoefficient));
+        _store.Set(CalibrationSupportMedialCoefficientKey, Clamp(coefficients.MedialCoefficient));
+        _store.Set(CalibrationSupportFinalCoefficientKey, Clamp(coefficients.FinalCoefficient));
+    }
+
     private static double Clamp(double value)
     {
         return Math.Max(0.0, Math.Min(1.0, value));
     }
 }
+
+public sealed record PositionSupportCoefficients(
+    double InitialCoefficient,
+    double MedialCoefficient,
+    double FinalCoefficient);

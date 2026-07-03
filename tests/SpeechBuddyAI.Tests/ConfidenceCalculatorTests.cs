@@ -164,6 +164,100 @@ public sealed class ConfidenceCalculatorTests
         Assert.True(calibrated > uncalibrated);
     }
 
+    [Fact]
+    public void BuildCalibrationTable_ImprovementScenario_MapsHigherBinsToHigherOutcomes()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var history = Enumerable.Range(0, 14)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-14 + index),
+                RawConfidenceScore = 0.35 + (index * 0.04),
+                OverallScore = 0.30 + (index * 0.045)
+            })
+            .ToArray();
+
+        var table = calculator.BuildCalibrationTable(history, minSamples: 8, binCount: 6);
+
+        Assert.True(table.IsActive);
+        Assert.Equal(6, table.Bins.Count);
+        Assert.True(table.Bins[0].CalibratedOutcome <= table.Bins[^1].CalibratedOutcome);
+    }
+
+    [Fact]
+    public void BuildCalibrationTable_DeteriorationScenario_FlattensWithIsotonicConstraint()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var history = Enumerable.Range(0, 14)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-14 + index),
+                RawConfidenceScore = 0.35 + (index * 0.04),
+                OverallScore = 0.82 - (index * 0.04)
+            })
+            .ToArray();
+
+        var table = calculator.BuildCalibrationTable(history, minSamples: 8, binCount: 6);
+
+        Assert.True(table.IsActive);
+        for (var i = 1; i < table.Bins.Count; i++)
+        {
+            Assert.True(table.Bins[i].CalibratedOutcome >= table.Bins[i - 1].CalibratedOutcome);
+        }
+    }
+
+    [Fact]
+    public void ComputeUncertaintyDecomposition_OscillationScenario_IncreasesVarianceComponent()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var stable = Enumerable.Range(0, 12)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-12 + index),
+                OverallScore = 0.70 + ((index % 2 == 0) ? 0.01 : -0.01)
+            })
+            .ToArray();
+        var oscillating = Enumerable.Range(0, 12)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-12 + index),
+                OverallScore = index % 2 == 0 ? 0.90 : 0.35
+            })
+            .ToArray();
+
+        var stableDecomposition = calculator.ComputeUncertaintyDecomposition(stable, consistencyUncertainty: 0.35);
+        var oscillatingDecomposition = calculator.ComputeUncertaintyDecomposition(oscillating, consistencyUncertainty: 0.35);
+
+        Assert.True(oscillatingDecomposition.VarianceDriven > stableDecomposition.VarianceDriven);
+        Assert.True(oscillatingDecomposition.VarianceDriven >= oscillatingDecomposition.SparsityDriven - 0.15);
+    }
+
+    [Fact]
+    public void ComputeScore_WithActiveCalibrationTable_AppliesNonLinearCorrection()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var scores = new ScoreComponents
+        {
+            PhonemeScore = 0.79,
+            FluencyScore = 0.76,
+            ConsistencyScore = 0.74,
+            OverallScore = 0.78
+        };
+        var table = new ConfidenceCalibrationTable(
+            new[]
+            {
+                new ConfidenceCalibrationBin(0.0, 0.5, 0.40, 4),
+                new ConfidenceCalibrationBin(0.5, 1.0, 0.86, 8)
+            },
+            Support: 1.0,
+            IsActive: true);
+
+        var withoutTable = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.25, "HighSupport", 0.75, 1.0);
+        var withTable = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.25, "HighSupport", 0.75, 1.0, table);
+
+        Assert.True(withTable > withoutTable);
+    }
+
     private sealed class StubProvider : IConfidenceThresholdProvider
     {
         private readonly ConfidenceThresholds _thresholds;

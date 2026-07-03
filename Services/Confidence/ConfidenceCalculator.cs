@@ -19,7 +19,47 @@ public sealed class ConfidenceCalculator
         double consistencyUncertainty = 0.5,
         string consistencyUncertaintyBand = "ModerateSupport",
         double empiricalOutcomeMean = 0.5,
-        double empiricalOutcomeSupport = 0.0)
+        double empiricalOutcomeSupport = 0.0,
+        ConfidenceCalibrationTable? calibrationTable = null)
+    {
+        var provisional = ComputeRawScore(
+            scores,
+            transcript,
+            priorEntryCount,
+            provider,
+            consistencyUncertainty,
+            consistencyUncertaintyBand);
+
+        var tableAdjusted = provisional;
+        if (calibrationTable is not null && calibrationTable.IsActive)
+        {
+            var mapped = MapConfidenceThroughTable(calibrationTable, provisional);
+            var tableBlendWeight = 0.45 * Clamp(calibrationTable.Support);
+            tableAdjusted = Clamp(tableAdjusted + (tableBlendWeight * (mapped - tableAdjusted)));
+        }
+
+        var outcomeMean = Clamp(empiricalOutcomeMean);
+        var support = Clamp(empiricalOutcomeSupport);
+
+        if (support <= 0.0)
+        {
+            return tableAdjusted;
+        }
+
+        var shrinkWeight = 0.35 * support;
+        var shrunk = tableAdjusted + (shrinkWeight * (outcomeMean - tableAdjusted));
+        var calibrationPenalty = Math.Abs(tableAdjusted - outcomeMean) * 0.08 * support;
+
+        return Clamp(shrunk - calibrationPenalty);
+    }
+
+    public double ComputeRawScore(
+        ScoreComponents scores,
+        string transcript,
+        int priorEntryCount,
+        string provider,
+        double consistencyUncertainty = 0.5,
+        string consistencyUncertaintyBand = "ModerateSupport")
     {
         if (scores is null)
         {
@@ -55,20 +95,163 @@ public sealed class ConfidenceCalculator
             providerBonus -
             (0.15 * spreadPenalty);
 
-        var provisional = Clamp(rawScore);
-        var outcomeMean = Clamp(empiricalOutcomeMean);
-        var support = Clamp(empiricalOutcomeSupport);
+        return Clamp(rawScore);
+    }
 
-        if (support <= 0.0)
+    public ConfidenceCalibrationTable BuildCalibrationTable(
+        IReadOnlyList<ProgressEntry> history,
+        int minSamples = 8,
+        int binCount = 6)
+    {
+        var source = history ?? Array.Empty<ProgressEntry>();
+        var samples = source
+            .Select(entry => new
+            {
+                Predictor = Clamp(entry.RawConfidenceScore > 0 ? entry.RawConfidenceScore : entry.ConfidenceScore),
+                Outcome = Clamp(entry.OverallScore)
+            })
+            .ToArray();
+
+        if (samples.Length < Math.Max(4, minSamples))
         {
-            return provisional;
+            return ConfidenceCalibrationTable.Inactive;
         }
 
-        var shrinkWeight = 0.35 * support;
-        var shrunk = provisional + (shrinkWeight * (outcomeMean - provisional));
-        var calibrationPenalty = Math.Abs(provisional - outcomeMean) * 0.08 * support;
+        var effectiveBinCount = Math.Clamp(binCount, 3, 12);
+        var binWidth = 1.0 / effectiveBinCount;
+        var binMeans = new double[effectiveBinCount];
+        var binCounts = new int[effectiveBinCount];
 
-        return Clamp(shrunk - calibrationPenalty);
+        foreach (var sample in samples)
+        {
+            var index = Math.Min((int)(sample.Predictor / binWidth), effectiveBinCount - 1);
+            binMeans[index] += sample.Outcome;
+            binCounts[index]++;
+        }
+
+        for (var i = 0; i < effectiveBinCount; i++)
+        {
+            binMeans[i] = binCounts[i] > 0 ? binMeans[i] / binCounts[i] : double.NaN;
+        }
+
+        for (var i = 0; i < effectiveBinCount; i++)
+        {
+            if (!double.IsNaN(binMeans[i]))
+            {
+                continue;
+            }
+
+            var left = i - 1;
+            while (left >= 0 && double.IsNaN(binMeans[left]))
+            {
+                left--;
+            }
+
+            var right = i + 1;
+            while (right < effectiveBinCount && double.IsNaN(binMeans[right]))
+            {
+                right++;
+            }
+
+            if (left >= 0 && right < effectiveBinCount)
+            {
+                var leftDistance = i - left;
+                var rightDistance = right - i;
+                var leftWeight = 1.0 / leftDistance;
+                var rightWeight = 1.0 / rightDistance;
+                binMeans[i] = ((binMeans[left] * leftWeight) + (binMeans[right] * rightWeight)) / (leftWeight + rightWeight);
+            }
+            else if (left >= 0)
+            {
+                binMeans[i] = binMeans[left];
+            }
+            else if (right < effectiveBinCount)
+            {
+                binMeans[i] = binMeans[right];
+            }
+            else
+            {
+                binMeans[i] = 0.5;
+            }
+        }
+
+        var levelValues = new List<double>();
+        var levelWeights = new List<double>();
+        var levelStarts = new List<int>();
+        var levelEnds = new List<int>();
+
+        for (var i = 0; i < effectiveBinCount; i++)
+        {
+            levelValues.Add(binMeans[i]);
+            levelWeights.Add(Math.Max(1.0, binCounts[i]));
+            levelStarts.Add(i);
+            levelEnds.Add(i);
+
+            while (levelValues.Count >= 2 && levelValues[^2] > levelValues[^1])
+            {
+                var last = levelValues.Count - 1;
+                var mergedWeight = levelWeights[last - 1] + levelWeights[last];
+                var mergedValue = ((levelValues[last - 1] * levelWeights[last - 1]) + (levelValues[last] * levelWeights[last])) / mergedWeight;
+
+                levelValues[last - 1] = mergedValue;
+                levelWeights[last - 1] = mergedWeight;
+                levelEnds[last - 1] = levelEnds[last];
+
+                levelValues.RemoveAt(last);
+                levelWeights.RemoveAt(last);
+                levelStarts.RemoveAt(last);
+                levelEnds.RemoveAt(last);
+            }
+        }
+
+        var monotonicMeans = new double[effectiveBinCount];
+        for (var i = 0; i < levelValues.Count; i++)
+        {
+            for (var index = levelStarts[i]; index <= levelEnds[i]; index++)
+            {
+                monotonicMeans[index] = Clamp(levelValues[i]);
+            }
+        }
+
+        var bins = new List<ConfidenceCalibrationBin>(effectiveBinCount);
+        for (var i = 0; i < effectiveBinCount; i++)
+        {
+            var lower = i * binWidth;
+            var upper = i == effectiveBinCount - 1 ? 1.0 : (i + 1) * binWidth;
+            bins.Add(new ConfidenceCalibrationBin(lower, upper, monotonicMeans[i], binCounts[i]));
+        }
+
+        var support = Math.Min(samples.Length, 24) / 24.0;
+        return new ConfidenceCalibrationTable(bins, support, true);
+    }
+
+    public UncertaintyDecomposition ComputeUncertaintyDecomposition(
+        IReadOnlyList<ProgressEntry> targetHistory,
+        double consistencyUncertainty)
+    {
+        var history = targetHistory ?? Array.Empty<ProgressEntry>();
+        if (history.Count == 0)
+        {
+            return new UncertaintyDecomposition(0.0, 1.0);
+        }
+
+        var recent = history
+            .OrderByDescending(entry => entry.Timestamp)
+            .Take(12)
+            .ToArray();
+        var values = recent
+            .Select(entry => Clamp(entry.OverallScore))
+            .ToArray();
+
+        var variance = ComputeVariance(values);
+        var normalizedVariance = Math.Min(variance / 0.05, 1.0);
+        var supportFactor = Math.Min(recent.Length, 12) / 12.0;
+        var sparsity = 1.0 - supportFactor;
+        var consistency = Clamp(consistencyUncertainty);
+
+        var varianceDriven = Clamp((0.65 * normalizedVariance) + (0.35 * consistency));
+        var sparsityDriven = Clamp((0.70 * sparsity) + (0.30 * consistency));
+        return new UncertaintyDecomposition(varianceDriven, sparsityDriven);
     }
 
     public string ComputeBand(double confidenceScore)
@@ -172,4 +355,42 @@ public sealed class ConfidenceCalculator
         var mean = values.Average();
         return values.Average(value => Math.Pow(value - mean, 2));
     }
+
+    private static double MapConfidenceThroughTable(ConfidenceCalibrationTable table, double provisionalScore)
+    {
+        var score = Clamp(provisionalScore);
+        var bins = table.Bins;
+        if (bins.Count == 0)
+        {
+            return score;
+        }
+
+        foreach (var bin in bins)
+        {
+            if (score >= bin.LowerBound && score <= bin.UpperBound)
+            {
+                return Clamp(bin.CalibratedOutcome);
+            }
+        }
+
+        return Clamp(bins[^1].CalibratedOutcome);
+    }
 }
+
+public sealed record ConfidenceCalibrationBin(
+    double LowerBound,
+    double UpperBound,
+    double CalibratedOutcome,
+    int SampleCount);
+
+public sealed record ConfidenceCalibrationTable(
+    IReadOnlyList<ConfidenceCalibrationBin> Bins,
+    double Support,
+    bool IsActive)
+{
+    public static ConfidenceCalibrationTable Inactive { get; } = new(Array.Empty<ConfidenceCalibrationBin>(), 0.0, false);
+}
+
+public sealed record UncertaintyDecomposition(
+    double VarianceDriven,
+    double SparsityDriven);

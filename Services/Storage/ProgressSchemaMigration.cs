@@ -13,7 +13,15 @@ public static class ProgressSchemaMigration
         ("HistoricalDriftZScore", "REAL NOT NULL DEFAULT 0.0"),
         ("HistoricalDriftSummary", "TEXT NOT NULL DEFAULT ''"),
         ("AdaptiveModerateThreshold", "REAL NOT NULL DEFAULT 0.0"),
-        ("AdaptiveHighThreshold", "REAL NOT NULL DEFAULT 0.0")
+        ("AdaptiveHighThreshold", "REAL NOT NULL DEFAULT 0.0"),
+        ("RawConfidenceScore", "REAL NOT NULL DEFAULT 0.0"),
+        ("EmpiricalOutcomeMean", "REAL NOT NULL DEFAULT 0.0"),
+        ("EmpiricalOutcomeSupport", "REAL NOT NULL DEFAULT 0.0"),
+        ("CalibrationResidual", "REAL NOT NULL DEFAULT 0.0"),
+        ("CalibrationMethod", "TEXT NOT NULL DEFAULT ''"),
+        ("CalibrationTableJson", "TEXT NOT NULL DEFAULT ''"),
+        ("VarianceUncertaintyComponent", "REAL NOT NULL DEFAULT 0.0"),
+        ("SparsityUncertaintyComponent", "REAL NOT NULL DEFAULT 0.0")
     };
 
     public static IReadOnlyList<string> BuildMissingColumnCommands(IEnumerable<string> existingColumns)

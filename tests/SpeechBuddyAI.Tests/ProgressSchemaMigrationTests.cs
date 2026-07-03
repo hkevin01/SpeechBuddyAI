@@ -9,7 +9,7 @@ public sealed class ProgressSchemaMigrationTests
     {
         var commands = ProgressSchemaMigration.BuildMissingColumnCommands(Array.Empty<string>());
 
-        Assert.Equal(10, commands.Count);
+        Assert.Equal(18, commands.Count);
         Assert.Contains(commands, c => c.Contains("ConfidenceScore", StringComparison.Ordinal));
         Assert.Contains(commands, c => c.Contains("ConfidenceBand", StringComparison.Ordinal));
         Assert.Contains(commands, c => c.Contains("BaseTargetSound", StringComparison.Ordinal));
@@ -20,6 +20,14 @@ public sealed class ProgressSchemaMigrationTests
         Assert.Contains(commands, c => c.Contains("HistoricalDriftSummary", StringComparison.Ordinal));
         Assert.Contains(commands, c => c.Contains("AdaptiveModerateThreshold", StringComparison.Ordinal));
         Assert.Contains(commands, c => c.Contains("AdaptiveHighThreshold", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("RawConfidenceScore", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("EmpiricalOutcomeMean", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("EmpiricalOutcomeSupport", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("CalibrationResidual", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("CalibrationMethod", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("CalibrationTableJson", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("VarianceUncertaintyComponent", StringComparison.Ordinal));
+        Assert.Contains(commands, c => c.Contains("SparsityUncertaintyComponent", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -27,7 +35,7 @@ public sealed class ProgressSchemaMigrationTests
     {
         var commands = ProgressSchemaMigration.BuildMissingColumnCommands(new[] { "Id", "ConfidenceScore", "BaseTargetSound", "PositionTag" });
 
-        Assert.Equal(7, commands.Count);
+        Assert.Equal(15, commands.Count);
         Assert.Contains(commands, c => c.Contains("ConfidenceBand", StringComparison.Ordinal));
         Assert.Contains(commands, c => c.Contains("ScoringFormulaVersion", StringComparison.Ordinal));
     }
@@ -46,7 +54,15 @@ public sealed class ProgressSchemaMigrationTests
             "historicaldriftzscore",
             "HistoricalDriftSummary",
             "adaptivemoderatethreshold",
-            "ADAPTIVEHIGHTHRESHOLD"
+            "ADAPTIVEHIGHTHRESHOLD",
+            "RAWCONFIDENCESCORE",
+            "EmpiricalOutcomeMean",
+            "empiricaloutcomesupport",
+            "CalibrationResidual",
+            "calibrationmethod",
+            "CalibrationTableJson",
+            "varianceuncertaintycomponent",
+            "SPARSITYUNCERTAINTYCOMPONENT"
         });
 
         Assert.Empty(commands);

@@ -36,6 +36,14 @@ public class ProgressEntry
     public string HistoricalDriftSummary { get; set; } = string.Empty;
     public double AdaptiveModerateThreshold { get; set; }
     public double AdaptiveHighThreshold { get; set; }
+    public double RawConfidenceScore { get; set; }
+    public double EmpiricalOutcomeMean { get; set; }
+    public double EmpiricalOutcomeSupport { get; set; }
+    public double CalibrationResidual { get; set; }
+    public string CalibrationMethod { get; set; } = string.Empty;
+    public string CalibrationTableJson { get; set; } = string.Empty;
+    public double VarianceUncertaintyComponent { get; set; }
+    public double SparsityUncertaintyComponent { get; set; }
 
     [Ignore]
     public ConfidenceBand ConfidenceBandValue => ConfidenceBandExtensions.Parse(ConfidenceBand);
