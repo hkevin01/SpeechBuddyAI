@@ -15,6 +15,7 @@ public class SessionNote
     public string RawNote { get; set; } = string.Empty;
     public string SoapSummary { get; set; } = string.Empty;
     public string ParentSummary { get; set; } = string.Empty;
+    public string SessionCalibrationQualitySummary { get; set; } = string.Empty;
     public long AssignmentSnapshotDateTicks { get; set; }
     public string AssignmentSelectionSummary { get; set; } = string.Empty;
     public string AssignmentSelectionDetails { get; set; } = string.Empty;

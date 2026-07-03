@@ -26,6 +26,7 @@ public sealed class SessionNoteAndNoteStorageTests
         var ticksProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.SessionDateTicks));
         var sessionDateProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.SessionDate));
         var assignmentDateProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentSnapshotDate));
+        var sessionCalibrationQualityProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.SessionCalibrationQualitySummary));
         var driftSummaryProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentRationaleDriftSummary));
         var modelAuditSummaryProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentModelAuditSummary));
         var formulaVersionProperty = typeof(SessionNote).GetProperty(nameof(SessionNote.AssignmentScoringFormulaVersion));
@@ -34,6 +35,7 @@ public sealed class SessionNoteAndNoteStorageTests
         Assert.NotNull(ticksProperty);
         Assert.NotNull(sessionDateProperty);
         Assert.NotNull(assignmentDateProperty);
+        Assert.NotNull(sessionCalibrationQualityProperty);
         Assert.NotNull(driftSummaryProperty);
         Assert.NotNull(modelAuditSummaryProperty);
         Assert.NotNull(formulaVersionProperty);
@@ -42,6 +44,7 @@ public sealed class SessionNoteAndNoteStorageTests
         Assert.NotNull(ticksProperty!.GetCustomAttributes(typeof(IndexedAttribute), inherit: true).FirstOrDefault());
         Assert.NotNull(sessionDateProperty!.GetCustomAttributes(typeof(IgnoreAttribute), inherit: true).FirstOrDefault());
         Assert.NotNull(assignmentDateProperty!.GetCustomAttributes(typeof(IgnoreAttribute), inherit: true).FirstOrDefault());
+        Assert.Equal(typeof(string), sessionCalibrationQualityProperty!.PropertyType);
         Assert.Equal(typeof(string), driftSummaryProperty!.PropertyType);
         Assert.Equal(typeof(string), modelAuditSummaryProperty!.PropertyType);
         Assert.Equal(typeof(string), formulaVersionProperty!.PropertyType);

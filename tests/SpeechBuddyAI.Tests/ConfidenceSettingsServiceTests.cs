@@ -213,6 +213,7 @@ public sealed class ConfidenceSettingsServiceTests
         var service = new ConfidenceSettingsService(new InMemoryStore());
         service.SaveCalibrationPositionSupportCoefficients(new PositionSupportCoefficients(1.8, 1.7, 1.6));
         service.SaveCalibrationTableActivationMinSamples(16);
+        service.SaveCalibrationQualityActivationThreshold(0.77);
 
         service.ResetDefaults();
 
@@ -221,6 +222,22 @@ public sealed class ConfidenceSettingsServiceTests
         Assert.Equal(ConfidenceSettingsService.DefaultCalibrationPositionSupportCoefficients.MedialCoefficient, coefficients.MedialCoefficient, 3);
         Assert.Equal(ConfidenceSettingsService.DefaultCalibrationPositionSupportCoefficients.FinalCoefficient, coefficients.FinalCoefficient, 3);
         Assert.Equal(ConfidenceSettingsService.DefaultCalibrationTableActivationMinSamples, service.GetCalibrationTableActivationMinSamples());
+        Assert.Equal(ConfidenceSettingsService.DefaultCalibrationQualityActivationThreshold, service.GetCalibrationQualityActivationThreshold(), 3);
+    }
+
+    [Fact]
+    public void CalibrationQualityActivationThreshold_PersistsAndClamps()
+    {
+        var service = new ConfidenceSettingsService(new InMemoryStore());
+
+        service.SaveCalibrationQualityActivationThreshold(1.10);
+        Assert.Equal(0.85, service.GetCalibrationQualityActivationThreshold(), 3);
+
+        service.SaveCalibrationQualityActivationThreshold(0.10);
+        Assert.Equal(0.35, service.GetCalibrationQualityActivationThreshold(), 3);
+
+        service.SaveCalibrationQualityActivationThreshold(0.63);
+        Assert.Equal(0.63, service.GetCalibrationQualityActivationThreshold(), 3);
     }
 
     private sealed class InMemoryStore : IKeyValueStore

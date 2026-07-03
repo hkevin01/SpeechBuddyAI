@@ -46,6 +46,7 @@ public partial class SettingsPage : ContentPage
             CalibrationMedialSupportSlider.Value = calibrationCoefficients.MedialCoefficient;
             CalibrationFinalSupportSlider.Value = calibrationCoefficients.FinalCoefficient;
             CalibrationTableActivationSamplesSlider.Value = _settingsService.GetCalibrationTableActivationMinSamples();
+            CalibrationQualityThresholdSlider.Value = _settingsService.GetCalibrationQualityActivationThreshold();
             ShareBehaviorPicker.SelectedIndex =
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
@@ -102,6 +103,7 @@ public partial class SettingsPage : ContentPage
                 CalibrationMedialSupportSlider.Value,
                 CalibrationFinalSupportSlider.Value));
             _settingsService.SaveCalibrationTableActivationMinSamples((int)Math.Round(CalibrationTableActivationSamplesSlider.Value));
+            _settingsService.SaveCalibrationQualityActivationThreshold(CalibrationQualityThresholdSlider.Value);
             StatusLabel.Text = "Clinician settings saved.";
         }
         catch (Exception ex)
@@ -139,6 +141,7 @@ public partial class SettingsPage : ContentPage
             CalibrationMedialSupportSlider.Value = calibrationDefaults.MedialCoefficient;
             CalibrationFinalSupportSlider.Value = calibrationDefaults.FinalCoefficient;
             CalibrationTableActivationSamplesSlider.Value = _settingsService.GetCalibrationTableActivationMinSamples();
+            CalibrationQualityThresholdSlider.Value = _settingsService.GetCalibrationQualityActivationThreshold();
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";
@@ -184,6 +187,7 @@ public partial class SettingsPage : ContentPage
         CalibrationMedialSupportValueLabel.Text = $"{CalibrationMedialSupportSlider.Value:0.00}x";
         CalibrationFinalSupportValueLabel.Text = $"{CalibrationFinalSupportSlider.Value:0.00}x";
         CalibrationTableActivationSamplesValueLabel.Text = $"{Math.Round(CalibrationTableActivationSamplesSlider.Value)} samples";
+        CalibrationQualityThresholdValueLabel.Text = $"{CalibrationQualityThresholdSlider.Value:0.00}";
     }
 
     private static T ResolveService<T>() where T : notnull

@@ -35,4 +35,6 @@ public sealed class AssignmentFocusTargetReason
     public double ReliabilitySampleDepthScore { get; init; }
     public double ReliabilityVarianceScore { get; init; }
     public double ReliabilityTrendStabilityScore { get; init; }
+    public double CalibrationQualityScore { get; init; }
+    public double CalibrationConfidenceAdjustment { get; init; }
 }

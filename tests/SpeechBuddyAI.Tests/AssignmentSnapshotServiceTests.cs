@@ -28,6 +28,8 @@ public sealed class AssignmentSnapshotServiceTests
                 DeclineScore = 0.19,
                 FrequencyScore = 0.44,
                 ConfidenceFactor = 0.81,
+                CalibrationQualityScore = 0.57,
+                CalibrationConfidenceAdjustment = 0.87,
                 EvidenceStrength = 0.77,
                 ConfidenceVariance = 0.019,
                 OverallScoreMean = 0.58,
@@ -46,6 +48,8 @@ public sealed class AssignmentSnapshotServiceTests
         Assert.Contains("priority 0.72", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CI95", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("evidence", details, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("calibration quality", details, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("adjustment", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("position order final -> medial -> initial", details, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[suppressed]", details, StringComparison.OrdinalIgnoreCase);
     }

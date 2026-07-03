@@ -1,5 +1,6 @@
 using SpeechBuddyAI.Models;
 using SpeechBuddyAI.Services.Confidence;
+using System.Text.Json;
 
 namespace SpeechBuddyAI.Services;
 
@@ -181,6 +182,8 @@ public class AiTextService
                     ReliabilitySampleDepthScore = candidate.ReliabilitySampleDepthScore,
                     ReliabilityVarianceScore = candidate.ReliabilityVarianceScore,
                     ReliabilityTrendStabilityScore = candidate.ReliabilityTrendStabilityScore,
+                    CalibrationQualityScore = candidate.CalibrationQualityScore,
+                    CalibrationConfidenceAdjustment = candidate.CalibrationConfidenceAdjustment,
                     ConfidenceVariance = confidenceVariance,
                     AssignmentChangeSuppressed = suppressChange,
                     OverallScoreMean = candidate.OverallScoreMean,
@@ -305,12 +308,14 @@ public class AiTextService
         var daysSinceLast = Math.Max(0.0, (now - ordered[^1].Timestamp).TotalDays);
         var recency = Math.Exp(-daysSinceLast / 14.0);
         var averageConfidence = Clamp(ordered.Average(entry => NormalizeConfidence(entry.ConfidenceScore)));
+        var calibrationQualityScore = ComputeRecentCalibrationQualityScore(ordered);
+        var calibrationConfidenceAdjustment = 0.70 + (0.30 * calibrationQualityScore);
         var evidence = ComputeEvidenceStrength(entries.Count);
         var reliabilitySampleDepthScore = Clamp(entries.Count / 8.0);
         var reliabilityVarianceScore = Clamp(1.0 - Math.Min(1.0, ComputeVariance(recent.Select(item => Clamp(item.OverallScore)).ToArray()) / 0.08));
         var overallTrend = ComputeConfidenceWeightedTrendSlope(declineScoped, settings.ConfidencePenaltyStrength);
         var reliabilityTrendStabilityScore = Clamp(1.0 - Math.Min(1.0, Math.Abs(overallTrend * DeclineWindowDays) / 0.45));
-        var reliabilityScore = Clamp((reliabilitySampleDepthScore + reliabilityVarianceScore + reliabilityTrendStabilityScore) / 3.0);
+        var reliabilityScore = Clamp((reliabilitySampleDepthScore + reliabilityVarianceScore + reliabilityTrendStabilityScore + calibrationQualityScore) / 4.0);
         var (ciLower, ciUpper) = ComputeScoreConfidenceInterval(recent.Select(item => Clamp(item.OverallScore)).ToArray());
         var ciSuppressed = recent.Length < Math.Max(2, ciMinSamples);
         var positionSamples = BuildPositionSamples(target, entries);
@@ -343,6 +348,8 @@ public class AiTextService
             frequency,
             1.0,
             averageConfidence,
+            calibrationQualityScore,
+            calibrationConfidenceAdjustment,
             recency,
             evidence,
             positionWeightedDecline,
@@ -396,15 +403,16 @@ public class AiTextService
 
          return $"Focus on {targetList} based on weighted priority from recent severity, instability, trend decline, and repetition frequency. " +
                $"Weights are severity {settings.SeverityWeight:0.00}, instability {settings.InstabilityWeight:0.00}, decline {settings.DeclineWeight:0.00}, frequency {settings.FrequencyWeight:0.00}, with confidence penalty strength {settings.ConfidencePenaltyStrength:0.00}. " +
-               $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}, position-weighted decline {top.PositionWeightedDecline:0.00}, confidence factor {top.ConfidenceFactor:0.00}). " +
+                             $"Highest-priority target is {top.Target} (priority {top.Priority:0.00}, severity {top.Severity:0.00}, instability {top.Instability:0.00}, position-weighted decline {top.PositionWeightedDecline:0.00}, confidence factor {top.ConfidenceFactor:0.00}, calibration quality {top.CalibrationQualityScore:0.00}, calibration confidence adjustment {top.CalibrationConfidenceAdjustment:0.00}). " +
              $"Most frequent challenge pattern was '{commonPattern}', so drills should emphasize slow, repeatable production before speed." +
                gatingText + reliabilityText + suppressionText;
     }
 
     private static double ComputePriority(TargetAssignmentCandidate candidate, AssignmentPrioritySettings settings)
     {
-        var confidenceFactor = ((1.0 - settings.ConfidencePenaltyStrength) +
-                                (settings.ConfidencePenaltyStrength * candidate.AverageConfidence));
+                var baseConfidenceFactor = ((1.0 - settings.ConfidencePenaltyStrength) +
+                                                                        (settings.ConfidencePenaltyStrength * candidate.AverageConfidence));
+                var confidenceFactor = baseConfidenceFactor * candidate.CalibrationConfidenceAdjustment;
         var weighted = (settings.SeverityWeight * candidate.Severity) +
                        (settings.InstabilityWeight * candidate.Instability) +
                        (settings.DeclineWeight * candidate.Decline) +
@@ -798,6 +806,63 @@ public class AiTextService
         return Clamp(EvidenceFloor + ((1.0 - EvidenceFloor) * scaled));
     }
 
+    private static double ComputeRecentCalibrationQualityScore(IReadOnlyList<ProgressEntry> orderedEntries)
+    {
+        if (orderedEntries is null || orderedEntries.Count == 0)
+        {
+            return 0.60;
+        }
+
+        var recent = orderedEntries
+            .OrderByDescending(entry => entry.Timestamp)
+            .Take(8)
+            .Reverse()
+            .ToArray();
+
+        var smoothed = 0.60;
+        foreach (var entry in recent)
+        {
+            var support = Clamp(entry.EmpiricalOutcomeSupport <= 0.0 ? 0.40 : entry.EmpiricalOutcomeSupport);
+            var quality = ResolveEntryCalibrationQuality(entry);
+            var alpha = 0.35 + (0.45 * support);
+            smoothed = ((1.0 - alpha) * smoothed) + (alpha * quality);
+        }
+
+        return Clamp(smoothed);
+    }
+
+    private static double ResolveEntryCalibrationQuality(ProgressEntry entry)
+    {
+        var payload = (entry.CalibrationTableJson ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(payload))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(payload);
+                if (document.RootElement.TryGetProperty("quality", out var quality) &&
+                    quality.ValueKind == JsonValueKind.Object &&
+                    quality.TryGetProperty("qualityScore", out var scoreElement) &&
+                    scoreElement.ValueKind == JsonValueKind.Number)
+                {
+                    return Clamp(scoreElement.GetDouble());
+                }
+            }
+            catch
+            {
+                // Keep fallback behavior for legacy or malformed calibration payloads.
+            }
+        }
+
+        var support = Clamp(entry.EmpiricalOutcomeSupport <= 0.0 ? 0.35 : entry.EmpiricalOutcomeSupport);
+        if (!string.IsNullOrWhiteSpace(entry.CalibrationMethod) &&
+            entry.CalibrationMethod.Contains("isotonic", StringComparison.OrdinalIgnoreCase))
+        {
+            return Clamp(0.65 + (0.25 * support));
+        }
+
+        return Clamp(0.55 + (0.20 * support));
+    }
+
     private static IReadOnlyDictionary<string, double> BuildPositionImportanceWeights(AssignmentPrioritySettings settings)
     {
         var weights = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
@@ -895,6 +960,8 @@ public class AiTextService
         double Frequency,
         double FrequencyNormalizationFactor,
         double AverageConfidence,
+        double CalibrationQualityScore,
+        double CalibrationConfidenceAdjustment,
         double Recency,
         double EvidenceStrength,
         double PositionWeightedDecline,

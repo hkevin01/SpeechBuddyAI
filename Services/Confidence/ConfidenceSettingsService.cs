@@ -25,6 +25,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private const string CalibrationSupportMedialCoefficientKey = "calibration.support.medialCoefficient";
     private const string CalibrationSupportFinalCoefficientKey = "calibration.support.finalCoefficient";
     private const string CalibrationTableActivationMinSamplesKey = "calibration.table.activationMinSamples";
+    private const string CalibrationQualityActivationThresholdKey = "calibration.quality.activationThreshold";
 
     public const double DefaultModerateThreshold = 0.60;
     public const double DefaultHighThreshold = 0.80;
@@ -38,6 +39,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     public const double DefaultAssignmentUncertaintyBudgetCap = 0.40;
     public static readonly PositionSupportCoefficients DefaultCalibrationPositionSupportCoefficients = new(1.00, 0.85, 0.92);
     public const int DefaultCalibrationTableActivationMinSamples = 8;
+    public const double DefaultCalibrationQualityActivationThreshold = 0.50;
 
     private readonly IKeyValueStore _store;
 
@@ -89,6 +91,7 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         SaveAssignmentUncertaintyBudgetCap(DefaultAssignmentUncertaintyBudgetCap);
         SaveCalibrationPositionSupportCoefficients(DefaultCalibrationPositionSupportCoefficients);
         SaveCalibrationTableActivationMinSamples(DefaultCalibrationTableActivationMinSamples);
+        SaveCalibrationQualityActivationThreshold(DefaultCalibrationQualityActivationThreshold);
     }
 
     public SessionComparisonNormalizationMode GetSessionComparisonNormalizationMode()
@@ -291,6 +294,17 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
         _store.Set(CalibrationTableActivationMinSamplesKey, clamped);
     }
 
+    public double GetCalibrationQualityActivationThreshold()
+    {
+        var stored = _store.Get(CalibrationQualityActivationThresholdKey, DefaultCalibrationQualityActivationThreshold);
+        return ClampCalibrationQualityThreshold(stored);
+    }
+
+    public void SaveCalibrationQualityActivationThreshold(double threshold)
+    {
+        _store.Set(CalibrationQualityActivationThresholdKey, ClampCalibrationQualityThreshold(threshold));
+    }
+
     private static double Clamp(double value)
     {
         return Math.Max(0.0, Math.Min(1.0, value));
@@ -299,6 +313,11 @@ public sealed class ConfidenceSettingsService : IConfidenceThresholdProvider
     private static double ClampCoefficient(double value)
     {
         return Math.Max(0.10, Math.Min(2.00, value));
+    }
+
+    private static double ClampCalibrationQualityThreshold(double value)
+    {
+        return Math.Max(0.35, Math.Min(0.85, value));
     }
 }
 

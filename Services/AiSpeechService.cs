@@ -78,7 +78,12 @@ public class AiSpeechService
             var calibrationContext = BuildCalibrationContext(priorEntries, positionTag);
             var calibrationMinSamples = _confidenceSettingsService?.GetCalibrationTableActivationMinSamples()
                 ?? ConfidenceSettingsService.DefaultCalibrationTableActivationMinSamples;
-            var calibrationTable = _confidenceCalculator.BuildCalibrationTable(calibrationContext.RecentPool, calibrationMinSamples);
+            var calibrationQualityThreshold = _confidenceSettingsService?.GetCalibrationQualityActivationThreshold()
+                ?? ConfidenceSettingsService.DefaultCalibrationQualityActivationThreshold;
+            var calibrationTable = _confidenceCalculator.BuildCalibrationTable(
+                calibrationContext.RecentPool,
+                calibrationMinSamples,
+                qualityActivationThreshold: calibrationQualityThreshold);
             var rawConfidenceScore = _confidenceCalculator.ComputeRawScore(
                 scores,
                 normalizedTranscript,
@@ -97,9 +102,14 @@ public class AiSpeechService
                 calibrationContext.OutcomeMean,
                 calibrationContext.Support,
                 calibrationTable);
-            var confidenceBand = _confidenceCalculator.ComputeBand(confidenceScore, adaptiveThresholds);
             var drift = DetectHistoricalDrift(priorEntries, scores.OverallScore);
             var uncertainty = _confidenceCalculator.ComputeUncertaintyDecomposition(calibrationContext.RecentPool, consistencyProfile.Uncertainty);
+            var confidenceBand = ComputeGuardedConfidenceBand(
+                rawConfidenceScore,
+                confidenceScore,
+                adaptiveThresholds,
+                uncertainty,
+                calibrationTable);
             var calibrationResidual = Math.Abs(rawConfidenceScore - calibrationContext.OutcomeMean);
 
             var trialCount = priorEntries.Count + 1;
@@ -334,6 +344,16 @@ public class AiSpeechService
         var payload = new
         {
             support = table.Support,
+            quality = table.Quality is null
+                ? null
+                : new
+                {
+                    coverage = table.Quality.Coverage,
+                    minOccupiedBinCount = table.Quality.MinOccupiedBinCount,
+                    meanMonotonicAdjustment = table.Quality.MeanMonotonicAdjustment,
+                    qualityScore = table.Quality.QualityScore,
+                    meetsActivationGate = table.Quality.MeetsActivationGate
+                },
             bins = table.Bins.Select(bin => new
             {
                 lower = bin.LowerBound,
@@ -344,6 +364,32 @@ public class AiSpeechService
         };
 
         return JsonSerializer.Serialize(payload);
+    }
+
+    private string ComputeGuardedConfidenceBand(
+        double rawConfidenceScore,
+        double calibratedConfidenceScore,
+        ConfidenceThresholds thresholds,
+        UncertaintyDecomposition uncertainty,
+        ConfidenceCalibrationTable calibrationTable)
+    {
+        var rawBand = _confidenceCalculator.ComputeBand(rawConfidenceScore, thresholds);
+        var calibratedBand = _confidenceCalculator.ComputeBand(calibratedConfidenceScore, thresholds);
+        var sparsity = Math.Clamp(uncertainty.SparsityDriven, 0.0, 1.0);
+        var calibrationDelta = calibratedConfidenceScore - rawConfidenceScore;
+
+        var attemptedAggressiveUpgrade =
+            calibratedBand == "High" &&
+            rawBand != "High" &&
+            calibrationDelta >= 0.08;
+
+        var lowReliability = sparsity >= 0.72 || (calibrationTable.Quality is not null && calibrationTable.Quality.QualityScore < 0.52);
+        if (attemptedAggressiveUpgrade && lowReliability)
+        {
+            return "Moderate";
+        }
+
+        return calibratedBand;
     }
 
     private sealed record HistoricalDriftState(bool Detected, double ZScore, string Summary);

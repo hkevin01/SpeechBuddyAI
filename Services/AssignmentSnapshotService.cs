@@ -147,6 +147,7 @@ public sealed class AssignmentSnapshotService
             Environment.NewLine,
             reasons.Select(reason =>
                 $"- {reason.TargetSound}: priority {reason.PriorityScore:0.00} (severity {reason.SeverityScore:0.00}, instability {reason.InstabilityScore:0.00}, decline {reason.DeclineScore:0.00}, frequency {reason.FrequencyScore:0.00}, confidence factor {reason.ConfidenceFactor:0.00}, evidence {reason.EvidenceStrength:0.00}, variance {reason.ConfidenceVariance:0.000}); " +
+                $"calibration quality {reason.CalibrationQualityScore:0.00}, calibration confidence adjustment {reason.CalibrationConfidenceAdjustment:0.00}; " +
                 (reason.ConfidenceIntervalSuppressed
                     ? $"score CI95 hidden (n below {reason.ConfidenceIntervalMinSamples}); "
                     : $"score CI95 [{reason.OverallScoreCiLower:0.00}, {reason.OverallScoreCiUpper:0.00}] around mean {reason.OverallScoreMean:0.00}; ") +

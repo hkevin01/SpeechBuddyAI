@@ -208,16 +208,25 @@
                                     Maximum="24"
                                     ValueChanged="OnSliderValueChanged" />
 
+                                <Label Text="Calibration quality activation threshold" FontAttributes="Bold" />
+                                <Label x:Name="CalibrationQualityThresholdValueLabel" Text="0.50" />
+                                <Slider x:Name="CalibrationQualityThresholdSlider"
+                                    TabIndex="20"
+                                    SemanticProperties.Description="Set minimum calibration quality score required to activate non-linear calibration table"
+                                    Minimum="0.35"
+                                    Maximum="0.85"
+                                    ValueChanged="OnSliderValueChanged" />
+
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button Grid.Column="0"
                             Text="Save Clinician Settings"
-                            TabIndex="20"
+                            TabIndex="21"
                             SemanticProperties.Description="Save current clinician confidence and assignment settings"
                             Clicked="OnSaveClicked"
                             HorizontalOptions="Fill" />
                         <Button Grid.Column="1"
                             Text="Reset Defaults"
-                            TabIndex="21"
+                            TabIndex="22"
                             SemanticProperties.Description="Reset clinician settings to default values"
                             Clicked="OnResetClicked"
                             HorizontalOptions="Fill" />
@@ -230,7 +239,7 @@
                         <Label Text="Default Share Behavior" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Label Text="Choose what happens when Share Latest Report is used in Notes." />
                         <Picker x:Name="ShareBehaviorPicker"
-                            TabIndex="22"
+                            TabIndex="23"
                             SemanticProperties.Description="Select default share behavior for latest report"
                             SelectedIndex="1">
                         <Picker.Items>
@@ -239,7 +248,7 @@
                         </Picker.Items>
                     </Picker>
                     <Button Text="Save Share Behavior"
-                            TabIndex="23"
+                            TabIndex="24"
                             SemanticProperties.Description="Save default report share behavior"
                             Clicked="OnSaveShareBehaviorClicked"
                             HorizontalOptions="Fill" />

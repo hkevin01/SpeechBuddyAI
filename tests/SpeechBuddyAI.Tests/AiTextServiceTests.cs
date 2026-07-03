@@ -345,6 +345,53 @@ public sealed class AiTextServiceTests
         Assert.True(tunedDecline > baselineDecline);
     }
 
+    [Fact]
+    public async Task GenerateHomeAssignmentAsync_LowCalibrationQuality_ReducesAutomaticRecommendationConfidence()
+    {
+        var now = DateTime.UtcNow;
+        var rInitial = Entry("r:initial", 0.42, now.AddDays(-4), "pattern_r", 0.82);
+        rInitial.CalibrationMethod = "isotonic-binned+empirical-shrinkage";
+        rInitial.EmpiricalOutcomeSupport = 0.85;
+        rInitial.CalibrationTableJson = "{\"quality\":{\"qualityScore\":0.38}}";
+
+        var rMedial = Entry("r:medial", 0.40, now.AddDays(-3), "pattern_r", 0.80);
+        rMedial.CalibrationMethod = "isotonic-binned+empirical-shrinkage";
+        rMedial.EmpiricalOutcomeSupport = 0.80;
+        rMedial.CalibrationTableJson = "{\"quality\":{\"qualityScore\":0.36}}";
+
+        var rFinal = Entry("r:final", 0.39, now.AddDays(-2), "pattern_r", 0.81);
+        rFinal.CalibrationMethod = "isotonic-binned+empirical-shrinkage";
+        rFinal.EmpiricalOutcomeSupport = 0.78;
+        rFinal.CalibrationTableJson = "{\"quality\":{\"qualityScore\":0.35}}";
+
+        var sInitial = Entry("s:initial", 0.43, now.AddDays(-4), "pattern_s", 0.82);
+        sInitial.CalibrationMethod = "isotonic-binned+empirical-shrinkage";
+        sInitial.EmpiricalOutcomeSupport = 0.85;
+        sInitial.CalibrationTableJson = "{\"quality\":{\"qualityScore\":0.82}}";
+
+        var sMedial = Entry("s:medial", 0.41, now.AddDays(-3), "pattern_s", 0.80);
+        sMedial.CalibrationMethod = "isotonic-binned+empirical-shrinkage";
+        sMedial.EmpiricalOutcomeSupport = 0.80;
+        sMedial.CalibrationTableJson = "{\"quality\":{\"qualityScore\":0.84}}";
+
+        var sFinal = Entry("s:final", 0.40, now.AddDays(-2), "pattern_s", 0.81);
+        sFinal.CalibrationMethod = "isotonic-binned+empirical-shrinkage";
+        sFinal.EmpiricalOutcomeSupport = 0.78;
+        sFinal.CalibrationTableJson = "{\"quality\":{\"qualityScore\":0.85}}";
+
+        var history = new[] { rInitial, rMedial, rFinal, sInitial, sMedial, sFinal };
+
+        var service = new AiTextService(new PhonemeWordBankService(), new ConfidenceSettingsService(new InMemoryStore()), new AssignmentSnapshotService());
+        var assignment = await service.GenerateHomeAssignmentAsync(history);
+
+        var rReason = assignment.FocusTargetReasons.First(reason => string.Equals(reason.TargetSound, "r", StringComparison.OrdinalIgnoreCase));
+        var sReason = assignment.FocusTargetReasons.First(reason => string.Equals(reason.TargetSound, "s", StringComparison.OrdinalIgnoreCase));
+
+        Assert.True(rReason.CalibrationQualityScore < sReason.CalibrationQualityScore);
+        Assert.True(rReason.CalibrationConfidenceAdjustment < sReason.CalibrationConfidenceAdjustment);
+        Assert.True(rReason.PriorityScore < sReason.PriorityScore);
+    }
+
     private static ProgressEntry Entry(string target, double overall, DateTime timestamp, string pattern, double confidence)
     {
         return new ProgressEntry

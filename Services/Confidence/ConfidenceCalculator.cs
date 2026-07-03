@@ -34,7 +34,8 @@ public sealed class ConfidenceCalculator
         if (calibrationTable is not null && calibrationTable.IsActive)
         {
             var mapped = MapConfidenceThroughTable(calibrationTable, provisional);
-            var tableBlendWeight = 0.45 * Clamp(calibrationTable.Support);
+            var qualityWeight = calibrationTable.Quality?.QualityScore ?? 1.0;
+            var tableBlendWeight = 0.45 * Clamp(calibrationTable.Support) * Clamp(qualityWeight);
             tableAdjusted = Clamp(tableAdjusted + (tableBlendWeight * (mapped - tableAdjusted)));
         }
 
@@ -101,7 +102,8 @@ public sealed class ConfidenceCalculator
     public ConfidenceCalibrationTable BuildCalibrationTable(
         IReadOnlyList<ProgressEntry> history,
         int minSamples = 8,
-        int binCount = 6)
+        int binCount = 6,
+        double qualityActivationThreshold = 0.50)
     {
         var source = history ?? Array.Empty<ProgressEntry>();
         var samples = source
@@ -120,6 +122,7 @@ public sealed class ConfidenceCalculator
         var effectiveBinCount = Math.Clamp(binCount, 3, 12);
         var binWidth = 1.0 / effectiveBinCount;
         var binMeans = new double[effectiveBinCount];
+        var rawBinMeans = new double[effectiveBinCount];
         var binCounts = new int[effectiveBinCount];
 
         foreach (var sample in samples)
@@ -131,7 +134,9 @@ public sealed class ConfidenceCalculator
 
         for (var i = 0; i < effectiveBinCount; i++)
         {
-            binMeans[i] = binCounts[i] > 0 ? binMeans[i] / binCounts[i] : double.NaN;
+            var value = binCounts[i] > 0 ? binMeans[i] / binCounts[i] : double.NaN;
+            binMeans[i] = value;
+            rawBinMeans[i] = value;
         }
 
         for (var i = 0; i < effectiveBinCount; i++)
@@ -222,7 +227,11 @@ public sealed class ConfidenceCalculator
         }
 
         var support = Math.Min(samples.Length, 24) / 24.0;
-        return new ConfidenceCalibrationTable(bins, support, true);
+        var quality = ComputeCalibrationQuality(rawBinMeans, monotonicMeans, binCounts, qualityActivationThreshold);
+        var isActive = quality.MeetsActivationGate;
+        var effectiveSupport = isActive ? support * quality.QualityScore : 0.0;
+
+        return new ConfidenceCalibrationTable(bins, effectiveSupport, isActive, quality);
     }
 
     public UncertaintyDecomposition ComputeUncertaintyDecomposition(
@@ -375,6 +384,57 @@ public sealed class ConfidenceCalculator
 
         return Clamp(bins[^1].CalibratedOutcome);
     }
+
+    private static ConfidenceCalibrationQuality ComputeCalibrationQuality(
+        IReadOnlyList<double> rawBinMeans,
+        IReadOnlyList<double> monotonicMeans,
+        IReadOnlyList<int> binCounts,
+        double qualityActivationThreshold)
+    {
+        var binCount = rawBinMeans.Count;
+        if (binCount == 0)
+        {
+            return ConfidenceCalibrationQuality.Inactive;
+        }
+
+        var occupiedBins = 0;
+        var minOccupiedCount = int.MaxValue;
+        var weightedAdjustmentSum = 0.0;
+        var totalCount = 0;
+
+        for (var i = 0; i < binCount; i++)
+        {
+            if (binCounts[i] <= 0)
+            {
+                continue;
+            }
+
+            occupiedBins++;
+            minOccupiedCount = Math.Min(minOccupiedCount, binCounts[i]);
+            totalCount += binCounts[i];
+            weightedAdjustmentSum += Math.Abs(monotonicMeans[i] - rawBinMeans[i]) * binCounts[i];
+        }
+
+        if (occupiedBins == 0 || totalCount == 0)
+        {
+            return ConfidenceCalibrationQuality.Inactive;
+        }
+
+        var coverage = (double)occupiedBins / binCount;
+        var occupancyScore = Clamp(minOccupiedCount / 3.0);
+        var weightedAdjustment = weightedAdjustmentSum / totalCount;
+        var monotonicAdjustmentScore = 1.0 - Clamp(weightedAdjustment / 0.18);
+        var qualityScore = Clamp((0.45 * coverage) + (0.35 * occupancyScore) + (0.20 * monotonicAdjustmentScore));
+        var activationThreshold = Math.Clamp(qualityActivationThreshold, 0.35, 0.85);
+        var meetsGate = coverage >= 0.50 && minOccupiedCount >= 1 && qualityScore >= activationThreshold;
+
+        return new ConfidenceCalibrationQuality(
+            coverage,
+            minOccupiedCount,
+            weightedAdjustment,
+            qualityScore,
+            meetsGate);
+    }
 }
 
 public sealed record ConfidenceCalibrationBin(
@@ -386,9 +446,20 @@ public sealed record ConfidenceCalibrationBin(
 public sealed record ConfidenceCalibrationTable(
     IReadOnlyList<ConfidenceCalibrationBin> Bins,
     double Support,
-    bool IsActive)
+    bool IsActive,
+    ConfidenceCalibrationQuality? Quality = null)
 {
-    public static ConfidenceCalibrationTable Inactive { get; } = new(Array.Empty<ConfidenceCalibrationBin>(), 0.0, false);
+    public static ConfidenceCalibrationTable Inactive { get; } = new(Array.Empty<ConfidenceCalibrationBin>(), 0.0, false, ConfidenceCalibrationQuality.Inactive);
+}
+
+public sealed record ConfidenceCalibrationQuality(
+    double Coverage,
+    int MinOccupiedBinCount,
+    double MeanMonotonicAdjustment,
+    double QualityScore,
+    bool MeetsActivationGate)
+{
+    public static ConfidenceCalibrationQuality Inactive { get; } = new(0.0, 0, 1.0, 0.0, false);
 }
 
 public sealed record UncertaintyDecomposition(

@@ -38,6 +38,7 @@ public class ReportService
                 RawNote = safeRawNote,
                 SoapSummary = BuildSoapSummary(safeRawNote, safeEntries),
                 ParentSummary = BuildParentSummary(safeEntries),
+                SessionCalibrationQualitySummary = BuildSessionCalibrationQualitySummary(safeEntries),
                 AssignmentSnapshotDate = latestAssignmentSnapshot?.SnapshotDate,
                 AssignmentSelectionSummary = latestAssignmentSnapshot?.Rationale ?? "No assignment snapshot available for this report window.",
                 AssignmentSelectionDetails = BuildAssignmentSelectionDetails(latestAssignmentSnapshot, targetReasons),
@@ -234,6 +235,72 @@ public class ReportService
         }
 
         return "Compared with the earlier session in this review window, performance stayed fairly steady overall.";
+    }
+
+    private static string BuildSessionCalibrationQualitySummary(IReadOnlyList<ProgressEntry> entries)
+    {
+        var source = entries ?? Array.Empty<ProgressEntry>();
+        if (source.Count == 0)
+        {
+            return "No calibration quality evidence yet for this session.";
+        }
+
+        var targetSummaries = source
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.TargetSound))
+            .GroupBy(entry => entry.TargetSound.Trim().ToLowerInvariant())
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var scoped = group.OrderByDescending(entry => entry.Timestamp).Take(8).ToArray();
+                var qualityValues = scoped
+                    .Select(ResolveCalibrationQuality)
+                    .ToArray();
+                var avgQuality = qualityValues.Length == 0 ? 0.0 : qualityValues.Average();
+                var avgSupport = scoped.Average(entry => Math.Clamp(entry.EmpiricalOutcomeSupport, 0.0, 1.0));
+                var avgResidual = scoped.Average(entry => Math.Clamp(entry.CalibrationResidual, 0.0, 1.0));
+                var status = avgQuality >= 0.70
+                    ? "strong"
+                    : avgQuality >= 0.55
+                        ? "moderate"
+                        : "low";
+
+                return $"{group.Key}: quality {avgQuality:0.00} ({status}), support {avgSupport:0.00}, residual {avgResidual:0.000}";
+            })
+            .ToArray();
+
+        return targetSummaries.Length == 0
+            ? "No calibration quality evidence yet for this session."
+            : string.Join(" | ", targetSummaries);
+    }
+
+    private static double ResolveCalibrationQuality(ProgressEntry entry)
+    {
+        var payload = (entry.CalibrationTableJson ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(payload))
+        {
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(payload);
+                if (document.RootElement.TryGetProperty("quality", out var quality) &&
+                    quality.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                    quality.TryGetProperty("qualityScore", out var scoreElement) &&
+                    scoreElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    return Math.Clamp(scoreElement.GetDouble(), 0.0, 1.0);
+                }
+            }
+            catch
+            {
+                // Ignore malformed payloads and continue with fallback estimation.
+            }
+        }
+
+        var support = Math.Clamp(entry.EmpiricalOutcomeSupport <= 0.0 ? 0.35 : entry.EmpiricalOutcomeSupport, 0.0, 1.0);
+        var methodBoost = !string.IsNullOrWhiteSpace(entry.CalibrationMethod) &&
+                          entry.CalibrationMethod.Contains("isotonic", StringComparison.OrdinalIgnoreCase)
+            ? 0.10
+            : 0.0;
+        return Math.Clamp(0.50 + (0.30 * support) + methodBoost, 0.0, 1.0);
     }
 
     private static string BuildAssignmentSelectionDetails(

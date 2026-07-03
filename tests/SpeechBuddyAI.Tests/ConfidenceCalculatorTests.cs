@@ -199,7 +199,9 @@ public sealed class ConfidenceCalculatorTests
 
         var table = calculator.BuildCalibrationTable(history, minSamples: 8, binCount: 6);
 
-        Assert.True(table.IsActive);
+        Assert.NotNull(table.Quality);
+        Assert.False(table.Quality!.MeetsActivationGate);
+        Assert.False(table.IsActive);
         for (var i = 1; i < table.Bins.Count; i++)
         {
             Assert.True(table.Bins[i].CalibratedOutcome >= table.Bins[i - 1].CalibratedOutcome);
@@ -250,12 +252,94 @@ public sealed class ConfidenceCalculatorTests
                 new ConfidenceCalibrationBin(0.5, 1.0, 0.86, 8)
             },
             Support: 1.0,
-            IsActive: true);
+            IsActive: true,
+            Quality: new ConfidenceCalibrationQuality(1.0, 4, 0.02, 1.0, true));
 
         var withoutTable = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.25, "HighSupport", 0.75, 1.0);
         var withTable = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.25, "HighSupport", 0.75, 1.0, table);
 
         Assert.True(withTable > withoutTable);
+    }
+
+    [Fact]
+    public void BuildCalibrationTable_SparseBinCoverage_RemainsInactive()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var history = Enumerable.Range(0, 10)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-10 + index),
+                RawConfidenceScore = 0.88 + (index * 0.005),
+                OverallScore = 0.45 + ((index % 2 == 0) ? 0.03 : -0.02)
+            })
+            .ToArray();
+
+        var table = calculator.BuildCalibrationTable(history, minSamples: 8, binCount: 6);
+
+        Assert.False(table.IsActive);
+        Assert.NotNull(table.Quality);
+        Assert.True(table.Quality!.Coverage < 0.5);
+        Assert.False(table.Quality.MeetsActivationGate);
+    }
+
+    [Fact]
+    public void BuildCalibrationTable_WellDistributedSamples_ActivatesQualityGate()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var history = Enumerable.Range(0, 30)
+            .Select(index => new ProgressEntry
+            {
+                Timestamp = DateTime.UtcNow.AddDays(-30 + index),
+                RawConfidenceScore = 0.05 + (index * 0.03),
+                OverallScore = 0.10 + (index * 0.025)
+            })
+            .ToArray();
+
+        var table = calculator.BuildCalibrationTable(history, minSamples: 8, binCount: 6);
+
+        Assert.True(table.IsActive);
+        Assert.NotNull(table.Quality);
+        Assert.True(table.Quality!.Coverage >= 0.5);
+        Assert.True(table.Quality.QualityScore > 0.55);
+        Assert.True(table.Support > 0.0);
+    }
+
+    [Fact]
+    public void ComputeScore_LowQualityCalibrationTable_HasSmallerImpactThanHighQualityTable()
+    {
+        var calculator = new ConfidenceCalculator(new StubProvider(new ConfidenceThresholds(0.60, 0.80)));
+        var scores = new ScoreComponents
+        {
+            PhonemeScore = 0.76,
+            FluencyScore = 0.72,
+            ConsistencyScore = 0.74,
+            OverallScore = 0.74
+        };
+
+        var highQuality = new ConfidenceCalibrationTable(
+            new[]
+            {
+                new ConfidenceCalibrationBin(0.0, 0.5, 0.42, 5),
+                new ConfidenceCalibrationBin(0.5, 1.0, 0.88, 9)
+            },
+            Support: 1.0,
+            IsActive: true,
+            Quality: new ConfidenceCalibrationQuality(1.0, 3, 0.02, 1.0, true));
+
+        var lowQuality = new ConfidenceCalibrationTable(
+            highQuality.Bins,
+            Support: 1.0,
+            IsActive: true,
+            Quality: new ConfidenceCalibrationQuality(0.55, 2, 0.16, 0.56, true));
+
+        var baseline = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.30, "ModerateSupport", 0.72, 0.9);
+        var withHighQuality = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.30, "ModerateSupport", 0.72, 0.9, highQuality);
+        var withLowQuality = calculator.ComputeScore(scores, "rocket", 6, "offline-heuristic", 0.30, "ModerateSupport", 0.72, 0.9, lowQuality);
+
+        var highDelta = Math.Abs(withHighQuality - baseline);
+        var lowDelta = Math.Abs(withLowQuality - baseline);
+
+        Assert.True(highDelta > lowDelta);
     }
 
     private sealed class StubProvider : IConfidenceThresholdProvider

@@ -64,6 +64,7 @@ public static class ReportExportFormatter
             $"Adaptive Thresholds: {BuildAdaptiveThresholdSummary(entries)}" + Environment.NewLine +
             $"Calibration Drift by Target: {BuildCalibrationDriftByTargetSummary(entries)}" + Environment.NewLine +
             $"Uncertainty Decomposition: {BuildUncertaintyDecompositionSummary(entries)}" + Environment.NewLine +
+            $"Session Calibration Quality: {SafeValue(note.SessionCalibrationQualitySummary)}" + Environment.NewLine +
             $"Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
@@ -125,6 +126,7 @@ public static class ReportExportFormatter
             $"- Adaptive Thresholds: {BuildAdaptiveThresholdSummary(entries)}" + Environment.NewLine +
             $"- Calibration Drift by Target: {BuildCalibrationDriftByTargetSummary(entries)}" + Environment.NewLine +
             $"- Uncertainty Decomposition: {BuildUncertaintyDecompositionSummary(entries)}" + Environment.NewLine +
+            $"- Session Calibration Quality: {SafeValue(note.SessionCalibrationQualitySummary)}" + Environment.NewLine +
             $"- Target-Level Deltas: {BuildTargetDeltaSummary(entries)}" + Environment.NewLine +
             $"- Session Comparison: {BuildSessionComparisonOverview(snapshot)}" + Environment.NewLine +
             $"- Confidence Movement: {snapshot.ConfidenceBandMovementSummary}" + Environment.NewLine +
@@ -187,6 +189,7 @@ public static class ReportExportFormatter
             CsvLine("AdaptiveThresholds", BuildAdaptiveThresholdSummary(entries)),
             CsvLine("CalibrationDriftByTarget", BuildCalibrationDriftByTargetSummary(entries)),
             CsvLine("UncertaintyDecomposition", BuildUncertaintyDecompositionSummary(entries)),
+            CsvLine("SessionCalibrationQuality", SafeValue(note.SessionCalibrationQualitySummary)),
             CsvLine("TargetLevelDeltas", BuildTargetDeltaSummary(entries)),
             CsvLine("SessionComparison", BuildSessionComparisonOverview(snapshot)),
             CsvLine("ConfidenceMovement", snapshot.ConfidenceBandMovementSummary),
@@ -346,8 +349,9 @@ public static class ReportExportFormatter
                 continue;
             }
 
-            var firstWindow = ordered.Take(Math.Min(3, ordered.Length)).Average(entry => entry.CalibrationResidual);
-            var lastWindow = ordered.TakeLast(Math.Min(3, ordered.Length)).Average(entry => entry.CalibrationResidual);
+            var smoothedResiduals = BuildReliabilityWeightedSmoothedResiduals(ordered);
+            var firstWindow = smoothedResiduals.Take(Math.Min(3, smoothedResiduals.Length)).Average();
+            var lastWindow = smoothedResiduals.TakeLast(Math.Min(3, smoothedResiduals.Length)).Average();
             var delta = lastWindow - firstWindow;
             var direction = delta < -0.015
                 ? "improving"
@@ -355,11 +359,39 @@ public static class ReportExportFormatter
                     ? "worsening"
                     : "stable";
             var avgSupport = ordered.Average(entry => entry.EmpiricalOutcomeSupport);
+            var volatility = ordered
+                .Select((entry, index) => Math.Abs(Clamp(entry.CalibrationResidual) - smoothedResiduals[Math.Min(index, smoothedResiduals.Length - 1)]))
+                .Average();
 
-            summaries.Add($"{group.Key}: {delta:+0.000;-0.000;0.000} ({direction}, support {avgSupport:0.00})");
+            summaries.Add($"{group.Key}: {delta:+0.000;-0.000;0.000} ({direction}, support {avgSupport:0.00}, smoothed volatility {volatility:0.000})");
         }
 
         return summaries.Count == 0 ? "n/a" : string.Join(" | ", summaries);
+    }
+
+    private static double[] BuildReliabilityWeightedSmoothedResiduals(IReadOnlyList<ProgressEntry> ordered)
+    {
+        if (ordered.Count == 0)
+        {
+            return Array.Empty<double>();
+        }
+
+        var smoothed = new double[ordered.Count];
+        smoothed[0] = Clamp(ordered[0].CalibrationResidual);
+        for (var i = 1; i < ordered.Count; i++)
+        {
+            var support = Clamp(ordered[i].EmpiricalOutcomeSupport <= 0.0 ? 0.25 : ordered[i].EmpiricalOutcomeSupport);
+            var alpha = 0.20 + (0.55 * support);
+            var residual = Clamp(ordered[i].CalibrationResidual);
+            smoothed[i] = ((1.0 - alpha) * smoothed[i - 1]) + (alpha * residual);
+        }
+
+        return smoothed;
+    }
+
+    private static double Clamp(double value)
+    {
+        return Math.Max(0.0, Math.Min(1.0, value));
     }
 
     private static string BuildUncertaintyDecompositionSummary(IReadOnlyList<ProgressEntry> entries)

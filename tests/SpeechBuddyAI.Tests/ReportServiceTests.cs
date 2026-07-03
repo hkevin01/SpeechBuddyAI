@@ -140,7 +140,11 @@ public sealed class ReportServiceTests
         Assert.Contains("Current rationale:", report.AssignmentSelectionDetails);
         Assert.Contains("Uncertainty budget:", report.AssignmentSelectionDetails);
         Assert.Contains("calibration", report.AssignmentModelAuditSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("quality", report.SessionCalibrationQualitySummary, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(AiTextService.ScoringFormulaVersion, report.AssignmentScoringFormulaVersion);
+
+        var exportText = service.BuildExportText(report, MakeEntries(), ReportExportFormat.PlainText);
+        Assert.Contains("Session Calibration Quality:", exportText);
     }
 
     private static (ReportService Service, AssignmentSnapshotService Snapshots) CreateService()
