@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+             xmlns:views="clr-namespace:SpeechBuddyAI.Views"
              x:Class="SpeechBuddyAI.Pages.HomePage"
              ios:Page.UseSafeArea="True"
              Title="Home">
@@ -13,26 +14,26 @@
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Session Overview" Style="{StaticResource SectionTitleLabelStyle}" />
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-                        <Frame Grid.Row="0" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#EFF6FF" BorderColor="#BFDBFE">
+                    <Grid x:Name="OverviewMetricsGrid" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                        <Frame x:Name="TotalAttemptsCard" Grid.Row="0" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource InfoContainer}" BorderColor="{StaticResource InfoOutline}">
                             <VerticalStackLayout Spacing="2">
                                 <Label Text="Total Attempts" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
                                 <Label x:Name="TotalAttemptsLabel" Text="-" Style="{StaticResource MetricValueLabelStyle}" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#F0FDF4" BorderColor="#BBF7D0">
+                        <Frame x:Name="AverageScoreCard" Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource SuccessContainer}" BorderColor="{StaticResource SuccessOutline}">
                             <VerticalStackLayout Spacing="2">
                                 <Label Text="Average Score" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
                                 <Label x:Name="AverageScoreLabel" Text="-" Style="{StaticResource MetricValueLabelStyle}" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Row="1" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#FFF7ED" BorderColor="#FED7AA">
+                        <Frame x:Name="MostPracticedCard" Grid.Row="1" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource WarningContainer}" BorderColor="{StaticResource WarningOutline}">
                             <VerticalStackLayout Spacing="2">
                                 <Label Text="Most Practiced" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
                                 <Label x:Name="MostPracticedLabel" Text="-" FontAttributes="Bold" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Row="1" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#FDF4FF" BorderColor="#E9D5FF">
+                        <Frame x:Name="StreakCard" Grid.Row="1" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource ReviewContainer}" BorderColor="{StaticResource ReviewOutline}">
                             <VerticalStackLayout Spacing="2">
                                 <Label Text="Practice Streak" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
                                 <Label x:Name="StreakLabel" Text="-" FontAttributes="Bold" />
@@ -46,6 +47,7 @@
                 <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Home Assignment" Style="{StaticResource SectionTitleLabelStyle}" />
+                    <views:StatusBannerView x:Name="AssignmentStatusBanner" />
                     <Button Text="Generate from Weak Patterns"
                             TabIndex="0"
                         SemanticProperties.Description="Generate a home assignment using recent weak-pattern evidence"

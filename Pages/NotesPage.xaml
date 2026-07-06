@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
          xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+             xmlns:views="clr-namespace:SpeechBuddyAI.Views"
              x:Class="SpeechBuddyAI.Pages.NotesPage"
          ios:Page.UseSafeArea="True"
              Title="Notes">
@@ -23,11 +24,14 @@
             Clicked="OnSaveNoteClicked" />
         </Grid>
 
+            <views:StatusBannerView x:Name="NotesStatusBanner" />
+
             <HorizontalStackLayout x:Name="ExportFormatRow" Spacing="10" VerticalOptions="Center">
                 <Label Text="Export format" VerticalOptions="Center" />
                 <Picker x:Name="ExportFormatPicker"
                     TabIndex="3"
                 SemanticProperties.Description="Select export format for reports"
+                        SemanticProperties.Hint="Choose plain text, markdown, or CSV summary export"
                         SelectedIndex="0"
                         SelectedIndexChanged="OnExportFormatChanged">
                     <Picker.Items>
@@ -68,6 +72,8 @@
                     <Label x:Name="ComparisonPreviewNormalizationLabel" Text="Normalization: -" />
                     <CollectionView x:Name="ComparisonPreviewBadgesCollection"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Comparison preview summary badges"
+                                    SemanticProperties.Hint="Swipe through comparison summary badges for the selected export window"
                                     HeightRequest="52">
                         <CollectionView.ItemsLayout>
                             <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
@@ -85,6 +91,8 @@
                     </CollectionView>
                     <CollectionView x:Name="ComparisonPreviewTimelineCollection"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Comparison preview timeline"
+                                    SemanticProperties.Hint="Browse timeline entries to compare recent session windows before export"
                                     HeightRequest="150">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
@@ -115,16 +123,19 @@
                         <Picker x:Name="AssignmentTargetPicker"
                             TabIndex="6"
                                 SemanticProperties.Description="Select target sound for assignment analytics drill-down"
+                                SemanticProperties.Hint="Choose a target sound to filter assignment analytics and model audit summaries"
                                 SelectedIndexChanged="OnAssignmentTargetChanged" />
                     </HorizontalStackLayout>
 
                     <CollectionView x:Name="AssignmentSnapshotCollection"
                                     SelectionMode="Single"
+                                    SemanticProperties.Description="Assignment snapshot history"
+                                    SemanticProperties.Hint="Select a saved assignment snapshot to inspect analytics details"
                                     SelectionChanged="OnAssignmentSnapshotSelectionChanged"
                                     HeightRequest="180">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <Frame BorderColor="#E9ECEF" BackgroundColor="#FAFAFA" Padding="8,6" Margin="0,0,0,6">
+                                <Frame Style="{StaticResource NeutralCardFrameStyle}" Padding="8,6" Margin="0,0,0,6">
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding SnapshotDateText}" FontAttributes="Bold" FontSize="12" />
                                         <Label Text="{Binding FocusTargetsText}" FontSize="12" />
@@ -142,6 +153,7 @@
                         <CollectionView Grid.Row="0" Grid.Column="1"
                                         x:Name="SeveritySparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Severity sparkline across assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -160,6 +172,7 @@
                         <CollectionView Grid.Row="1" Grid.Column="1"
                                         x:Name="InstabilitySparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Instability sparkline across assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -178,6 +191,7 @@
                         <CollectionView Grid.Row="2" Grid.Column="1"
                                         x:Name="DeclineSparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Decline sparkline across assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -196,6 +210,7 @@
                         <CollectionView Grid.Row="3" Grid.Column="1"
                                         x:Name="FrequencySparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Frequency sparkline across assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -214,6 +229,7 @@
                         <CollectionView Grid.Row="4" Grid.Column="1"
                                         x:Name="ConfidenceSparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Confidence sparkline across assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -245,6 +261,7 @@
                         <CollectionView Grid.Row="0" Grid.Column="1"
                                         x:Name="CalibrationNext1SparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Calibration next-one-horizon sparkline"
                                         HeightRequest="28">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -260,6 +277,7 @@
                         <CollectionView Grid.Row="1" Grid.Column="1"
                                         x:Name="CalibrationNext3SparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Calibration next-three-horizon sparkline"
                                         HeightRequest="28">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -275,6 +293,7 @@
                         <CollectionView Grid.Row="2" Grid.Column="1"
                                         x:Name="TraceDriftSparklineCollection"
                                         SelectionMode="None"
+                                        SemanticProperties.Description="Trace drift sparkline across model audit snapshots"
                                         HeightRequest="28">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -289,10 +308,12 @@
 
                     <CollectionView x:Name="AssignmentModelAuditCollection"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Assignment model audit snapshot collection"
+                                    SemanticProperties.Hint="Browse model audit cards to compare calibration and trace drift across snapshots"
                                     HeightRequest="180">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <Frame BorderColor="#E9ECEF" BackgroundColor="#F8FAFC" Padding="8,6" Margin="0,0,0,6">
+                                <Frame Style="{StaticResource NeutralCardFrameStyle}" Padding="8,6" Margin="0,0,0,6">
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding SnapshotDateText}" FontAttributes="Bold" FontSize="12" />
                                         <Label Text="{Binding FormulaVersionText}" FontSize="11" TextColor="#555555" />
@@ -322,7 +343,7 @@
                     Clicked="OnShareLatestClicked" />
                 </Grid>
 
-            <Label x:Name="NoteStatusLabel" Text="" FontAttributes="Italic" />
+            <Label x:Name="NoteStatusLabel" Text="" FontAttributes="Italic" IsVisible="False" />
 
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">

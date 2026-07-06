@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+             xmlns:views="clr-namespace:SpeechBuddyAI.Views"
              x:Class="SpeechBuddyAI.Pages.PracticePage"
              ios:Page.UseSafeArea="True"
              Title="Practice">
@@ -49,7 +50,7 @@
                     HorizontalOptions="Fill" />
                 </Grid>
 
-            <Label x:Name="StatusLabel" Text="No attempt scored yet." FontAttributes="Italic" Style="{StaticResource CaptionLabelStyle}" />
+            <views:StatusBannerView x:Name="PracticeStatusBanner" Message="No attempt scored yet." />
 
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">
@@ -66,7 +67,7 @@
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Generated Practice Words" Style="{StaticResource SectionTitleLabelStyle}" />
-                    <Label x:Name="PracticeWordsLabel" Text="No words generated yet." />
+                    <Label x:Name="PracticeWordsLabel" Text="No words generated yet." SemanticProperties.Description="Generated practice words for the current target" SemanticProperties.Hint="Read the generated words after choosing a target and optional position" />
                 </VerticalStackLayout>
             </Frame>
         </VerticalStackLayout>

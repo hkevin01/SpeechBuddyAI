@@ -1,4 +1,5 @@
 using SpeechBuddyAI.Services;
+using SpeechBuddyAI.Views;
 
 namespace SpeechBuddyAI.Pages;
 
@@ -21,11 +22,13 @@ public partial class PracticePage : ContentPage
 
         if (string.IsNullOrWhiteSpace(target) || string.IsNullOrWhiteSpace(transcript))
         {
-            StatusLabel.Text = "Enter both target sound and transcript before scoring.";
+            PracticeStatusBanner.Message = "Enter both target sound and transcript before scoring.";
+            PracticeStatusBanner.Tone = StatusBannerTone.Warning;
             return;
         }
 
-        StatusLabel.Text = "Scoring attempt...";
+        PracticeStatusBanner.Message = "Scoring attempt...";
+        PracticeStatusBanner.Tone = StatusBannerTone.Info;
 
         try
         {
@@ -38,17 +41,19 @@ public partial class PracticePage : ContentPage
             ProviderLabel.Text = $"Provider: {result.Provider}";
             ConfidenceLabel.Text = $"Confidence: {result.ConfidenceBand} ({result.ConfidenceScore:P0})";
 
-            StatusLabel.Text =
+            PracticeStatusBanner.Message =
                 $"Saved trial {result.Entry.TrialCount} for '{result.Entry.TargetSound}' (pattern: {result.Entry.ErrorPattern}).";
+            PracticeStatusBanner.Tone = result.HistoricalDriftDetected ? StatusBannerTone.Warning : StatusBannerTone.Success;
 
             if (result.HistoricalDriftDetected)
             {
-                StatusLabel.Text += $" {result.HistoricalDriftSummary}";
+                PracticeStatusBanner.Message += $" {result.HistoricalDriftSummary}";
             }
         }
         catch (Exception ex)
         {
-            StatusLabel.Text = ex.Message;
+            PracticeStatusBanner.Message = ex.Message;
+            PracticeStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
@@ -65,11 +70,14 @@ public partial class PracticePage : ContentPage
         {
             var words = await _aiTextService.GeneratePracticeWordsAsync(key);
             PracticeWordsLabel.Text = string.Join(", ", words);
+            PracticeStatusBanner.Message = "Practice words generated.";
+            PracticeStatusBanner.Tone = StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             PracticeWordsLabel.Text = "Could not generate words.";
-            StatusLabel.Text = ex.Message;
+            PracticeStatusBanner.Message = ex.Message;
+            PracticeStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 

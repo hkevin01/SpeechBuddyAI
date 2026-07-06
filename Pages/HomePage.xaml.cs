@@ -1,5 +1,6 @@
 using SpeechBuddyAI.Services;
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Views;
 
 namespace SpeechBuddyAI.Pages;
 
@@ -9,6 +10,7 @@ public partial class HomePage : ContentPage
     private readonly AiTextService _aiTextService;
     private readonly DashboardStatsService _dashboardStatsService;
     private readonly AssignmentSnapshotService _assignmentSnapshotService;
+    private LayoutBucket _currentLayoutBucket = LayoutBucket.Unknown;
 
     public HomePage()
     {
@@ -22,7 +24,14 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        ApplyResponsiveLayout(Width);
         await RefreshStatsAsync();
+    }
+
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+        ApplyResponsiveLayout(width);
     }
 
     private async Task RefreshStatsAsync()
@@ -50,6 +59,8 @@ public partial class HomePage : ContentPage
         AssignmentTargetsLabel.Text = string.Empty;
         AssignmentWordsLabel.Text = string.Empty;
         AssignmentReasonDetailsLabel.Text = string.Empty;
+        AssignmentStatusBanner.Message = "Building assignment from recent weak-pattern evidence.";
+        AssignmentStatusBanner.Tone = StatusBannerTone.Info;
 
         try
         {
@@ -65,11 +76,77 @@ public partial class HomePage : ContentPage
                                               : string.Join(", ", assignment.FocusTargets));
             AssignmentWordsLabel.Text = "Suggested Words: " + string.Join(", ", assignment.SuggestedWords);
             AssignmentReasonDetailsLabel.Text = BuildFocusReasonSummary(assignment.FocusTargetReasons);
+            AssignmentStatusBanner.Message = assignment.ReviewRequired
+                ? assignment.UncertaintyBudgetSummary
+                : "Assignment generated successfully.";
+            AssignmentStatusBanner.Tone = assignment.ReviewRequired ? StatusBannerTone.ReviewRequired : StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             AssignmentTitleLabel.Text = "Assignment generation failed";
             AssignmentRationaleLabel.Text = ex.Message;
+            AssignmentStatusBanner.Message = ex.Message;
+            AssignmentStatusBanner.Tone = StatusBannerTone.Warning;
+        }
+    }
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var bucket = width >= 768
+            ? LayoutBucket.Tablet
+            : width > 0 && width < 480
+                ? LayoutBucket.CompactPhone
+                : LayoutBucket.Phone;
+
+        if (bucket == _currentLayoutBucket)
+        {
+            return;
+        }
+
+        _currentLayoutBucket = bucket;
+
+        if (bucket == LayoutBucket.CompactPhone)
+        {
+            OverviewMetricsGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star)
+            };
+            OverviewMetricsGrid.RowDefinitions = new RowDefinitionCollection
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            };
+            Grid.SetColumn(TotalAttemptsCard, 0);
+            Grid.SetRow(TotalAttemptsCard, 0);
+            Grid.SetColumn(AverageScoreCard, 0);
+            Grid.SetRow(AverageScoreCard, 1);
+            Grid.SetColumn(MostPracticedCard, 0);
+            Grid.SetRow(MostPracticedCard, 2);
+            Grid.SetColumn(StreakCard, 0);
+            Grid.SetRow(StreakCard, 3);
+        }
+        else
+        {
+            OverviewMetricsGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Star)
+            };
+            OverviewMetricsGrid.RowDefinitions = new RowDefinitionCollection
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            };
+            Grid.SetColumn(TotalAttemptsCard, 0);
+            Grid.SetRow(TotalAttemptsCard, 0);
+            Grid.SetColumn(AverageScoreCard, 1);
+            Grid.SetRow(AverageScoreCard, 0);
+            Grid.SetColumn(MostPracticedCard, 0);
+            Grid.SetRow(MostPracticedCard, 1);
+            Grid.SetColumn(StreakCard, 1);
+            Grid.SetRow(StreakCard, 1);
         }
     }
 
@@ -97,5 +174,13 @@ public partial class HomePage : ContentPage
             " | ",
             reasons.Select(reason =>
                 $"{reason.TargetSound} p={reason.PriorityScore:0.00}, seq {reason.PositionSequence}"));
+    }
+
+    private enum LayoutBucket
+    {
+        Unknown,
+        CompactPhone,
+        Phone,
+        Tablet
     }
 }
