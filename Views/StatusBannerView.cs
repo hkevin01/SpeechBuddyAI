@@ -1,15 +1,8 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using SpeechBuddyAI.Pages.ViewModels;
 
 namespace SpeechBuddyAI.Views;
-
-public enum StatusBannerTone
-{
-    Info,
-    Success,
-    Warning,
-    ReviewRequired
-}
 
 public sealed class StatusBannerView : ContentView
 {

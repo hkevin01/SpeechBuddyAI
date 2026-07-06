@@ -116,17 +116,17 @@ public sealed class NotesPageViewModel
             DeclineTrendText = BuildSeriesLine("Decline", decline),
             FrequencyTrendText = BuildSeriesLine("Frequency", frequency),
             ConfidenceTrendText = BuildSeriesLine("Confidence", confidence),
-            SeverityPoints = BuildSparklinePoints(severity, "#2563EB"),
-            InstabilityPoints = BuildSparklinePoints(instability, "#F59E0B"),
-            DeclinePoints = BuildSparklinePoints(decline, "#DC2626"),
-            FrequencyPoints = BuildSparklinePoints(frequency, "#7C3AED"),
-            ConfidencePoints = BuildSparklinePoints(confidence, "#059669"),
+            SeverityPoints = BuildSparklinePoints(severity, UiThemeTokens.SparklineSeverity),
+            InstabilityPoints = BuildSparklinePoints(instability, UiThemeTokens.SparklineInstability),
+            DeclinePoints = BuildSparklinePoints(decline, UiThemeTokens.SparklineDecline),
+            FrequencyPoints = BuildSparklinePoints(frequency, UiThemeTokens.SparklineFrequency),
+            ConfidencePoints = BuildSparklinePoints(confidence, UiThemeTokens.SparklineConfidence),
             ModelAuditSummaryText = AssignmentSnapshotService.BuildModelAuditSummary(orderedSnapshots),
             FormulaVersionSummaryText = formulaVersionSummary,
             AdvisoryWeightSuggestionText = latestSuggestion,
-            Next1CalibrationPoints = BuildSparklinePoints(calibrationNext1.Select(value => 1.0 - value).ToArray(), "#0EA5E9"),
-            Next3CalibrationPoints = BuildSparklinePoints(calibrationNext3.Select(value => 1.0 - value).ToArray(), "#EC4899"),
-            TraceDriftPoints = BuildSparklinePoints(traceDrift, "#334155"),
+            Next1CalibrationPoints = BuildSparklinePoints(calibrationNext1.Select(value => 1.0 - value).ToArray(), UiThemeTokens.SparklineCalibrationNext1),
+            Next3CalibrationPoints = BuildSparklinePoints(calibrationNext3.Select(value => 1.0 - value).ToArray(), UiThemeTokens.SparklineCalibrationNext3),
+            TraceDriftPoints = BuildSparklinePoints(traceDrift, UiThemeTokens.SparklineTraceDrift),
             ModelAuditRows = modelAuditRows
         };
     }
@@ -368,7 +368,7 @@ public sealed class SparklinePoint
 {
     public double Value { get; init; }
     public double Height { get; init; }
-    public string ColorHex { get; init; } = "#2563EB";
+    public string ColorHex { get; init; } = UiThemeTokens.SparklineSeverity;
 }
 
 public sealed class ModelAuditRow

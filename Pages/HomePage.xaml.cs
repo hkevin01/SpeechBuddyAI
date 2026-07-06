@@ -1,5 +1,6 @@
 using SpeechBuddyAI.Services;
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Pages.ViewModels;
 using SpeechBuddyAI.Views;
 
 namespace SpeechBuddyAI.Pages;
@@ -59,8 +60,7 @@ public partial class HomePage : ContentPage
         AssignmentTargetsLabel.Text = string.Empty;
         AssignmentWordsLabel.Text = string.Empty;
         AssignmentReasonDetailsLabel.Text = string.Empty;
-        AssignmentStatusBanner.Message = "Building assignment from recent weak-pattern evidence.";
-        AssignmentStatusBanner.Tone = StatusBannerTone.Info;
+        ApplyBanner(StatusBannerState.Info("Building assignment from recent weak-pattern evidence."));
 
         try
         {
@@ -76,18 +76,20 @@ public partial class HomePage : ContentPage
                                               : string.Join(", ", assignment.FocusTargets));
             AssignmentWordsLabel.Text = "Suggested Words: " + string.Join(", ", assignment.SuggestedWords);
             AssignmentReasonDetailsLabel.Text = BuildFocusReasonSummary(assignment.FocusTargetReasons);
-            AssignmentStatusBanner.Message = assignment.ReviewRequired
-                ? assignment.UncertaintyBudgetSummary
-                : "Assignment generated successfully.";
-            AssignmentStatusBanner.Tone = assignment.ReviewRequired ? StatusBannerTone.ReviewRequired : StatusBannerTone.Success;
+            ApplyBanner(StatusBannerState.FromAssignment(assignment));
         }
         catch (Exception ex)
         {
             AssignmentTitleLabel.Text = "Assignment generation failed";
             AssignmentRationaleLabel.Text = ex.Message;
-            AssignmentStatusBanner.Message = ex.Message;
-            AssignmentStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
+    }
+
+    private void ApplyBanner(StatusBannerState state)
+    {
+        AssignmentStatusBanner.Message = state.Message;
+        AssignmentStatusBanner.Tone = state.Tone;
     }
 
     private void ApplyResponsiveLayout(double width)

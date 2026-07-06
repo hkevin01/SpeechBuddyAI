@@ -60,6 +60,7 @@
     <Compile Include="../../Services/Reports/ReportExportFormatter.cs" Link="Shared/ReportExportFormatter.cs" />
     <Compile Include="../../Services/Reports/ReportShareBehavior.cs" Link="Shared/ReportShareBehavior.cs" />
     <Compile Include="../../Services/Reports/ReportExportSettingsService.cs" Link="Shared/ReportExportSettingsService.cs" />
+    <Compile Include="../../Pages/ViewModels/UiThemeTokens.cs" Link="Shared/UiThemeTokens.cs" />
     <Compile Include="../../Pages/ViewModels/ProgressPageViewModel.cs" Link="Shared/ProgressPageViewModel.cs" />
     <Compile Include="../../Pages/ViewModels/NotesPageViewModel.cs" Link="Shared/NotesPageViewModel.cs" />
   </ItemGroup>

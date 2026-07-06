@@ -1,4 +1,5 @@
 using SpeechBuddyAI.Services;
+using SpeechBuddyAI.Pages.ViewModels;
 using SpeechBuddyAI.Views;
 
 namespace SpeechBuddyAI.Pages;
@@ -22,13 +23,11 @@ public partial class PracticePage : ContentPage
 
         if (string.IsNullOrWhiteSpace(target) || string.IsNullOrWhiteSpace(transcript))
         {
-            PracticeStatusBanner.Message = "Enter both target sound and transcript before scoring.";
-            PracticeStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning("Enter both target sound and transcript before scoring."));
             return;
         }
 
-        PracticeStatusBanner.Message = "Scoring attempt...";
-        PracticeStatusBanner.Tone = StatusBannerTone.Info;
+        ApplyBanner(StatusBannerState.Info("Scoring attempt..."));
 
         try
         {
@@ -41,19 +40,19 @@ public partial class PracticePage : ContentPage
             ProviderLabel.Text = $"Provider: {result.Provider}";
             ConfidenceLabel.Text = $"Confidence: {result.ConfidenceBand} ({result.ConfidenceScore:P0})";
 
-            PracticeStatusBanner.Message =
-                $"Saved trial {result.Entry.TrialCount} for '{result.Entry.TargetSound}' (pattern: {result.Entry.ErrorPattern}).";
-            PracticeStatusBanner.Tone = result.HistoricalDriftDetected ? StatusBannerTone.Warning : StatusBannerTone.Success;
-
+            var banner = StatusBannerState.Success(
+                $"Saved trial {result.Entry.TrialCount} for '{result.Entry.TargetSound}' (pattern: {result.Entry.ErrorPattern}).");
             if (result.HistoricalDriftDetected)
             {
-                PracticeStatusBanner.Message += $" {result.HistoricalDriftSummary}";
+                banner = StatusBannerState.Warning(
+                    $"Saved trial {result.Entry.TrialCount} for '{result.Entry.TargetSound}' (pattern: {result.Entry.ErrorPattern}). {result.HistoricalDriftSummary}");
             }
+
+            ApplyBanner(banner);
         }
         catch (Exception ex)
         {
-            PracticeStatusBanner.Message = ex.Message;
-            PracticeStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
     }
 
@@ -70,15 +69,19 @@ public partial class PracticePage : ContentPage
         {
             var words = await _aiTextService.GeneratePracticeWordsAsync(key);
             PracticeWordsLabel.Text = string.Join(", ", words);
-            PracticeStatusBanner.Message = "Practice words generated.";
-            PracticeStatusBanner.Tone = StatusBannerTone.Success;
+            ApplyBanner(StatusBannerState.Success("Practice words generated."));
         }
         catch (Exception ex)
         {
             PracticeWordsLabel.Text = "Could not generate words.";
-            PracticeStatusBanner.Message = ex.Message;
-            PracticeStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
+    }
+
+    private void ApplyBanner(StatusBannerState state)
+    {
+        PracticeStatusBanner.Message = state.Message;
+        PracticeStatusBanner.Tone = state.Tone;
     }
 
     private static T ResolveService<T>() where T : notnull

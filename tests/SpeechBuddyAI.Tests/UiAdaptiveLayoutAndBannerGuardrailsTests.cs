@@ -12,7 +12,7 @@ public sealed class UiAdaptiveLayoutAndBannerGuardrailsTests
         {
             ["Pages/HomePage.xaml"] = ["OverviewMetricsGrid", "AssignmentStatusBanner"],
             ["Pages/ProgressPage.xaml"] = ["SessionComparisonGrid"],
-            ["Pages/NotesPage.xaml"] = ["ExportFormatRow", "AssignmentTargetRow", "NotesStatusBanner"],
+            ["Pages/NotesPage.xaml"] = ["ExportFormatRow", "ExportDateRangeRow", "AssignmentTargetRow", "NotesActionGrid", "ReportActionGrid", "NotesStatusBanner"],
             ["Pages/SettingsPage.xaml"] = ["SettingsStatusBanner"],
             ["Pages/PracticePage.xaml"] = ["PracticeStatusBanner"]
         };

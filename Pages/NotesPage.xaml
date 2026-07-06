@@ -11,7 +11,7 @@
         <Label Text="Session Notes" Style="{StaticResource PageTitleLabelStyle}" />
             <Editor x:Name="RawNoteEditor" Style="{StaticResource FilledEditorStyle}" Placeholder="Type or dictate your note here..." HeightRequest="180" TabIndex="0" SemanticProperties.Description="Enter or dictate the clinician session note" />
 
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+        <Grid x:Name="NotesActionGrid" ColumnDefinitions="*,*" ColumnSpacing="8">
         <Button Grid.Column="0"
             Text="Generate Summaries"
             TabIndex="1"
@@ -46,7 +46,7 @@
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Export Metadata Window" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Label Text="Metadata summaries use entries from this date range." Style="{StaticResource CaptionLabelStyle}" TextColor="{StaticResource MutedText}" />
-                    <HorizontalStackLayout Spacing="10">
+                    <HorizontalStackLayout x:Name="ExportDateRangeRow" Spacing="10">
                         <VerticalStackLayout>
                             <Label Text="Start" Style="{StaticResource CaptionLabelStyle}" />
                             <DatePicker x:Name="ExportStartDatePicker"
@@ -338,7 +338,7 @@
                 </VerticalStackLayout>
             </Frame>
 
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Grid x:Name="ReportActionGrid" ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Button Grid.Column="0"
                     Text="Export Latest Report"
                     TabIndex="7"

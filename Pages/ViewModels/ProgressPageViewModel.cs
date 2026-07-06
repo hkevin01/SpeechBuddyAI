@@ -6,8 +6,8 @@ namespace SpeechBuddyAI.Pages.ViewModels;
 public sealed class ProgressComparisonLegendItem
 {
     public string Title { get; init; } = string.Empty;
-    public string BackgroundColor { get; init; } = "#F1F3F5";
-    public string BorderColor { get; init; } = "#ADB5BD";
+    public string BackgroundColor { get; init; } = UiThemeTokens.NeutralContainer;
+    public string BorderColor { get; init; } = UiThemeTokens.NeutralOutline;
 }
 
 public sealed class ProgressTimelineRow
@@ -23,8 +23,8 @@ public sealed class ProgressSummaryBadge
 {
     public string Title { get; init; } = string.Empty;
     public string Value { get; init; } = string.Empty;
-    public string BackgroundColor { get; init; } = "#F8F9FA";
-    public string BorderColor { get; init; } = "#DEE2E6";
+    public string BackgroundColor { get; init; } = UiThemeTokens.NeutralContainer;
+    public string BorderColor { get; init; } = UiThemeTokens.NeutralOutline;
 }
 
 public sealed class ProgressTrendViewState
@@ -279,15 +279,15 @@ public sealed class ProgressPageViewModel
             {
                 Title = "Stabilizing",
                 Value = $"{stabilizing.TargetSound} ({(stabilizing.PreviousSessionVariance - stabilizing.CurrentSessionVariance):+0.000;-0.000;0.000} variance)",
-                BackgroundColor = "#E8F7EE",
-                BorderColor = "#7BC496"
+                BackgroundColor = UiThemeTokens.HighConfidenceContainer,
+                BorderColor = UiThemeTokens.HighConfidenceOutline
             },
             new ProgressSummaryBadge
             {
                 Title = "Regression Risk",
                 Value = $"{regressionRisk.TargetSound} ({regressionRisk.ConsistencyDecay:+0.000;-0.000;0.000} drift)",
-                BackgroundColor = "#FFF1F0",
-                BorderColor = "#E59B92"
+                BackgroundColor = UiThemeTokens.LowConfidenceContainer,
+                BorderColor = UiThemeTokens.LowConfidenceOutline
             }
         };
     }

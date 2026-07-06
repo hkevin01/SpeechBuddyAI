@@ -6,6 +6,15 @@ namespace SpeechBuddyAI.Tests;
 
 public sealed class UiSnapshotVisualRegressionTests
 {
+    private static readonly string[] HighRiskScreenKeywords =
+    [
+        "home",
+        "practice",
+        "progress",
+        "notes",
+        "settings"
+    ];
+
     [Fact]
     public void CompactPhoneSnapshots_DoNotRegressAgainstBaseline()
     {
@@ -24,6 +33,7 @@ public sealed class UiSnapshotVisualRegressionTests
         var baselineFiles = Directory.GetFiles(baselineDir, "*.png", SearchOption.TopDirectoryOnly)
             .Select(Path.GetFileName)
             .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>()
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -32,7 +42,18 @@ public sealed class UiSnapshotVisualRegressionTests
             return;
         }
 
+        var baselineCoverageViolations = ValidateHighRiskCoverage(baselineFiles, "baseline");
+        var currentFiles = Directory.GetFiles(currentDir, "*.png", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>()
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var currentCoverageViolations = ValidateHighRiskCoverage(currentFiles, "current");
+
         var violations = new List<string>();
+        violations.AddRange(baselineCoverageViolations);
+        violations.AddRange(currentCoverageViolations);
 
         foreach (var fileName in baselineFiles)
         {
@@ -66,6 +87,31 @@ public sealed class UiSnapshotVisualRegressionTests
         Assert.True(
             violations.Count == 0,
             "Visual regression violations found:" + Environment.NewLine + string.Join(Environment.NewLine, violations));
+    }
+
+    private static IReadOnlyList<string> ValidateHighRiskCoverage(IReadOnlyList<string> fileNames, string label)
+    {
+        if (fileNames.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var normalized = fileNames
+            .Select(name => Path.GetFileNameWithoutExtension(name) ?? string.Empty)
+            .ToArray();
+        var violations = new List<string>();
+
+        foreach (var keyword in HighRiskScreenKeywords)
+        {
+            if (normalized.Any(name => name.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            violations.Add($"Missing {label} compact-phone snapshot coverage for high-risk screen keyword '{keyword}'.");
+        }
+
+        return violations;
     }
 
     private static double ComputeNormalizedPixelDelta(Image<Rgba32> baseline, Image<Rgba32> current, IReadOnlyList<IgnoreRegion> ignoreRegions)

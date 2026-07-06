@@ -57,8 +57,7 @@ public partial class NotesPage : ContentPage
         SoapSummaryLabel.Text = "Generating clinician summary...";
         ParentSummaryLabel.Text = "Generating parent summary...";
         NoteStatusLabel.Text = string.Empty;
-        NotesStatusBanner.Message = "Generating clinician and parent summaries.";
-        NotesStatusBanner.Tone = StatusBannerTone.Info;
+        ApplyBanner(StatusBannerState.Info("Generating clinician and parent summaries."));
 
         try
         {
@@ -71,15 +70,13 @@ public partial class NotesPage : ContentPage
             _viewModel.SetGeneratedNote(report);
             NotesHistoryCollection.SelectedItem = null;
             NoteStatusLabel.Text = "Summaries ready. Press Save Note to persist.";
-            NotesStatusBanner.Message = "Summaries ready. Save the note to persist this report.";
-            NotesStatusBanner.Tone = StatusBannerTone.Success;
+            ApplyBanner(StatusBannerState.Success("Summaries ready. Save the note to persist this report."));
         }
         catch (Exception ex)
         {
             SoapSummaryLabel.Text = "Unable to generate summaries.";
             ParentSummaryLabel.Text = ex.Message;
-            NotesStatusBanner.Message = ex.Message;
-            NotesStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
     }
 
@@ -88,8 +85,7 @@ public partial class NotesPage : ContentPage
         if (_viewModel.PendingNote is null)
         {
             NoteStatusLabel.Text = "Generate summaries first before saving.";
-            NotesStatusBanner.Message = "Generate summaries first before saving.";
-            NotesStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning("Generate summaries first before saving."));
             return;
         }
 
@@ -98,23 +94,20 @@ public partial class NotesPage : ContentPage
             await _noteStorageService.SaveNoteAsync(_viewModel.PendingNote);
             _viewModel.MarkSaved();
             NoteStatusLabel.Text = "Note saved.";
-            NotesStatusBanner.Message = "Note saved successfully.";
-            NotesStatusBanner.Tone = StatusBannerTone.Success;
+            ApplyBanner(StatusBannerState.Success("Note saved successfully."));
             await RefreshHistoryAsync();
         }
         catch (Exception ex)
         {
             NoteStatusLabel.Text = ex.Message;
-            NotesStatusBanner.Message = ex.Message;
-            NotesStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
     }
 
     private async void OnExportLatestClicked(object? sender, EventArgs e)
     {
         NoteStatusLabel.Text = "Exporting latest report...";
-        NotesStatusBanner.Message = "Exporting latest report.";
-        NotesStatusBanner.Tone = StatusBannerTone.Info;
+        ApplyBanner(StatusBannerState.Info("Exporting latest report."));
 
         try
         {
@@ -122,8 +115,7 @@ public partial class NotesPage : ContentPage
             if (note is null)
             {
                 NoteStatusLabel.Text = "No report available to export. Generate and save a note first.";
-                NotesStatusBanner.Message = NoteStatusLabel.Text;
-                NotesStatusBanner.Tone = StatusBannerTone.Warning;
+                ApplyBanner(StatusBannerState.Warning(NoteStatusLabel.Text));
                 return;
             }
 
@@ -131,22 +123,19 @@ public partial class NotesPage : ContentPage
             var format = GetSelectedExportFormat();
             var filePath = await _reportService.ExportReportAsync(note, metadataEntries, format);
             NoteStatusLabel.Text = $"Report exported: {Path.GetFileName(filePath)}";
-            NotesStatusBanner.Message = NoteStatusLabel.Text;
-            NotesStatusBanner.Tone = StatusBannerTone.Success;
+            ApplyBanner(StatusBannerState.Success(NoteStatusLabel.Text));
         }
         catch (Exception ex)
         {
             NoteStatusLabel.Text = ex.Message;
-            NotesStatusBanner.Message = ex.Message;
-            NotesStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
     }
 
     private async void OnShareLatestClicked(object? sender, EventArgs e)
     {
         NoteStatusLabel.Text = "Preparing report for sharing...";
-        NotesStatusBanner.Message = "Preparing report for sharing.";
-        NotesStatusBanner.Tone = StatusBannerTone.Info;
+        ApplyBanner(StatusBannerState.Info("Preparing report for sharing."));
 
         try
         {
@@ -154,8 +143,7 @@ public partial class NotesPage : ContentPage
             if (note is null)
             {
                 NoteStatusLabel.Text = "No report available to share. Generate and save a note first.";
-                NotesStatusBanner.Message = NoteStatusLabel.Text;
-                NotesStatusBanner.Tone = StatusBannerTone.Warning;
+                ApplyBanner(StatusBannerState.Warning(NoteStatusLabel.Text));
                 return;
             }
 
@@ -167,21 +155,18 @@ public partial class NotesPage : ContentPage
             {
                 var filePath = await _reportService.ExportReportAsync(note, metadataEntries, format);
                 NoteStatusLabel.Text = $"Report exported only (per settings): {Path.GetFileName(filePath)}";
-                NotesStatusBanner.Message = NoteStatusLabel.Text;
-                NotesStatusBanner.Tone = StatusBannerTone.Success;
+                ApplyBanner(StatusBannerState.Success(NoteStatusLabel.Text));
                 return;
             }
 
             await _reportService.ShareReportAsync(note, metadataEntries, format);
             NoteStatusLabel.Text = "Share flow opened.";
-            NotesStatusBanner.Message = NoteStatusLabel.Text;
-            NotesStatusBanner.Tone = StatusBannerTone.Success;
+            ApplyBanner(StatusBannerState.Success(NoteStatusLabel.Text));
         }
         catch (Exception ex)
         {
             NoteStatusLabel.Text = ex.Message;
-            NotesStatusBanner.Message = ex.Message;
-            NotesStatusBanner.Tone = StatusBannerTone.Warning;
+            ApplyBanner(StatusBannerState.Warning(ex.Message));
         }
     }
 
@@ -216,8 +201,7 @@ public partial class NotesPage : ContentPage
             : selected.ParentSummary;
 
         NoteStatusLabel.Text = $"Loaded note from {selected.SessionDate:yyyy-MM-dd HH:mm}.";
-        NotesStatusBanner.Message = NoteStatusLabel.Text;
-        NotesStatusBanner.Tone = StatusBannerTone.Info;
+        ApplyBanner(StatusBannerState.Info(NoteStatusLabel.Text));
     }
 
     private async void OnExportPreviewWindowChanged(object? sender, DateChangedEventArgs e)
@@ -417,8 +401,37 @@ public partial class NotesPage : ContentPage
         {
             ExportFormatRow.Orientation = StackOrientation.Vertical;
             ExportFormatRow.Spacing = 6;
+            ExportDateRangeRow.Orientation = StackOrientation.Vertical;
+            ExportDateRangeRow.Spacing = 6;
             AssignmentTargetRow.Orientation = StackOrientation.Vertical;
             AssignmentTargetRow.Spacing = 6;
+            NotesActionGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star)
+            };
+            Grid.SetColumnSpan(NotesActionGrid.Children[0], 1);
+            Grid.SetColumn(NotesActionGrid.Children[0], 0);
+            Grid.SetRow(NotesActionGrid.Children[0], 0);
+            Grid.SetColumn(NotesActionGrid.Children[1], 0);
+            Grid.SetRow(NotesActionGrid.Children[1], 1);
+            NotesActionGrid.RowDefinitions = new RowDefinitionCollection
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            };
+            ReportActionGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star)
+            };
+            Grid.SetColumn(ReportActionGrid.Children[0], 0);
+            Grid.SetRow(ReportActionGrid.Children[0], 0);
+            Grid.SetColumn(ReportActionGrid.Children[1], 0);
+            Grid.SetRow(ReportActionGrid.Children[1], 1);
+            ReportActionGrid.RowDefinitions = new RowDefinitionCollection
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            };
             PrioritySparklineGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
                 new ColumnDefinition(new GridLength(96)),
@@ -436,8 +449,30 @@ public partial class NotesPage : ContentPage
         {
             ExportFormatRow.Orientation = StackOrientation.Horizontal;
             ExportFormatRow.Spacing = 10;
+            ExportDateRangeRow.Orientation = StackOrientation.Horizontal;
+            ExportDateRangeRow.Spacing = 10;
             AssignmentTargetRow.Orientation = StackOrientation.Horizontal;
             AssignmentTargetRow.Spacing = 8;
+            NotesActionGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Star)
+            };
+            NotesActionGrid.RowDefinitions = new RowDefinitionCollection();
+            Grid.SetColumn(NotesActionGrid.Children[0], 0);
+            Grid.SetRow(NotesActionGrid.Children[0], 0);
+            Grid.SetColumn(NotesActionGrid.Children[1], 1);
+            Grid.SetRow(NotesActionGrid.Children[1], 0);
+            ReportActionGrid.ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Star)
+            };
+            ReportActionGrid.RowDefinitions = new RowDefinitionCollection();
+            Grid.SetColumn(ReportActionGrid.Children[0], 0);
+            Grid.SetRow(ReportActionGrid.Children[0], 0);
+            Grid.SetColumn(ReportActionGrid.Children[1], 1);
+            Grid.SetRow(ReportActionGrid.Children[1], 0);
             PrioritySparklineGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
                 new ColumnDefinition(new GridLength(110)),
@@ -451,6 +486,12 @@ public partial class NotesPage : ContentPage
             AssignmentSnapshotCollection.HeightRequest = bucket == LayoutBucket.Tablet ? 240 : 180;
             AssignmentModelAuditCollection.HeightRequest = bucket == LayoutBucket.Tablet ? 220 : 180;
         }
+    }
+
+    private void ApplyBanner(StatusBannerState state)
+    {
+        NotesStatusBanner.Message = state.Message;
+        NotesStatusBanner.Tone = state.Tone;
     }
 
     private enum LayoutBucket
