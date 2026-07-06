@@ -154,6 +154,7 @@
                                         x:Name="SeveritySparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Severity sparkline across assignment snapshots"
+                                        SemanticProperties.Hint="Read the relative severity heights across saved assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -173,6 +174,7 @@
                                         x:Name="InstabilitySparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Instability sparkline across assignment snapshots"
+                                        SemanticProperties.Hint="Read the relative instability heights across saved assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -192,6 +194,7 @@
                                         x:Name="DeclineSparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Decline sparkline across assignment snapshots"
+                                        SemanticProperties.Hint="Read the relative decline heights across saved assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -211,6 +214,7 @@
                                         x:Name="FrequencySparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Frequency sparkline across assignment snapshots"
+                                        SemanticProperties.Hint="Read the relative frequency heights across saved assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -230,6 +234,7 @@
                                         x:Name="ConfidenceSparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Confidence sparkline across assignment snapshots"
+                                        SemanticProperties.Hint="Read the relative confidence heights across saved assignment snapshots"
                                         HeightRequest="30">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -262,6 +267,7 @@
                                         x:Name="CalibrationNext1SparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Calibration next-one-horizon sparkline"
+                                        SemanticProperties.Hint="Read the relative next-one calibration error across saved snapshots"
                                         HeightRequest="28">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -278,6 +284,7 @@
                                         x:Name="CalibrationNext3SparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Calibration next-three-horizon sparkline"
+                                        SemanticProperties.Hint="Read the relative next-three calibration error across saved snapshots"
                                         HeightRequest="28">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -294,6 +301,7 @@
                                         x:Name="TraceDriftSparklineCollection"
                                         SelectionMode="None"
                                         SemanticProperties.Description="Trace drift sparkline across model audit snapshots"
+                                        SemanticProperties.Hint="Read the relative trace drift across saved model audit snapshots"
                                         HeightRequest="28">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="3" />
@@ -374,7 +382,7 @@
                                 <Label Text="{Binding SessionDate, StringFormat='{0:yyyy-MM-dd HH:mm}'}"
                                        FontAttributes="Bold" />
                                 <Label Text="{Binding SoapSummary}" />
-                                <Label Text="{Binding ParentSummary}" TextColor="#555555" />
+                                <Label Text="{Binding ParentSummary}" TextColor="{StaticResource SubtleText}" />
                             </VerticalStackLayout>
                         </Frame>
                     </DataTemplate>

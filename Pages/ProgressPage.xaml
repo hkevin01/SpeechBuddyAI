@@ -164,11 +164,11 @@
                     <Label Text="Score Trend (Recent Attempts)" Style="{StaticResource SectionTitleLabelStyle}" />
                     <HorizontalStackLayout Spacing="14">
                         <HorizontalStackLayout Spacing="4">
-                            <BoxView Color="#4C8EDA" WidthRequest="14" HeightRequest="10" />
+                            <BoxView Color="{StaticResource ChartOverall}" WidthRequest="14" HeightRequest="10" />
                             <Label Text="Overall" VerticalTextAlignment="Center" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="4">
-                            <BoxView Color="#2F9E44" WidthRequest="14" HeightRequest="10" />
+                            <BoxView Color="{StaticResource ChartConfidence}" WidthRequest="14" HeightRequest="10" />
                             <Label Text="Confidence" VerticalTextAlignment="Center" />
                         </HorizontalStackLayout>
                     </HorizontalStackLayout>
@@ -176,7 +176,8 @@
                         <Label x:Name="ModerateThresholdLabel" Text="Moderate threshold: -" />
                         <Label x:Name="HighThresholdLabel" Text="High threshold: -" />
                     </HorizontalStackLayout>
-                    <CollectionView x:Name="TrendCollection" HeightRequest="180">
+                    <CollectionView x:Name="TrendCollection"
+                                    HeightRequest="180"
                                     SemanticProperties.Description="Recent attempt score trend chart"
                                     SemanticProperties.Hint="Browse trend rows to compare overall and confidence values for recent attempts">
                         <CollectionView.ItemTemplate>

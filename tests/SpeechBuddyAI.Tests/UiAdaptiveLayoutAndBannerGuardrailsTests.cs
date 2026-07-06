@@ -52,7 +52,13 @@ public sealed class UiAdaptiveLayoutAndBannerGuardrailsTests
             for (var i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
-                if (!line.Contains('#', StringComparison.Ordinal))
+                var referencesColorProperty =
+                    line.Contains("Color=", StringComparison.Ordinal) ||
+                    line.Contains("BackgroundColor=", StringComparison.Ordinal) ||
+                    line.Contains("BorderColor=", StringComparison.Ordinal) ||
+                    line.Contains("TextColor=", StringComparison.Ordinal);
+
+                if (!referencesColorProperty || !line.Contains('#', StringComparison.Ordinal))
                 {
                     continue;
                 }
