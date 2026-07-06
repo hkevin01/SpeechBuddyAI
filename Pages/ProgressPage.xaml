@@ -79,6 +79,8 @@
                     <Label x:Name="NormalizationModeLabel" Text="Normalization: -" />
                     <CollectionView x:Name="SummaryBadgesCollection"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Summary badges for session comparison metrics"
+                                    SemanticProperties.Hint="Swipe through summary badges for current session comparison details"
                                     HeightRequest="52">
                         <CollectionView.ItemsLayout>
                             <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
@@ -97,6 +99,8 @@
                     <Label Text="Target Improvements" FontAttributes="Bold" Margin="0,8,0,0" />
                     <CollectionView x:Name="TargetComparisonChips"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Target improvement chips showing per-target change and confidence movement"
+                                    SemanticProperties.Hint="Swipe horizontally to review each target's comparison chip"
                                     HeightRequest="60">
                         <CollectionView.ItemsLayout>
                             <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
@@ -116,6 +120,8 @@
                     <Label Text="Chip Legend" FontAttributes="Bold" FontSize="12" />
                     <CollectionView x:Name="ConfidenceLegendCollection"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Legend for confidence comparison chip colors"
+                                    SemanticProperties.Hint="Read the legend items to understand chip status colors"
                                     HeightRequest="44">
                         <CollectionView.ItemsLayout>
                             <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
@@ -131,6 +137,8 @@
                     <Label Text="Recent Session History" FontAttributes="Bold" FontSize="12" />
                     <CollectionView x:Name="SessionTimelineCollection"
                                     SelectionMode="None"
+                                    SemanticProperties.Description="Recent session history timeline"
+                                    SemanticProperties.Hint="Browse timeline rows to compare session-level overall and confidence trends"
                                     HeightRequest="180">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
@@ -169,6 +177,8 @@
                         <Label x:Name="HighThresholdLabel" Text="High threshold: -" />
                     </HorizontalStackLayout>
                     <CollectionView x:Name="TrendCollection" HeightRequest="180">
+                                    SemanticProperties.Description="Recent attempt score trend chart"
+                                    SemanticProperties.Hint="Browse trend rows to compare overall and confidence values for recent attempts">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
@@ -176,7 +186,7 @@
                                     <VerticalStackLayout Grid.Column="1" Spacing="3">
                                         <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
                                             <Grid Grid.Column="0" WidthRequest="{OnIdiom Phone=180, Tablet=320, Desktop=260}" HorizontalOptions="Start">
-                                                <BoxView Color="#4C8EDA"
+                                                <BoxView Color="{StaticResource ChartOverall}"
                                                         HeightRequest="10"
                                                         WidthRequest="{Binding BarWidth}"
                                                         HorizontalOptions="Start" />
@@ -188,17 +198,17 @@
                                         </Grid>
                                         <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
                                             <Grid Grid.Column="0" WidthRequest="{OnIdiom Phone=180, Tablet=320, Desktop=260}" HorizontalOptions="Start">
-                                                <BoxView Color="#F8D7A0"
+                                                <BoxView Color="{StaticResource ThresholdModerate}"
                                                         WidthRequest="1"
                                                         HeightRequest="10"
                                                         HorizontalOptions="Start"
                                                         TranslationX="{Binding ModerateGuideOffset}" />
-                                                <BoxView Color="#F08C00"
+                                                <BoxView Color="{StaticResource ThresholdHigh}"
                                                         WidthRequest="1"
                                                         HeightRequest="10"
                                                         HorizontalOptions="Start"
                                                         TranslationX="{Binding HighGuideOffset}" />
-                                                <BoxView Color="#2F9E44"
+                                                <BoxView Color="{StaticResource ChartConfidence}"
                                                         HeightRequest="10"
                                                         WidthRequest="{Binding ConfidenceBarWidth}"
                                                         HorizontalOptions="Start" />
@@ -216,7 +226,9 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <CollectionView x:Name="ProgressCollection">
+            <CollectionView x:Name="ProgressCollection"
+                            SemanticProperties.Description="Saved progress entries list"
+                            SemanticProperties.Hint="Browse saved attempts to review detailed scoring history for each target">
                 <CollectionView.EmptyView>
                     <Label Text="No attempts saved yet. Score an attempt in Practice." />
                 </CollectionView.EmptyView>

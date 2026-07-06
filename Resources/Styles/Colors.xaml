@@ -15,4 +15,22 @@
     <Color x:Key="MutedText">#46525B</Color>
     <Color x:Key="Success">#2F9E44</Color>
     <Color x:Key="Warning">#D17A00</Color>
+    <Color x:Key="InfoContainer">#EAF2FF</Color>
+    <Color x:Key="OnInfoContainer">#173A63</Color>
+    <Color x:Key="InfoOutline">#B7CCEE</Color>
+    <Color x:Key="SuccessContainer">#E7F6EA</Color>
+    <Color x:Key="OnSuccessContainer">#1F5130</Color>
+    <Color x:Key="SuccessOutline">#B5D9BC</Color>
+    <Color x:Key="WarningContainer">#FFF4E5</Color>
+    <Color x:Key="OnWarningContainer">#704400</Color>
+    <Color x:Key="WarningOutline">#E9C58B</Color>
+    <Color x:Key="ReviewContainer">#F8EEFF</Color>
+    <Color x:Key="OnReviewContainer">#4F2C6F</Color>
+    <Color x:Key="ReviewOutline">#DAB9F1</Color>
+    <Color x:Key="NeutralContainer">#FAFBFC</Color>
+    <Color x:Key="NeutralOutline">#D7E0E7</Color>
+    <Color x:Key="ChartOverall">#4C8EDA</Color>
+    <Color x:Key="ChartConfidence">#2F9E44</Color>
+    <Color x:Key="ThresholdModerate">#F8D7A0</Color>
+    <Color x:Key="ThresholdHigh">#F08C00</Color>
 </ResourceDictionary>

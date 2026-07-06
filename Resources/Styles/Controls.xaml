@@ -132,4 +132,9 @@
         <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
         <Setter Property="Padding" Value="16" />
     </Style>
+
+    <Style x:Key="NeutralCardFrameStyle" TargetType="Frame" BasedOn="{StaticResource CardFrameStyle}">
+        <Setter Property="BackgroundColor" Value="{StaticResource NeutralContainer}" />
+        <Setter Property="BorderColor" Value="{StaticResource NeutralOutline}" />
+    </Style>
 </ResourceDictionary>
