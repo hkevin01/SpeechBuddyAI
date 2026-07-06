@@ -8,15 +8,18 @@
     <ScrollView>
         <VerticalStackLayout Style="{StaticResource PageRootLayoutStyle}">
             <Label Text="Progress Dashboard" Style="{StaticResource PageTitleLabelStyle}" />
-            <Label x:Name="TrajectoryLabel" Text="Trajectory not available yet." />
+            <Label x:Name="TrajectoryLabel" Text="Trajectory not available yet." Style="{StaticResource SupportingTextLabelStyle}" />
 
             <HorizontalStackLayout Spacing="8">
                 <Entry x:Name="FilterEntry"
+                       Style="{StaticResource FilledInputEntryStyle}"
                        Placeholder="Filter by target sound..."
                        TabIndex="0"
+                       SemanticProperties.Description="Filter progress entries by target sound"
                        HorizontalOptions="FillAndExpand"
                        TextChanged="OnFilterTextChanged" />
                 <Button Text="Clear"
+                    Style="{StaticResource SecondaryButtonStyle}"
                     TabIndex="1"
                         SemanticProperties.Description="Clear target-sound filter"
                         Clicked="OnFilterClearClicked" />
@@ -26,21 +29,21 @@
                     <Label Text="Comparison Date Range" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <VerticalStackLayout Spacing="3">
-                            <Label Text="Start" FontSize="12" />
+                            <Label Text="Start" Style="{StaticResource CaptionLabelStyle}" />
                             <DatePicker x:Name="ProgressStartDatePicker"
                                         TabIndex="2"
                                         SemanticProperties.Description="Start date for comparison range"
                                         DateSelected="OnDateRangeChanged" />
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="3">
-                            <Label Text="End" FontSize="12" />
+                            <Label Text="End" Style="{StaticResource CaptionLabelStyle}" />
                             <DatePicker x:Name="ProgressEndDatePicker"
                                         TabIndex="3"
                                         SemanticProperties.Description="End date for comparison range"
                                         DateSelected="OnDateRangeChanged" />
                         </VerticalStackLayout>
                     </Grid>
-                    <Label x:Name="DateRangeSummaryLabel" Text="Date range: -" FontSize="12" />
+                    <Label x:Name="DateRangeSummaryLabel" Text="Date range: -" Style="{StaticResource CaptionLabelStyle}" />
                 </VerticalStackLayout>
             </Frame>
 
@@ -48,7 +51,7 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Session Comparison" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Grid x:Name="SessionComparisonGrid" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="8">
-                        <Frame x:Name="CurrentSessionCard" Grid.Column="0" BorderColor="#DDE7F7" BackgroundColor="#F7FAFF" Padding="8">
+                        <Frame x:Name="CurrentSessionCard" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BorderColor="#DDE7F7" BackgroundColor="#F7FAFF">
                             <VerticalStackLayout Spacing="3">
                                 <Label Text="Current Session" FontAttributes="Bold" />
                                 <Label x:Name="CurrentSessionDateLabel" Text="Date: -" />
@@ -57,7 +60,7 @@
                                 <Label x:Name="CurrentSessionConfidenceLabel" Text="Confidence Avg: -" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame x:Name="PreviousSessionCard" Grid.Column="1" BorderColor="#EADCF8" BackgroundColor="#FCF8FF" Padding="8">
+                        <Frame x:Name="PreviousSessionCard" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BorderColor="#EADCF8" BackgroundColor="#FCF8FF">
                             <VerticalStackLayout Spacing="3">
                                 <Label Text="Previous Session" FontAttributes="Bold" />
                                 <Label x:Name="PreviousSessionDateLabel" Text="Date: -" />

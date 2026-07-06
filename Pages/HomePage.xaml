@@ -8,38 +8,38 @@
     <ScrollView>
         <VerticalStackLayout Style="{StaticResource PageRootLayoutStyle}">
             <Label Text="SpeechBuddy AI" Style="{StaticResource PageTitleLabelStyle}" />
-            <Label Text="Therapist companion for articulation practice, progress tracking, and smart notes." />
+            <Label Text="Therapist companion for articulation practice, progress tracking, and smart notes." Style="{StaticResource SupportingTextLabelStyle}" />
 
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Session Overview" Style="{StaticResource SectionTitleLabelStyle}" />
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
-                        <Frame Grid.Row="0" Grid.Column="0" Padding="10" BackgroundColor="#EFF6FF" BorderColor="#BFDBFE">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                        <Frame Grid.Row="0" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#EFF6FF" BorderColor="#BFDBFE">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Total Attempts" FontSize="11" TextColor="#555" />
-                                <Label x:Name="TotalAttemptsLabel" Text="-" FontSize="22" FontAttributes="Bold" />
+                                <Label Text="Total Attempts" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label x:Name="TotalAttemptsLabel" Text="-" Style="{StaticResource MetricValueLabelStyle}" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Row="0" Grid.Column="1" Padding="10" BackgroundColor="#F0FDF4" BorderColor="#BBF7D0">
+                        <Frame Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#F0FDF4" BorderColor="#BBF7D0">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Average Score" FontSize="11" TextColor="#555" />
-                                <Label x:Name="AverageScoreLabel" Text="-" FontSize="22" FontAttributes="Bold" />
+                                <Label Text="Average Score" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label x:Name="AverageScoreLabel" Text="-" Style="{StaticResource MetricValueLabelStyle}" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Row="1" Grid.Column="0" Padding="10" BackgroundColor="#FFF7ED" BorderColor="#FED7AA">
+                        <Frame Grid.Row="1" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#FFF7ED" BorderColor="#FED7AA">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Most Practiced" FontSize="11" TextColor="#555" />
-                                <Label x:Name="MostPracticedLabel" Text="-" FontSize="16" FontAttributes="Bold" />
+                                <Label Text="Most Practiced" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label x:Name="MostPracticedLabel" Text="-" FontAttributes="Bold" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame Grid.Row="1" Grid.Column="1" Padding="10" BackgroundColor="#FDF4FF" BorderColor="#E9D5FF">
+                        <Frame Grid.Row="1" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="#FDF4FF" BorderColor="#E9D5FF">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Practice Streak" FontSize="11" TextColor="#555" />
-                                <Label x:Name="StreakLabel" Text="-" FontSize="16" FontAttributes="Bold" />
+                                <Label Text="Practice Streak" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label x:Name="StreakLabel" Text="-" FontAttributes="Bold" />
                             </VerticalStackLayout>
                         </Frame>
                     </Grid>
-                    <Label x:Name="MostImprovedLabel" Text="Most improved: -" />
+                    <Label x:Name="MostImprovedLabel" Text="Most improved: -" Style="{StaticResource SupportingTextLabelStyle}" />
                 </VerticalStackLayout>
             </Frame>
 

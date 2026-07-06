@@ -8,12 +8,12 @@
     <ScrollView>
         <VerticalStackLayout Style="{StaticResource PageRootLayoutStyle}">
             <Label Text="M1 Practice Scoring" Style="{StaticResource PageTitleLabelStyle}" />
-            <Label Text="Capture an attempt, compute score components, and persist the result." />
+            <Label Text="Capture an attempt, compute score components, and persist the result." Style="{StaticResource SupportingTextLabelStyle}" />
 
-            <Label Text="Target sound" FontAttributes="Bold" />
-            <Entry x:Name="TargetSoundEntry" Placeholder="e.g., r or sh" TabIndex="0" />
+            <Label Text="Target sound" Style="{StaticResource InputLabelStyle}" />
+            <Entry x:Name="TargetSoundEntry" Style="{StaticResource FilledInputEntryStyle}" Placeholder="e.g., r or sh" TabIndex="0" SemanticProperties.Description="Enter target sound such as r, s, or sh" />
 
-            <Label Text="Word position (optional)" FontAttributes="Bold" />
+            <Label Text="Word position (optional)" Style="{StaticResource InputLabelStyle}" />
             <Picker x:Name="PositionPicker"
                     Title="Any position"
                     TabIndex="1"
@@ -26,13 +26,13 @@
                 </Picker.Items>
             </Picker>
 
-            <Label Text="Attempt transcript" FontAttributes="Bold" />
+            <Label Text="Attempt transcript" Style="{StaticResource InputLabelStyle}" />
                 <Editor x:Name="TranscriptEditor"
+                    Style="{StaticResource FilledEditorStyle}"
                     Placeholder="Type recognized transcript here"
                         TabIndex="2"
                     SemanticProperties.Description="Transcript editor for captured speech"
-                    AutoSize="TextChanges"
-                    HeightRequest="120" />
+                    HeightRequest="144" />
 
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Button Grid.Column="0"
@@ -49,7 +49,7 @@
                     HorizontalOptions="Fill" />
                 </Grid>
 
-            <Label x:Name="StatusLabel" Text="No attempt scored yet." FontAttributes="Italic" />
+            <Label x:Name="StatusLabel" Text="No attempt scored yet." FontAttributes="Italic" Style="{StaticResource CaptionLabelStyle}" />
 
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">

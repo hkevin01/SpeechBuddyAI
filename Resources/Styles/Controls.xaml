@@ -6,37 +6,62 @@
     <x:Double x:Key="Spacing12">12</x:Double>
     <x:Double x:Key="Spacing16">16</x:Double>
     <x:Double x:Key="Spacing24">24</x:Double>
+    <x:Double x:Key="Spacing32">32</x:Double>
     <x:Double x:Key="TouchTargetMin">48</x:Double>
 
     <Style x:Key="PageRootLayoutStyle" TargetType="VerticalStackLayout">
-        <Setter Property="Padding" Value="16,12" />
-        <Setter Property="Spacing" Value="12" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Spacing" Value="16" />
+    </Style>
+
+    <Style x:Key="PageSectionStackStyle" TargetType="VerticalStackLayout">
+        <Setter Property="Spacing" Value="8" />
     </Style>
 
     <Style x:Key="PageTitleLabelStyle" TargetType="Label">
         <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
-        <Setter Property="FontSize" Value="{OnIdiom Phone=24, Tablet=28, Desktop=24}" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=28, Tablet=32, Desktop=28}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
     </Style>
 
     <Style x:Key="SectionTitleLabelStyle" TargetType="Label">
         <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
-        <Setter Property="FontSize" Value="{OnIdiom Phone=16, Tablet=18, Desktop=16}" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=18, Tablet=20, Desktop=18}" />
+        <Setter Property="LineBreakMode" Value="WordWrap" />
+    </Style>
+
+    <Style x:Key="InputLabelStyle" TargetType="Label">
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=15, Tablet=16, Desktop=15}" />
+        <Setter Property="Margin" Value="0,8,0,0" />
+    </Style>
+
+    <Style x:Key="SupportingTextLabelStyle" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource MutedText}" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=14, Tablet=15, Desktop=14}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
     </Style>
 
     <Style x:Key="CaptionLabelStyle" TargetType="Label">
         <Setter Property="TextColor" Value="{StaticResource MutedText}" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=13, Tablet=14, Desktop=13}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
+    </Style>
+
+    <Style x:Key="MetricValueLabelStyle" TargetType="Label">
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=24, Tablet=28, Desktop=24}" />
+        <Setter Property="LineBreakMode" Value="TailTruncation" />
     </Style>
 
     <Style TargetType="Label">
         <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
-        <Setter Property="FontSize" Value="{OnIdiom Phone=14, Tablet=16, Desktop=14}" />
+        <Setter Property="FontSize" Value="{OnIdiom Phone=15, Tablet=17, Desktop=15}" />
     </Style>
 
     <Style TargetType="Button">
@@ -44,26 +69,51 @@
         <Setter Property="TextColor" Value="{StaticResource OnPrimary}" />
         <Setter Property="MinimumHeightRequest" Value="{StaticResource TouchTargetMin}" />
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="Padding" Value="16,14" />
         <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="Margin" Value="0,4,0,4" />
+        <Setter Property="LineBreakMode" Value="WordWrap" />
+    </Style>
+
+    <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
+        <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
     </Style>
 
     <Style TargetType="Entry">
         <Setter Property="BackgroundColor" Value="{StaticResource Surface}" />
         <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
         <Setter Property="MinimumHeightRequest" Value="{StaticResource TouchTargetMin}" />
+        <Setter Property="ClearButtonVisibility" Value="WhileEditing" />
+        <Setter Property="Margin" Value="0,4,0,4" />
+    </Style>
+
+    <Style x:Key="FilledInputEntryStyle" TargetType="Entry" BasedOn="{StaticResource {x:Type Entry}}">
+        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource MutedText}" />
+    </Style>
+
+    <Style TargetType="DatePicker">
+        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
+        <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
+        <Setter Property="MinimumHeightRequest" Value="{StaticResource TouchTargetMin}" />
         <Setter Property="Margin" Value="0,4,0,4" />
     </Style>
 
     <Style TargetType="Editor">
-        <Setter Property="BackgroundColor" Value="{StaticResource Surface}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
         <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
+        <Setter Property="MinimumHeightRequest" Value="120" />
+        <Setter Property="Margin" Value="0,4,0,4" />
+    </Style>
+
+    <Style x:Key="FilledEditorStyle" TargetType="Editor" BasedOn="{StaticResource {x:Type Editor}}">
+        <Setter Property="AutoSize" Value="TextChanges" />
         <Setter Property="Margin" Value="0,4,0,4" />
     </Style>
 
     <Style TargetType="Picker">
-        <Setter Property="BackgroundColor" Value="{StaticResource Surface}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
         <Setter Property="TextColor" Value="{StaticResource OnBackground}" />
         <Setter Property="MinimumHeightRequest" Value="{StaticResource TouchTargetMin}" />
         <Setter Property="Margin" Value="0,4,0,4" />
@@ -73,8 +123,13 @@
         <Setter Property="BackgroundColor" Value="{StaticResource Surface}" />
         <Setter Property="BorderColor" Value="{StaticResource Outline}" />
         <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="Padding" Value="12" />
+        <Setter Property="Padding" Value="16" />
         <Setter Property="HasShadow" Value="True" />
-        <Setter Property="Margin" Value="0,4,0,4" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style x:Key="MetricCardFrameStyle" TargetType="Frame" BasedOn="{StaticResource CardFrameStyle}">
+        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceVariant}" />
+        <Setter Property="Padding" Value="16" />
     </Style>
 </ResourceDictionary>
