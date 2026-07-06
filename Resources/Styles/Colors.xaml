@@ -29,6 +29,11 @@
     <Color x:Key="ReviewOutline">#DAB9F1</Color>
     <Color x:Key="NeutralContainer">#FAFBFC</Color>
     <Color x:Key="NeutralOutline">#D7E0E7</Color>
+    <Color x:Key="SubtleText">#555555</Color>
+    <Color x:Key="CurrentSessionContainer">#F7FAFF</Color>
+    <Color x:Key="CurrentSessionOutline">#DDE7F7</Color>
+    <Color x:Key="PreviousSessionContainer">#FCF8FF</Color>
+    <Color x:Key="PreviousSessionOutline">#EADCF8</Color>
     <Color x:Key="ChartOverall">#4C8EDA</Color>
     <Color x:Key="ChartConfidence">#2F9E44</Color>
     <Color x:Key="ThresholdModerate">#F8D7A0</Color>

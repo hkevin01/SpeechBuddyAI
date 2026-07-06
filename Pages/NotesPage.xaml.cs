@@ -3,6 +3,7 @@ using SpeechBuddyAI.Services;
 using SpeechBuddyAI.Pages.ViewModels;
 using SpeechBuddyAI.Services.Confidence;
 using SpeechBuddyAI.Services.Reports;
+using SpeechBuddyAI.Views;
 
 namespace SpeechBuddyAI.Pages;
 
@@ -56,6 +57,8 @@ public partial class NotesPage : ContentPage
         SoapSummaryLabel.Text = "Generating clinician summary...";
         ParentSummaryLabel.Text = "Generating parent summary...";
         NoteStatusLabel.Text = string.Empty;
+        NotesStatusBanner.Message = "Generating clinician and parent summaries.";
+        NotesStatusBanner.Tone = StatusBannerTone.Info;
 
         try
         {
@@ -68,11 +71,15 @@ public partial class NotesPage : ContentPage
             _viewModel.SetGeneratedNote(report);
             NotesHistoryCollection.SelectedItem = null;
             NoteStatusLabel.Text = "Summaries ready. Press Save Note to persist.";
+            NotesStatusBanner.Message = "Summaries ready. Save the note to persist this report.";
+            NotesStatusBanner.Tone = StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             SoapSummaryLabel.Text = "Unable to generate summaries.";
             ParentSummaryLabel.Text = ex.Message;
+            NotesStatusBanner.Message = ex.Message;
+            NotesStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
@@ -81,6 +88,8 @@ public partial class NotesPage : ContentPage
         if (_viewModel.PendingNote is null)
         {
             NoteStatusLabel.Text = "Generate summaries first before saving.";
+            NotesStatusBanner.Message = "Generate summaries first before saving.";
+            NotesStatusBanner.Tone = StatusBannerTone.Warning;
             return;
         }
 
@@ -89,17 +98,23 @@ public partial class NotesPage : ContentPage
             await _noteStorageService.SaveNoteAsync(_viewModel.PendingNote);
             _viewModel.MarkSaved();
             NoteStatusLabel.Text = "Note saved.";
+            NotesStatusBanner.Message = "Note saved successfully.";
+            NotesStatusBanner.Tone = StatusBannerTone.Success;
             await RefreshHistoryAsync();
         }
         catch (Exception ex)
         {
             NoteStatusLabel.Text = ex.Message;
+            NotesStatusBanner.Message = ex.Message;
+            NotesStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
     private async void OnExportLatestClicked(object? sender, EventArgs e)
     {
         NoteStatusLabel.Text = "Exporting latest report...";
+        NotesStatusBanner.Message = "Exporting latest report.";
+        NotesStatusBanner.Tone = StatusBannerTone.Info;
 
         try
         {
@@ -107,6 +122,8 @@ public partial class NotesPage : ContentPage
             if (note is null)
             {
                 NoteStatusLabel.Text = "No report available to export. Generate and save a note first.";
+                NotesStatusBanner.Message = NoteStatusLabel.Text;
+                NotesStatusBanner.Tone = StatusBannerTone.Warning;
                 return;
             }
 
@@ -114,16 +131,22 @@ public partial class NotesPage : ContentPage
             var format = GetSelectedExportFormat();
             var filePath = await _reportService.ExportReportAsync(note, metadataEntries, format);
             NoteStatusLabel.Text = $"Report exported: {Path.GetFileName(filePath)}";
+            NotesStatusBanner.Message = NoteStatusLabel.Text;
+            NotesStatusBanner.Tone = StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             NoteStatusLabel.Text = ex.Message;
+            NotesStatusBanner.Message = ex.Message;
+            NotesStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
     private async void OnShareLatestClicked(object? sender, EventArgs e)
     {
         NoteStatusLabel.Text = "Preparing report for sharing...";
+        NotesStatusBanner.Message = "Preparing report for sharing.";
+        NotesStatusBanner.Tone = StatusBannerTone.Info;
 
         try
         {
@@ -131,6 +154,8 @@ public partial class NotesPage : ContentPage
             if (note is null)
             {
                 NoteStatusLabel.Text = "No report available to share. Generate and save a note first.";
+                NotesStatusBanner.Message = NoteStatusLabel.Text;
+                NotesStatusBanner.Tone = StatusBannerTone.Warning;
                 return;
             }
 
@@ -142,15 +167,21 @@ public partial class NotesPage : ContentPage
             {
                 var filePath = await _reportService.ExportReportAsync(note, metadataEntries, format);
                 NoteStatusLabel.Text = $"Report exported only (per settings): {Path.GetFileName(filePath)}";
+                NotesStatusBanner.Message = NoteStatusLabel.Text;
+                NotesStatusBanner.Tone = StatusBannerTone.Success;
                 return;
             }
 
             await _reportService.ShareReportAsync(note, metadataEntries, format);
             NoteStatusLabel.Text = "Share flow opened.";
+            NotesStatusBanner.Message = NoteStatusLabel.Text;
+            NotesStatusBanner.Tone = StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             NoteStatusLabel.Text = ex.Message;
+            NotesStatusBanner.Message = ex.Message;
+            NotesStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
@@ -185,6 +216,8 @@ public partial class NotesPage : ContentPage
             : selected.ParentSummary;
 
         NoteStatusLabel.Text = $"Loaded note from {selected.SessionDate:yyyy-MM-dd HH:mm}.";
+        NotesStatusBanner.Message = NoteStatusLabel.Text;
+        NotesStatusBanner.Tone = StatusBannerTone.Info;
     }
 
     private async void OnExportPreviewWindowChanged(object? sender, DateChangedEventArgs e)

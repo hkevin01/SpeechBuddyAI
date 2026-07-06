@@ -1,6 +1,7 @@
 using SpeechBuddyAI.Services.Confidence;
 using SpeechBuddyAI.Services.Reports;
 using SpeechBuddyAI.Models;
+using SpeechBuddyAI.Views;
 
 namespace SpeechBuddyAI.Pages;
 
@@ -51,10 +52,14 @@ public partial class SettingsPage : ContentPage
                 _reportExportSettingsService.GetDefaultShareBehavior() == ReportShareBehavior.ExportOnly ? 0 : 1;
             RefreshLabels();
             StatusLabel.Text = "Current clinician settings loaded.";
+            SettingsStatusBanner.Message = StatusLabel.Text;
+            SettingsStatusBanner.Tone = StatusBannerTone.Info;
         }
         catch (Exception ex)
         {
             StatusLabel.Text = ex.Message;
+            SettingsStatusBanner.Message = ex.Message;
+            SettingsStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
@@ -71,6 +76,8 @@ public partial class SettingsPage : ContentPage
         if (high <= moderate)
         {
             StatusLabel.Text = "High threshold must be greater than moderate threshold.";
+            SettingsStatusBanner.Message = StatusLabel.Text;
+            SettingsStatusBanner.Tone = StatusBannerTone.Warning;
             return;
         }
 
@@ -105,10 +112,14 @@ public partial class SettingsPage : ContentPage
             _settingsService.SaveCalibrationTableActivationMinSamples((int)Math.Round(CalibrationTableActivationSamplesSlider.Value));
             _settingsService.SaveCalibrationQualityActivationThreshold(CalibrationQualityThresholdSlider.Value);
             StatusLabel.Text = "Clinician settings saved.";
+            SettingsStatusBanner.Message = StatusLabel.Text;
+            SettingsStatusBanner.Tone = StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             StatusLabel.Text = ex.Message;
+            SettingsStatusBanner.Message = ex.Message;
+            SettingsStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
@@ -145,10 +156,14 @@ public partial class SettingsPage : ContentPage
             ShareBehaviorPicker.SelectedIndex = 1;
             RefreshLabels();
             StatusLabel.Text = "Clinician settings and share behavior reset to defaults.";
+            SettingsStatusBanner.Message = StatusLabel.Text;
+            SettingsStatusBanner.Tone = StatusBannerTone.Info;
         }
         catch (Exception ex)
         {
             StatusLabel.Text = ex.Message;
+            SettingsStatusBanner.Message = ex.Message;
+            SettingsStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 
@@ -161,10 +176,14 @@ public partial class SettingsPage : ContentPage
                 : ReportShareBehavior.ExportAndShare;
             _reportExportSettingsService.SaveDefaultShareBehavior(behavior);
             StatusLabel.Text = "Share behavior saved.";
+            SettingsStatusBanner.Message = StatusLabel.Text;
+            SettingsStatusBanner.Tone = StatusBannerTone.Success;
         }
         catch (Exception ex)
         {
             StatusLabel.Text = ex.Message;
+            SettingsStatusBanner.Message = ex.Message;
+            SettingsStatusBanner.Tone = StatusBannerTone.Warning;
         }
     }
 

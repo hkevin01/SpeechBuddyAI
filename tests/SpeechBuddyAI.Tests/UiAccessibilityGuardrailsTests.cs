@@ -50,6 +50,71 @@ public sealed class UiAccessibilityGuardrailsTests
     }
 
     [Fact]
+    public void AnalyticsCollections_HaveSemanticDescriptionsAndHints()
+    {
+        var collectionTargets = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["Pages/ProgressPage.xaml"] =
+            [
+                "SummaryBadgesCollection",
+                "TargetComparisonChips",
+                "ConfidenceLegendCollection",
+                "SessionTimelineCollection",
+                "TrendCollection",
+                "ProgressCollection"
+            ],
+            ["Pages/NotesPage.xaml"] =
+            [
+                "ComparisonPreviewBadgesCollection",
+                "ComparisonPreviewTimelineCollection",
+                "AssignmentSnapshotCollection",
+                "SeveritySparklineCollection",
+                "InstabilitySparklineCollection",
+                "DeclineSparklineCollection",
+                "FrequencySparklineCollection",
+                "ConfidenceSparklineCollection",
+                "CalibrationNext1SparklineCollection",
+                "CalibrationNext3SparklineCollection",
+                "TraceDriftSparklineCollection",
+                "AssignmentModelAuditCollection"
+            ]
+        };
+
+        var violations = new List<string>();
+        XNamespace xNamespace = "http://schemas.microsoft.com/winfx/2009/xaml";
+
+        foreach (var pair in collectionTargets)
+        {
+            var document = LoadXaml(pair.Key);
+            foreach (var name in pair.Value)
+            {
+                var element = document
+                    .Descendants()
+                    .FirstOrDefault(node => node.Attribute(xNamespace + "Name")?.Value == name);
+                if (element is null)
+                {
+                    violations.Add($"{pair.Key}::{name} missing element");
+                    continue;
+                }
+
+                var description = element.Attribute("SemanticProperties.Description")?.Value;
+                var hint = element.Attribute("SemanticProperties.Hint")?.Value;
+                if (string.IsNullOrWhiteSpace(description))
+                {
+                    violations.Add($"{pair.Key}::{name} missing SemanticProperties.Description");
+                }
+
+                if (string.IsNullOrWhiteSpace(hint))
+                {
+                    violations.Add($"{pair.Key}::{name} missing SemanticProperties.Hint");
+                }
+            }
+        }
+
+        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+    }
+
+    [Fact]
     public void ButtonStyle_EnforcesMinimumTouchTargetOf48()
     {
         var controls = LoadXaml("Resources/Styles/Controls.xaml");

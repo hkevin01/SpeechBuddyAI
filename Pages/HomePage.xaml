@@ -17,25 +17,25 @@
                     <Grid x:Name="OverviewMetricsGrid" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
                         <Frame x:Name="TotalAttemptsCard" Grid.Row="0" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource InfoContainer}" BorderColor="{StaticResource InfoOutline}">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Total Attempts" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label Text="Total Attempts" Style="{StaticResource CaptionLabelStyle}" TextColor="{StaticResource SubtleText}" />
                                 <Label x:Name="TotalAttemptsLabel" Text="-" Style="{StaticResource MetricValueLabelStyle}" />
                             </VerticalStackLayout>
                         </Frame>
                         <Frame x:Name="AverageScoreCard" Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource SuccessContainer}" BorderColor="{StaticResource SuccessOutline}">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Average Score" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label Text="Average Score" Style="{StaticResource CaptionLabelStyle}" TextColor="{StaticResource SubtleText}" />
                                 <Label x:Name="AverageScoreLabel" Text="-" Style="{StaticResource MetricValueLabelStyle}" />
                             </VerticalStackLayout>
                         </Frame>
                         <Frame x:Name="MostPracticedCard" Grid.Row="1" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource WarningContainer}" BorderColor="{StaticResource WarningOutline}">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Most Practiced" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label Text="Most Practiced" Style="{StaticResource CaptionLabelStyle}" TextColor="{StaticResource SubtleText}" />
                                 <Label x:Name="MostPracticedLabel" Text="-" FontAttributes="Bold" />
                             </VerticalStackLayout>
                         </Frame>
                         <Frame x:Name="StreakCard" Grid.Row="1" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BackgroundColor="{StaticResource ReviewContainer}" BorderColor="{StaticResource ReviewOutline}">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="Practice Streak" Style="{StaticResource CaptionLabelStyle}" TextColor="#555" />
+                                <Label Text="Practice Streak" Style="{StaticResource CaptionLabelStyle}" TextColor="{StaticResource SubtleText}" />
                                 <Label x:Name="StreakLabel" Text="-" FontAttributes="Bold" />
                             </VerticalStackLayout>
                         </Frame>

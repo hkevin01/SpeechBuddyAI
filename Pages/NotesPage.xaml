@@ -45,7 +45,7 @@
             <Frame Style="{StaticResource CardFrameStyle}">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Export Metadata Window" Style="{StaticResource SectionTitleLabelStyle}" />
-                    <Label Text="Metadata summaries use entries from this date range." Style="{StaticResource CaptionLabelStyle}" TextColor="#666666" />
+                    <Label Text="Metadata summaries use entries from this date range." Style="{StaticResource CaptionLabelStyle}" TextColor="{StaticResource MutedText}" />
                     <HorizontalStackLayout Spacing="10">
                         <VerticalStackLayout>
                             <Label Text="Start" Style="{StaticResource CaptionLabelStyle}" />
@@ -96,7 +96,7 @@
                                     HeightRequest="150">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <Frame BorderColor="#E9ECEF" BackgroundColor="#FAFAFA" Padding="8,6" Margin="0,0,0,6">
+                                <Frame Style="{StaticResource NeutralCardFrameStyle}" Padding="8,6" Margin="0,0,0,6">
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding SessionDateText}" FontAttributes="Bold" />
                                         <HorizontalStackLayout Spacing="10">
@@ -139,7 +139,7 @@
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding SnapshotDateText}" FontAttributes="Bold" FontSize="12" />
                                         <Label Text="{Binding FocusTargetsText}" FontSize="12" />
-                                        <Label Text="{Binding DriftSummaryText}" FontSize="11" TextColor="#555555" />
+                                        <Label Text="{Binding DriftSummaryText}" FontSize="11" TextColor="{StaticResource SubtleText}" />
                                     </VerticalStackLayout>
                                 </Frame>
                             </DataTemplate>
@@ -245,16 +245,16 @@
                         </CollectionView>
                     </Grid>
 
-                    <Label x:Name="SeverityTrendChartLabel" Text="Severity trend: -" FontSize="11" TextColor="#555555" />
-                    <Label x:Name="InstabilityTrendChartLabel" Text="Instability trend: -" FontSize="11" TextColor="#555555" />
-                    <Label x:Name="DeclineTrendChartLabel" Text="Decline trend: -" FontSize="11" TextColor="#555555" />
-                    <Label x:Name="FrequencyTrendChartLabel" Text="Frequency trend: -" FontSize="11" TextColor="#555555" />
-                    <Label x:Name="ConfidenceTrendChartLabel" Text="Confidence trend: -" FontSize="11" TextColor="#555555" />
+                    <Label x:Name="SeverityTrendChartLabel" Text="Severity trend: -" FontSize="11" TextColor="{StaticResource SubtleText}" />
+                    <Label x:Name="InstabilityTrendChartLabel" Text="Instability trend: -" FontSize="11" TextColor="{StaticResource SubtleText}" />
+                    <Label x:Name="DeclineTrendChartLabel" Text="Decline trend: -" FontSize="11" TextColor="{StaticResource SubtleText}" />
+                    <Label x:Name="FrequencyTrendChartLabel" Text="Frequency trend: -" FontSize="11" TextColor="{StaticResource SubtleText}" />
+                    <Label x:Name="ConfidenceTrendChartLabel" Text="Confidence trend: -" FontSize="11" TextColor="{StaticResource SubtleText}" />
 
                     <Label Text="Longitudinal Model Audit" FontAttributes="Bold" FontSize="12" Margin="0,10,0,0" />
                     <Label x:Name="AssignmentModelAuditSummaryLabel" Text="No assignment model-audit snapshots available." FontSize="11" />
-                    <Label x:Name="AssignmentFormulaVersionSummaryLabel" Text="Formula versions: n/a" FontSize="11" TextColor="#555555" />
-                    <Label x:Name="AssignmentAdvisoryWeightLabel" Text="No advisory weight suggestion available yet." FontSize="11" TextColor="#555555" />
+                    <Label x:Name="AssignmentFormulaVersionSummaryLabel" Text="Formula versions: n/a" FontSize="11" TextColor="{StaticResource SubtleText}" />
+                    <Label x:Name="AssignmentAdvisoryWeightLabel" Text="No advisory weight suggestion available yet." FontSize="11" TextColor="{StaticResource SubtleText}" />
 
                     <Grid x:Name="ModelAuditSparklineGrid" ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="Calib next-1" FontSize="12" VerticalOptions="Center" />
@@ -316,7 +316,7 @@
                                 <Frame Style="{StaticResource NeutralCardFrameStyle}" Padding="8,6" Margin="0,0,0,6">
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding SnapshotDateText}" FontAttributes="Bold" FontSize="12" />
-                                        <Label Text="{Binding FormulaVersionText}" FontSize="11" TextColor="#555555" />
+                                        <Label Text="{Binding FormulaVersionText}" FontSize="11" TextColor="{StaticResource SubtleText}" />
                                         <HorizontalStackLayout Spacing="10">
                                             <Label Text="{Binding Next1MaeText}" FontSize="11" />
                                             <Label Text="{Binding Next3MaeText}" FontSize="11" />

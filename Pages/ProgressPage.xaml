@@ -51,7 +51,7 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Session Comparison" Style="{StaticResource SectionTitleLabelStyle}" />
                     <Grid x:Name="SessionComparisonGrid" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="8">
-                        <Frame x:Name="CurrentSessionCard" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BorderColor="#DDE7F7" BackgroundColor="#F7FAFF">
+                        <Frame x:Name="CurrentSessionCard" Grid.Column="0" Style="{StaticResource MetricCardFrameStyle}" BorderColor="{StaticResource CurrentSessionOutline}" BackgroundColor="{StaticResource CurrentSessionContainer}">
                             <VerticalStackLayout Spacing="3">
                                 <Label Text="Current Session" FontAttributes="Bold" />
                                 <Label x:Name="CurrentSessionDateLabel" Text="Date: -" />
@@ -60,7 +60,7 @@
                                 <Label x:Name="CurrentSessionConfidenceLabel" Text="Confidence Avg: -" />
                             </VerticalStackLayout>
                         </Frame>
-                        <Frame x:Name="PreviousSessionCard" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BorderColor="#EADCF8" BackgroundColor="#FCF8FF">
+                        <Frame x:Name="PreviousSessionCard" Grid.Column="1" Style="{StaticResource MetricCardFrameStyle}" BorderColor="{StaticResource PreviousSessionOutline}" BackgroundColor="{StaticResource PreviousSessionContainer}">
                             <VerticalStackLayout Spacing="3">
                                 <Label Text="Previous Session" FontAttributes="Bold" />
                                 <Label x:Name="PreviousSessionDateLabel" Text="Date: -" />
@@ -142,7 +142,7 @@
                                     HeightRequest="180">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <Frame BorderColor="#E9ECEF" BackgroundColor="#FAFAFA" Padding="8,6" Margin="0,0,0,6">
+                                <Frame Style="{StaticResource NeutralCardFrameStyle}" Padding="8,6" Margin="0,0,0,6">
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding SessionDateText}" FontAttributes="Bold" />
                                         <HorizontalStackLayout Spacing="10">
